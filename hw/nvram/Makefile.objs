@@ -1,4 +1,3 @@
 common-obj-y += eeprom93xx.o
 common-obj-$(CONFIG_I2C) += eeprom_at24c.o
 common-obj-y += fw_cfg.o
-common-obj-y += chrp_nvram.o

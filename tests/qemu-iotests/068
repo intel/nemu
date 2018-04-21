@@ -45,16 +45,8 @@ _supported_os Linux
 IMGOPTS="compat=1.1"
 IMG_SIZE=128K
 
-case "$QEMU_DEFAULT_MACHINE" in
-  s390-ccw-virtio)
-      platform_parm="-no-shutdown"
-      hba=virtio-scsi-ccw
-      ;;
-  *)
-      platform_parm=""
-      hba=virtio-scsi-pci
-      ;;
-esac
+platform_parm=""
+hba=virtio-scsi-pci
 
 _qemu()
 {

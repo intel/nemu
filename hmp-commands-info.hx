@@ -215,8 +215,7 @@ STEXI
 Show PCI information.
 ETEXI
 
-#if defined(TARGET_I386) || defined(TARGET_SH4) || defined(TARGET_SPARC) || \
-    defined(TARGET_PPC) || defined(TARGET_XTENSA) || defined(TARGET_M68K)
+#if defined(TARGET_I386)
     {
         .name       = "tlb",
         .args_type  = "",
@@ -720,38 +719,6 @@ STEXI
 @item info rocker-of-dpa-groups @var{name} [@var{type}]
 @findex info rocker-of-dpa-groups
 Show rocker OF-DPA groups.
-ETEXI
-
-#if defined(TARGET_S390X)
-    {
-        .name       = "skeys",
-        .args_type  = "addr:l",
-        .params     = "address",
-        .help       = "Display the value of a storage key",
-        .cmd        = hmp_info_skeys,
-    },
-#endif
-
-STEXI
-@item info skeys @var{address}
-@findex info skeys
-Display the value of a storage key (s390 only)
-ETEXI
-
-#if defined(TARGET_S390X)
-    {
-        .name       = "cmma",
-        .args_type  = "addr:l,count:l?",
-        .params     = "address [count]",
-        .help       = "Display the values of the CMMA storage attributes for a range of pages",
-        .cmd        = hmp_info_cmma,
-    },
-#endif
-
-STEXI
-@item info cmma @var{address}
-@findex info cmma
-Display the values of the CMMA storage attributes for a range of pages (s390 only)
 ETEXI
 
     {

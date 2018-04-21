@@ -876,23 +876,7 @@ void    cpu_update_icount(CPUState *cpu);
 /*******************************************/
 /* host CPU ticks (if available) */
 
-#if defined(_ARCH_PPC)
-
-static inline int64_t cpu_get_host_ticks(void)
-{
-    int64_t retval;
-    /* http://ozlabs.org/pipermail/linuxppc-dev/1999-October/003889.html */
-    unsigned long junk;
-    __asm__ __volatile__ ("mfspr   %1,269\n\t"  /* mftbu */
-                          "mfspr   %L0,268\n\t" /* mftb */
-                          "mfspr   %0,269\n\t"  /* mftbu */
-                          "cmpw    %0,%1\n\t"
-                          "bne     $-16"
-                          : "=r" (retval), "=r" (junk));
-    return retval;
-}
-
-#elif defined(__i386__)
+#if defined(__i386__)
 
 static inline int64_t cpu_get_host_ticks(void)
 {
@@ -912,69 +896,6 @@ static inline int64_t cpu_get_host_ticks(void)
     val <<= 32;
     val |= low;
     return val;
-}
-
-#elif defined(__hppa__)
-
-static inline int64_t cpu_get_host_ticks(void)
-{
-    int val;
-    asm volatile ("mfctl %%cr16, %0" : "=r"(val));
-    return val;
-}
-
-#elif defined(__sparc__)
-
-static inline int64_t cpu_get_host_ticks (void)
-{
-#if defined(_LP64)
-    uint64_t        rval;
-    asm volatile("rd %%tick,%0" : "=r"(rval));
-    return rval;
-#else
-    /* We need an %o or %g register for this.  For recent enough gcc
-       there is an "h" constraint for that.  Don't bother with that.  */
-    union {
-        uint64_t i64;
-        struct {
-            uint32_t high;
-            uint32_t low;
-        }       i32;
-    } rval;
-    asm volatile("rd %%tick,%%g1; srlx %%g1,32,%0; mov %%g1,%1"
-                 : "=r"(rval.i32.high), "=r"(rval.i32.low) : : "g1");
-    return rval.i64;
-#endif
-}
-
-#elif defined(__mips__) && \
-    ((defined(__mips_isa_rev) && __mips_isa_rev >= 2) || defined(__linux__))
-/*
- * binutils wants to use rdhwr only on mips32r2
- * but as linux kernel emulate it, it's fine
- * to use it.
- *
- */
-#define MIPS_RDHWR(rd, value) {                         \
-        __asm__ __volatile__ (".set   push\n\t"         \
-                              ".set mips32r2\n\t"       \
-                              "rdhwr  %0, "rd"\n\t"     \
-                              ".set   pop"              \
-                              : "=r" (value));          \
-    }
-
-static inline int64_t cpu_get_host_ticks(void)
-{
-    /* On kernels >= 2.6.25 rdhwr <reg>, $2 and $3 are emulated */
-    uint32_t count;
-    static uint32_t cyc_per_count = 0;
-
-    if (!cyc_per_count) {
-        MIPS_RDHWR("$3", cyc_per_count);
-    }
-
-    MIPS_RDHWR("$2", count);
-    return (int64_t)(count * cyc_per_count);
 }
 
 #else

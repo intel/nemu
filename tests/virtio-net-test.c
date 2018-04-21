@@ -13,7 +13,6 @@
 #include "qemu/sockets.h"
 #include "qemu/iov.h"
 #include "libqos/libqos-pc.h"
-#include "libqos/libqos-spapr.h"
 #include "libqos/virtio.h"
 #include "libqos/virtio-pci.h"
 #include "qapi/qmp/qdict.h"
@@ -60,10 +59,8 @@ static QOSState *pci_test_start(int socket)
 
     if (strcmp(arch, "i386") == 0 || strcmp(arch, "x86_64") == 0) {
         qs = qtest_pc_boot(cmd, socket);
-    } else if (strcmp(arch, "ppc64") == 0) {
-        qs = qtest_spapr_boot(cmd, socket);
     } else {
-        g_printerr("virtio-net tests are only available on x86 or ppc64\n");
+        g_printerr("virtio-net tests are only available on x86\n");
         exit(EXIT_FAILURE);
     }
     global_qtest = qs->qts;

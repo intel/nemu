@@ -45,25 +45,6 @@ enum bfd_architecture
 {
   bfd_arch_unknown,    /* File arch not known */
   bfd_arch_obscure,    /* Arch known, not one of these */
-  bfd_arch_m68k,       /* Motorola 68xxx */
-#define bfd_mach_m68000 1
-#define bfd_mach_m68008 2
-#define bfd_mach_m68010 3
-#define bfd_mach_m68020 4
-#define bfd_mach_m68030 5
-#define bfd_mach_m68040 6
-#define bfd_mach_m68060 7
-#define bfd_mach_cpu32  8
-#define bfd_mach_mcf5200  9
-#define bfd_mach_mcf5206e 10
-#define bfd_mach_mcf5307  11
-#define bfd_mach_mcf5407  12
-#define bfd_mach_mcf528x  13
-#define bfd_mach_mcfv4e   14
-#define bfd_mach_mcf521x   15
-#define bfd_mach_mcf5249   16
-#define bfd_mach_mcf547x   17
-#define bfd_mach_mcf548x   18
   bfd_arch_vax,        /* DEC Vax */
   bfd_arch_i960,       /* Intel 960 */
      /* The order of the following is important.
@@ -84,37 +65,6 @@ enum bfd_architecture
 #define bfd_mach_i960_hx        8
 
   bfd_arch_a29k,       /* AMD 29000 */
-  bfd_arch_sparc,      /* SPARC */
-#define bfd_mach_sparc                 1
-/* The difference between v8plus and v9 is that v9 is a true 64 bit env.  */
-#define bfd_mach_sparc_sparclet        2
-#define bfd_mach_sparc_sparclite       3
-#define bfd_mach_sparc_v8plus          4
-#define bfd_mach_sparc_v8plusa         5 /* with ultrasparc add'ns.  */
-#define bfd_mach_sparc_sparclite_le    6
-#define bfd_mach_sparc_v9              7
-#define bfd_mach_sparc_v9a             8 /* with ultrasparc add'ns.  */
-#define bfd_mach_sparc_v8plusb         9 /* with cheetah add'ns.  */
-#define bfd_mach_sparc_v9b             10 /* with cheetah add'ns.  */
-/* Nonzero if MACH has the v9 instruction set.  */
-#define bfd_mach_sparc_v9_p(mach) \
-  ((mach) >= bfd_mach_sparc_v8plus && (mach) <= bfd_mach_sparc_v9b \
-   && (mach) != bfd_mach_sparc_sparclite_le)
-  bfd_arch_mips,       /* MIPS Rxxxx */
-#define bfd_mach_mips3000              3000
-#define bfd_mach_mips3900              3900
-#define bfd_mach_mips4000              4000
-#define bfd_mach_mips4010              4010
-#define bfd_mach_mips4100              4100
-#define bfd_mach_mips4300              4300
-#define bfd_mach_mips4400              4400
-#define bfd_mach_mips4600              4600
-#define bfd_mach_mips4650              4650
-#define bfd_mach_mips5000              5000
-#define bfd_mach_mips6000              6000
-#define bfd_mach_mips8000              8000
-#define bfd_mach_mips10000             10000
-#define bfd_mach_mips16                16
   bfd_arch_i386,       /* Intel 386 */
 #define bfd_mach_i386_i386 0
 #define bfd_mach_i386_i8086 1
@@ -133,60 +83,12 @@ enum bfd_architecture
 #define bfd_mach_h8300   1
 #define bfd_mach_h8300h  2
 #define bfd_mach_h8300s  3
-  bfd_arch_powerpc,    /* PowerPC */
-#define bfd_mach_ppc           0
-#define bfd_mach_ppc64         1
-#define bfd_mach_ppc_403       403
-#define bfd_mach_ppc_403gc     4030
-#define bfd_mach_ppc_e500      500
-#define bfd_mach_ppc_505       505
-#define bfd_mach_ppc_601       601
-#define bfd_mach_ppc_602       602
-#define bfd_mach_ppc_603       603
-#define bfd_mach_ppc_ec603e    6031
-#define bfd_mach_ppc_604       604
-#define bfd_mach_ppc_620       620
-#define bfd_mach_ppc_630       630
-#define bfd_mach_ppc_750       750
-#define bfd_mach_ppc_860       860
-#define bfd_mach_ppc_a35       35
-#define bfd_mach_ppc_rs64ii    642
-#define bfd_mach_ppc_rs64iii   643
-#define bfd_mach_ppc_7400      7400
   bfd_arch_rs6000,     /* IBM RS/6000 */
-  bfd_arch_hppa,       /* HP PA RISC */
-#define bfd_mach_hppa10        10
-#define bfd_mach_hppa11        11
-#define bfd_mach_hppa20        20
-#define bfd_mach_hppa20w       25
   bfd_arch_d10v,       /* Mitsubishi D10V */
   bfd_arch_z8k,        /* Zilog Z8000 */
 #define bfd_mach_z8001         1
 #define bfd_mach_z8002         2
   bfd_arch_h8500,      /* Hitachi H8/500 */
-  bfd_arch_sh,         /* Hitachi SH */
-#define bfd_mach_sh            1
-#define bfd_mach_sh2        0x20
-#define bfd_mach_sh_dsp     0x2d
-#define bfd_mach_sh2a       0x2a
-#define bfd_mach_sh2a_nofpu 0x2b
-#define bfd_mach_sh2e       0x2e
-#define bfd_mach_sh3        0x30
-#define bfd_mach_sh3_nommu  0x31
-#define bfd_mach_sh3_dsp    0x3d
-#define bfd_mach_sh3e       0x3e
-#define bfd_mach_sh4        0x40
-#define bfd_mach_sh4_nofpu  0x41
-#define bfd_mach_sh4_nommu_nofpu  0x42
-#define bfd_mach_sh4a       0x4a
-#define bfd_mach_sh4a_nofpu 0x4b
-#define bfd_mach_sh4al_dsp  0x4d
-#define bfd_mach_sh5        0x50
-  bfd_arch_alpha,      /* Dec Alpha */
-#define bfd_mach_alpha 1
-#define bfd_mach_alpha_ev4  0x10
-#define bfd_mach_alpha_ev5  0x20
-#define bfd_mach_alpha_ev6  0x30
   bfd_arch_arm,        /* Advanced Risc Machines ARM */
 #define bfd_mach_arm_unknown	0
 #define bfd_mach_arm_2		1
@@ -213,25 +115,11 @@ enum bfd_architecture
 #define bfd_mach_m32r          0  /* backwards compatibility */
   bfd_arch_mn10200,    /* Matsushita MN10200 */
   bfd_arch_mn10300,    /* Matsushita MN10300 */
-  bfd_arch_cris,       /* Axis CRIS */
-#define bfd_mach_cris_v0_v10   255
-#define bfd_mach_cris_v32      32
-#define bfd_mach_cris_v10_v32  1032
-  bfd_arch_microblaze, /* Xilinx MicroBlaze.  */
-  bfd_arch_moxie,      /* The Moxie core.  */
   bfd_arch_ia64,      /* HP/Intel ia64 */
 #define bfd_mach_ia64_elf64    64
 #define bfd_mach_ia64_elf32    32
-  bfd_arch_nios2,	/* Nios II */
-#define bfd_mach_nios2          0
-#define bfd_mach_nios2r1        1
-#define bfd_mach_nios2r2        2
-  bfd_arch_lm32,       /* Lattice Mico32 */
-#define bfd_mach_lm32 1
   bfd_arch_last
   };
-#define bfd_mach_s390_31 31
-#define bfd_mach_s390_64 64
 
 typedef struct symbol_cache_entry
 {
@@ -385,10 +273,7 @@ typedef struct disassemble_info {
 typedef int (*disassembler_ftype) (bfd_vma, disassemble_info *);
 
 int print_insn_tci(bfd_vma, disassemble_info*);
-int print_insn_big_mips         (bfd_vma, disassemble_info*);
-int print_insn_little_mips      (bfd_vma, disassemble_info*);
 int print_insn_i386             (bfd_vma, disassemble_info*);
-int print_insn_m68k             (bfd_vma, disassemble_info*);
 int print_insn_z8001            (bfd_vma, disassemble_info*);
 int print_insn_z8002            (bfd_vma, disassemble_info*);
 int print_insn_h8300            (bfd_vma, disassemble_info*);
@@ -396,48 +281,25 @@ int print_insn_h8300h           (bfd_vma, disassemble_info*);
 int print_insn_h8300s           (bfd_vma, disassemble_info*);
 int print_insn_h8500            (bfd_vma, disassemble_info*);
 int print_insn_arm_a64          (bfd_vma, disassemble_info*);
-int print_insn_alpha            (bfd_vma, disassemble_info*);
 disassembler_ftype arc_get_disassembler (int, int);
 int print_insn_arm              (bfd_vma, disassemble_info*);
-int print_insn_sparc            (bfd_vma, disassemble_info*);
 int print_insn_big_a29k         (bfd_vma, disassemble_info*);
 int print_insn_little_a29k      (bfd_vma, disassemble_info*);
 int print_insn_i960             (bfd_vma, disassemble_info*);
 int print_insn_sh               (bfd_vma, disassemble_info*);
 int print_insn_shl              (bfd_vma, disassemble_info*);
-int print_insn_hppa             (bfd_vma, disassemble_info*);
 int print_insn_m32r             (bfd_vma, disassemble_info*);
 int print_insn_m88k             (bfd_vma, disassemble_info*);
 int print_insn_mn10200          (bfd_vma, disassemble_info*);
 int print_insn_mn10300          (bfd_vma, disassemble_info*);
-int print_insn_moxie            (bfd_vma, disassemble_info*);
 int print_insn_ns32k            (bfd_vma, disassemble_info*);
-int print_insn_big_powerpc      (bfd_vma, disassemble_info*);
-int print_insn_little_powerpc   (bfd_vma, disassemble_info*);
 int print_insn_rs6000           (bfd_vma, disassemble_info*);
 int print_insn_w65              (bfd_vma, disassemble_info*);
 int print_insn_d10v             (bfd_vma, disassemble_info*);
 int print_insn_v850             (bfd_vma, disassemble_info*);
 int print_insn_tic30            (bfd_vma, disassemble_info*);
-int print_insn_ppc              (bfd_vma, disassemble_info*);
-int print_insn_s390             (bfd_vma, disassemble_info*);
-int print_insn_crisv32          (bfd_vma, disassemble_info*);
-int print_insn_crisv10          (bfd_vma, disassemble_info*);
-int print_insn_microblaze       (bfd_vma, disassemble_info*);
 int print_insn_ia64             (bfd_vma, disassemble_info*);
-int print_insn_lm32             (bfd_vma, disassemble_info*);
-int print_insn_big_nios2        (bfd_vma, disassemble_info*);
-int print_insn_little_nios2     (bfd_vma, disassemble_info*);
-int print_insn_xtensa           (bfd_vma, disassemble_info*);
-int print_insn_riscv32          (bfd_vma, disassemble_info*);
-int print_insn_riscv64          (bfd_vma, disassemble_info*);
 
-#if 0
-/* Fetch the disassembler for a given BFD, if that support is available.  */
-disassembler_ftype disassembler(bfd *);
-#endif
-
-
 /* This block of definitions is for particular callers who read instructions
    into a buffer before calling the instruction decoder.  */
 

@@ -852,7 +852,7 @@ ETEXI
 STEXI
 @item nmi @var{cpu}
 @findex nmi
-Inject an NMI on the default CPU (x86/s390) or all CPUs (ppc64).
+Inject an NMI on the default CPU (x86) or all CPUs (ppc64).
 
 ETEXI
 
@@ -1118,16 +1118,6 @@ gdb. Without -z|-l|-s, the dump format is ELF.
     length: the memory size, in bytes. It's optional, and should be specified
             together with begin.
 ETEXI
-
-#if defined(TARGET_S390X)
-    {
-        .name       = "dump-skeys",
-        .args_type  = "filename:F",
-        .params     = "",
-        .help       = "Save guest storage keys into file 'filename'.\n",
-        .cmd        = hmp_dump_skeys,
-    },
-#endif
 
 STEXI
 @item dump-skeys @var{filename}

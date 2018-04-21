@@ -122,9 +122,7 @@ int main(int argc, char **argv)
     qtest_add_func("/drive_del/without-dev", test_drive_without_dev);
 
     /* TODO I guess any arch with a hot-pluggable virtio bus would do */
-    if (!strcmp(arch, "i386") || !strcmp(arch, "x86_64") ||
-        !strcmp(arch, "ppc") || !strcmp(arch, "ppc64") ||
-        !strcmp(arch, "s390x")) {
+    if (!strcmp(arch, "i386") || !strcmp(arch, "x86_64")) {
         qtest_add_func("/drive_del/after_failed_device_add",
                        test_after_failed_device_add);
         qtest_add_func("/blockdev/drive_del_device_del",

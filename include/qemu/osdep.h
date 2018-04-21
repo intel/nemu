@@ -331,9 +331,6 @@ void qemu_anon_ram_free(void *ptr, size_t size);
       Valgrind does not support alignments larger than 1 MiB,
       therefore we need special code which handles running on Valgrind. */
 #  define QEMU_VMALLOC_ALIGN (512 * 4096)
-#elif defined(__linux__) && defined(__sparc__)
-#include <sys/shm.h>
-#  define QEMU_VMALLOC_ALIGN MAX(getpagesize(), SHMLBA)
 #else
 #  define QEMU_VMALLOC_ALIGN getpagesize()
 #endif

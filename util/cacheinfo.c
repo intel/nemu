@@ -68,19 +68,6 @@ static void arch_cache_info(int *isize, int *dsize)
     }
 }
 
-#elif defined(_ARCH_PPC) && defined(__linux__)
-# include "elf.h"
-
-static void arch_cache_info(int *isize, int *dsize)
-{
-    if (*isize == 0) {
-        *isize = qemu_getauxval(AT_ICACHEBSIZE);
-    }
-    if (*dsize == 0) {
-        *dsize = qemu_getauxval(AT_DCACHEBSIZE);
-    }
-}
-
 #else
 static void arch_cache_info(int *isize, int *dsize) { }
 #endif /* arch_cache_info */
@@ -101,15 +88,8 @@ static void fallback_cache_info(int *isize, int *dsize)
     } else if (*dsize) {
         *isize = *dsize;
     } else {
-#if defined(_ARCH_PPC)
-        /* For PPC, we're going to use the icache size computed for
-           flush_icache_range.  Which means that we must use the
-           architecture minimum.  */
-        *isize = *dsize = 16;
-#else
         /* Otherwise, 64 bytes is not uncommon.  */
         *isize = *dsize = 64;
-#endif
     }
 }
 

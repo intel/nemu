@@ -1,9 +1,5 @@
 common-obj-y += pam.o
 
-# PPC devices
-# NewWorld PowerMac
-# PowerPC E500 boards
-
 # ARM devices
 
 common-obj-$(CONFIG_PCI_PIIX) += piix.o

@@ -1375,10 +1375,6 @@ enum ethtool_fec_config_bits {
 #define ETHTOOL_GFECPARAM	0x00000050 /* Get FEC settings */
 #define ETHTOOL_SFECPARAM	0x00000051 /* Set FEC settings */
 
-/* compatibility with older code */
-#define SPARC_ETH_GSET		ETHTOOL_GSET
-#define SPARC_ETH_SSET		ETHTOOL_SSET
-
 /* Link mode bit indices */
 enum ethtool_link_mode_bit_indices {
 	ETHTOOL_LINK_MODE_10baseT_Half_BIT	= 0,

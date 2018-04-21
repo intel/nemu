@@ -2196,7 +2196,7 @@ fi
 fdt_required=no
 for target in $target_list; do
   case $target in
-    aarch64*-softmmu|arm*-softmmu|ppc*-softmmu|microblaze*-softmmu|mips64el-softmmu)
+    aarch64*-softmmu|arm*-softmmu)
       fdt_required=yes
     ;;
   esac
@@ -4030,9 +4030,6 @@ echo "Block whitelist (rw) $block_drv_rw_whitelist"
 echo "Block whitelist (ro) $block_drv_ro_whitelist"
 echo "VirtFS support    $virtfs"
 echo "Multipath support $mpath"
-if test -n "$sparc_cpu"; then
-    echo "Target Sparc Arch $sparc_cpu"
-fi
 echo "PIE               $pie"
 echo "vde support       $vde"
 echo "netmap support    $netmap"
@@ -4946,13 +4943,10 @@ fi
 # build tree in object directory in case the source is not in the current directory
 DIRS="tests tests/libqos tests/qapi-schema tests/qemu-iotests tests/vm"
 DIRS="$DIRS docs docs/interop fsdev scsi"
-DIRS="$DIRS pc-bios/optionrom pc-bios/spapr-rtas pc-bios/s390-ccw"
 DIRS="$DIRS roms/seabios roms/vgabios"
 FILES="Makefile qdict-test-data.txt"
 FILES="$FILES po/Makefile"
 FILES="$FILES pc-bios/optionrom/Makefile pc-bios/keymaps"
-FILES="$FILES pc-bios/spapr-rtas/Makefile"
-FILES="$FILES pc-bios/s390-ccw/Makefile"
 FILES="$FILES roms/seabios/Makefile roms/vgabios/Makefile"
 FILES="$FILES pc-bios/qemu-icon.bmp"
 FILES="$FILES .gdbinit scripts" # scripts needed by relative path in .gdbinit

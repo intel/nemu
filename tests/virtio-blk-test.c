@@ -11,7 +11,6 @@
 #include "qemu/osdep.h"
 #include "libqtest.h"
 #include "libqos/libqos-pc.h"
-#include "libqos/libqos-spapr.h"
 #include "libqos/virtio.h"
 #include "libqos/virtio-pci.h"
 #include "libqos/virtio-mmio.h"
@@ -71,10 +70,8 @@ static QOSState *pci_test_start(void)
 
     if (strcmp(arch, "i386") == 0 || strcmp(arch, "x86_64") == 0) {
         qs = qtest_pc_boot(cmd, tmp_path, PCI_SLOT, PCI_FN);
-    } else if (strcmp(arch, "ppc64") == 0) {
-        qs = qtest_spapr_boot(cmd, tmp_path, PCI_SLOT, PCI_FN);
     } else {
-        g_printerr("virtio-blk tests are only available on x86 or ppc64\n");
+        g_printerr("virtio-blk tests are only available on x86 \n");
         exit(EXIT_FAILURE);
     }
     global_qtest = qs->qts;
@@ -746,8 +743,7 @@ int main(int argc, char **argv)
 
     g_test_init(&argc, &argv, NULL);
 
-    if (strcmp(arch, "i386") == 0 || strcmp(arch, "x86_64") == 0 ||
-        strcmp(arch, "ppc64") == 0) {
+    if (strcmp(arch, "i386") == 0 || strcmp(arch, "x86_64") == 0) {
         qtest_add_func("/virtio/blk/pci/basic", pci_basic);
         qtest_add_func("/virtio/blk/pci/indirect", pci_indirect);
         qtest_add_func("/virtio/blk/pci/config", pci_config);

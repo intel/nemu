@@ -204,8 +204,6 @@ static int glue(elf_reloc, SZ)(struct elfhdr *ehdr, int fd, int must_swab,
     struct elf_shdr *reltab, *shdr_table = NULL;
     struct elf_rela *rels = NULL;
     int nrels, i, ret = -1;
-    elf_word wordval;
-    void *addr;
 
     shdr_table = load_at(fd, ehdr->e_shoff,
                          sizeof(struct elf_shdr) * ehdr->e_shnum);
@@ -235,26 +233,6 @@ static int glue(elf_reloc, SZ)(struct elfhdr *ehdr, int fd, int must_swab,
         if (rels[i].r_offset < ph->p_vaddr ||
             rels[i].r_offset >= ph->p_vaddr + ph->p_filesz) {
             continue;
-        }
-        addr = &data[rels[i].r_offset - ph->p_vaddr];
-        switch (elf_machine) {
-        case EM_S390:
-            switch (rels[i].r_info) {
-            case R_390_RELATIVE:
-                wordval = *(elf_word *)addr;
-                if (must_swab) {
-                    bswapSZs(&wordval);
-                }
-                wordval = translate_fn(translate_opaque, wordval);
-                if (must_swab) {
-                    bswapSZs(&wordval);
-                }
-                *(elf_word *)addr = wordval;
-                break;
-            default:
-                fprintf(stderr, "Unsupported relocation type %i!\n",
-                        (int)rels[i].r_info);
-            }
         }
     }
 
@@ -295,33 +273,9 @@ static int glue(load_elf, SZ)(const char *name, int fd,
     }
 
     switch (elf_machine) {
-        case EM_PPC64:
-            if (ehdr.e_machine != EM_PPC64) {
-                if (ehdr.e_machine != EM_PPC) {
-                    ret = ELF_LOAD_WRONG_ARCH;
-                    goto fail;
-                }
-            }
-            break;
         case EM_X86_64:
             if (ehdr.e_machine != EM_X86_64) {
                 if (ehdr.e_machine != EM_386) {
-                    ret = ELF_LOAD_WRONG_ARCH;
-                    goto fail;
-                }
-            }
-            break;
-        case EM_MICROBLAZE:
-            if (ehdr.e_machine != EM_MICROBLAZE) {
-                if (ehdr.e_machine != EM_MICROBLAZE_OLD) {
-                    ret = ELF_LOAD_WRONG_ARCH;
-                    goto fail;
-                }
-            }
-            break;
-        case EM_MOXIE:
-            if (ehdr.e_machine != EM_MOXIE) {
-                if (ehdr.e_machine != EM_MOXIE_OLD) {
                     ret = ELF_LOAD_WRONG_ARCH;
                     goto fail;
                 }

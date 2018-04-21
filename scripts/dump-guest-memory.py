@@ -45,9 +45,6 @@ PT_LOAD = 1
 PT_NOTE = 4
 
 EM_386 = 3
-EM_PPC = 20
-EM_PPC64 = 21
-EM_S390 = 22
 EM_AARCH = 183
 EM_X86_64 = 62
 
@@ -95,26 +92,10 @@ class ELF(object):
             self.ehdr = get_arch_ehdr(self.endianness, self.elfclass)
             self.ehdr.e_machine = EM_386
 
-        elif arch == 's390':
-            self.endianness = ELFDATA2MSB
-            self.ehdr = get_arch_ehdr(self.endianness, self.elfclass)
-            self.ehdr.e_machine = EM_S390
-
-        elif arch == 'ppc64-le':
-            self.endianness = ELFDATA2LSB
-            self.ehdr = get_arch_ehdr(self.endianness, self.elfclass)
-            self.ehdr.e_machine = EM_PPC64
-
-        elif arch == 'ppc64-be':
-            self.endianness = ELFDATA2MSB
-            self.ehdr = get_arch_ehdr(self.endianness, self.elfclass)
-            self.ehdr.e_machine = EM_PPC64
-
         else:
             raise gdb.GdbError("No valid arch type specified.\n"
                                "Currently supported types:\n"
-                               "aarch64-be, aarch64-le, X86_64, 386, s390, "
-                               "ppc64-be, ppc64-le")
+                               "aarch64-be, aarch64-le, X86_64, 386")
 
         self.add_segment(PT_NOTE, 0, 0)
 
@@ -482,8 +463,8 @@ command are not supported -- no attempt is made to get the guest's
 internal paging structures (ie. paging=false is hard-wired), and guest
 memory is always fully dumped.
 
-Currently aarch64-be, aarch64-le, X86_64, 386, s390, ppc64-be,
-ppc64-le guests are supported.
+Currently aarch64-be, aarch64-le, X86_64, 386,
+guests are supported.
 
 The CORE/NT_PRSTATUS and QEMU notes (that is, the VCPUs' statuses) are
 not written to the vmcore. Preparing these would require context that is

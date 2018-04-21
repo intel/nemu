@@ -271,30 +271,13 @@ void disas(FILE *out, void *code, unsigned long size)
     s.info.cap_mode = CS_MODE_64;
     s.info.cap_insn_unit = 1;
     s.info.cap_insn_split = 8;
-#elif defined(_ARCH_PPC)
-    s.info.disassembler_options = (char *)"any";
-    print_insn = print_insn_ppc;
-    s.info.cap_arch = CS_ARCH_PPC;
-#elif defined(__riscv__)
-    print_insn = print_insn_riscv;
 #elif defined(__aarch64__) && defined(CONFIG_ARM_A64_DIS)
     print_insn = print_insn_arm_a64;
     s.info.cap_arch = CS_ARCH_ARM64;
-#elif defined(__sparc__)
-    print_insn = print_insn_sparc;
-    s.info.mach = bfd_mach_sparc_v9b;
 #elif defined(__arm__)
     print_insn = print_insn_arm;
     s.info.cap_arch = CS_ARCH_ARM;
     /* TCG only generates code for arm mode.  */
-#elif defined(__MIPSEB__)
-    print_insn = print_insn_big_mips;
-#elif defined(__MIPSEL__)
-    print_insn = print_insn_little_mips;
-#elif defined(__m68k__)
-    print_insn = print_insn_m68k;
-#elif defined(__hppa__)
-    print_insn = print_insn_hppa;
 #endif
 
     if (s.info.cap_arch >= 0 && cap_disas_host(&s.info, code, size)) {

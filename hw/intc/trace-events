@@ -50,15 +50,6 @@ grlib_irqmp_set_irq(int irq) "Raise CPU IRQ %d"
 grlib_irqmp_readl_unknown(uint64_t addr) "addr 0x%"PRIx64
 grlib_irqmp_writel_unknown(uint64_t addr, uint32_t value) "addr 0x%"PRIx64" value 0x%x"
 
-# hw/intc/lm32_pic.c
-lm32_pic_raise_irq(void) "Raise CPU interrupt"
-lm32_pic_lower_irq(void) "Lower CPU interrupt"
-lm32_pic_interrupt(int irq, int level) "Set IRQ%d %d"
-lm32_pic_set_im(uint32_t im) "im 0x%08x"
-lm32_pic_set_ip(uint32_t ip) "ip 0x%08x"
-lm32_pic_get_im(uint32_t im) "im 0x%08x"
-lm32_pic_get_ip(uint32_t ip) "ip 0x%08x"
-
 # hw/intc/xics.c
 xics_icp_check_ipi(int server, uint8_t mfrr) "CPU %d can take IPI mfrr=0x%x"
 xics_icp_accept(uint32_t old_xirr, uint32_t new_xirr) "icp_accept: XIRR 0x%"PRIx32"->0x%"PRIx32
@@ -71,15 +62,6 @@ xics_ics_simple_set_irq_lsi(int srcno, int nr) "set_irq_lsi: srcno %d [irq 0x%x]
 xics_ics_simple_write_xive(int nr, int srcno, int server, uint8_t priority) "ics_write_xive: irq 0x%x [src %d] server 0x%x prio 0x%x"
 xics_ics_simple_reject(int nr, int srcno) "reject irq 0x%x [src %d]"
 xics_ics_simple_eoi(int nr) "ics_eoi: irq 0x%x"
-
-# hw/intc/s390_flic_kvm.c
-flic_create_device(int err) "flic: create device failed %d"
-flic_no_device_api(int err) "flic: no Device Contral API support %d"
-flic_reset_failed(int err) "flic: reset failed %d"
-
-# hw/intc/s390_flic.c
-qemu_s390_airq_suppressed(uint8_t type, uint8_t isc) "flic: adapter I/O interrupt suppressed (type 0x%x isc 0x%x)"
-qemu_s390_suppress_airq(uint8_t isc, const char *from, const char *to) "flic: for isc 0x%x, suppress airq by modifying ais mode from %s to %s"
 
 # hw/intc/aspeed_vic.c
 aspeed_vic_set_irq(int irq, int level) "Enabling IRQ %d: %d"

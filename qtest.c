@@ -28,9 +28,6 @@
 #include "qemu/option.h"
 #include "qemu/error-report.h"
 #include "qemu/cutils.h"
-#ifdef TARGET_PPC64
-#include "hw/ppc/spapr_rtas.h"
-#endif
 
 #define MAX_IRQ 256
 
@@ -572,25 +569,6 @@ static void qtest_process_command(CharBackend *chr, gchar **words)
         qtest_sendf(chr, "OK big\n");
 #else
         qtest_sendf(chr, "OK little\n");
-#endif
-#ifdef TARGET_PPC64
-    } else if (strcmp(words[0], "rtas") == 0) {
-        uint64_t res, args, ret;
-        unsigned long nargs, nret;
-        int rc;
-
-        rc = qemu_strtoul(words[2], NULL, 0, &nargs);
-        g_assert(rc == 0);
-        rc = qemu_strtou64(words[3], NULL, 0, &args);
-        g_assert(rc == 0);
-        rc = qemu_strtoul(words[4], NULL, 0, &nret);
-        g_assert(rc == 0);
-        rc = qemu_strtou64(words[5], NULL, 0, &ret);
-        g_assert(rc == 0);
-        res = qtest_rtas_call(words[1], nargs, args, nret, ret);
-
-        qtest_send_prefix(chr);
-        qtest_sendf(chr, "OK %"PRIu64"\n", res);
 #endif
     } else if (qtest_enabled() && strcmp(words[0], "clock_step") == 0) {
         int64_t ns;

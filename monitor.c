@@ -1141,17 +1141,15 @@ static void qmp_unregister_commands_hack(void)
     qmp_unregister_command(&qmp_commands, "query-sev-launch-measure");
     qmp_unregister_command(&qmp_commands, "query-sev-capabilities");
 #endif
-    qmp_unregister_command(&qmp_commands, "dump-skeys");
 #ifndef TARGET_ARM
     qmp_unregister_command(&qmp_commands, "query-gic-capabilities");
 #endif
-#if !defined(TARGET_S390X) && !defined(TARGET_I386)
+#if !defined(TARGET_I386)
     qmp_unregister_command(&qmp_commands, "query-cpu-model-expansion");
 #endif
     qmp_unregister_command(&qmp_commands, "query-cpu-model-baseline");
     qmp_unregister_command(&qmp_commands, "query-cpu-model-comparison");
-#if !defined(TARGET_PPC) && !defined(TARGET_ARM) && !defined(TARGET_I386) \
-    && !defined(TARGET_S390X)
+#if !defined(TARGET_ARM) && !defined(TARGET_I386)
     qmp_unregister_command(&qmp_commands, "query-cpu-definitions");
 #endif
 }
@@ -4675,11 +4673,6 @@ SevCapability *qmp_query_sev_capabilities(Error **errp)
     return NULL;
 }
 #endif
-
-void qmp_dump_skeys(const char *filename, Error **errp)
-{
-    error_setg(errp, QERR_FEATURE_DISABLED, "dump-skeys");
-}
 
 #ifndef TARGET_ARM
 GICCapabilityList *qmp_query_gic_capabilities(Error **errp)

@@ -359,8 +359,6 @@ const char *qvirtio_get_dev_type(void)
 
     if (g_str_equal(arch, "arm") || g_str_equal(arch, "aarch64")) {
         return "device";  /* for virtio-mmio */
-    } else if (g_str_equal(arch, "s390x")) {
-        return "ccw";
     } else {
         return "pci";
     }

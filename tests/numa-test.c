@@ -280,10 +280,6 @@ int main(int argc, char **argv)
         qtest_add_data_func("/numa/pc/cpu/explicit", args, pc_numa_cpu);
     }
 
-    if (!strcmp(arch, "ppc64")) {
-        qtest_add_data_func("/numa/spapr/cpu/explicit", args, spapr_numa_cpu);
-    }
-
     if (!strcmp(arch, "aarch64")) {
         qtest_add_data_func("/numa/aarch64/cpu/explicit", args,
                             aarch64_numa_cpu);

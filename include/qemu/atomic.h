@@ -99,7 +99,7 @@
  * Note that x32 is fully detected with __x64_64__ + _ILP32, and that for
  * Sparc we always force the use of sparcv9 in configure.
  */
-#if defined(__x86_64__) || defined(__sparc__)
+#if defined(__x86_64__)
 # define ATOMIC_REG_SIZE  8
 #else
 # define ATOMIC_REG_SIZE  sizeof(void *)
@@ -240,8 +240,7 @@
 #endif
 
 
-
-#if defined(__i386__) || defined(__x86_64__) || defined(__s390x__)
+#if defined(__i386__) || defined(__x86_64__)
 
 /*
  * Because of the strongly ordered storage model, wmb() and rmb() are nops
@@ -258,22 +257,7 @@
  */
 #define atomic_xchg(ptr, i)    (barrier(), __sync_lock_test_and_set(ptr, i))
 
-#elif defined(_ARCH_PPC)
-
-/*
- * We use an eieio() for wmb() on powerpc.  This assumes we don't
- * need to order cacheable and non-cacheable stores with respect to
- * each other.
- *
- * smp_mb has the same problem as on x86 for not-very-new GCC
- * (http://patchwork.ozlabs.org/patch/126184/, Nov 2011).
- */
-#define smp_wmb()          ({ asm volatile("eieio" ::: "memory"); (void)0; })
-#define smp_mb_release()   ({ asm volatile("sync" ::: "memory"); (void)0; })
-#define smp_mb_acquire()   ({ asm volatile("sync" ::: "memory"); (void)0; })
-#define smp_mb()           ({ asm volatile("sync" ::: "memory"); (void)0; })
-
-#endif /* _ARCH_PPC */
+#endif
 
 /*
  * For (host) platforms we don't have explicit barrier definitions
@@ -407,7 +391,7 @@
 
 /* This is more efficient than a store plus a fence.  */
 #if !defined(__SANITIZE_THREAD__)
-#if defined(__i386__) || defined(__x86_64__) || defined(__s390x__)
+#if defined(__i386__) || defined(__x86_64__)
 #define atomic_mb_set(ptr, i)  ((void)atomic_xchg(ptr, i))
 #endif
 #endif

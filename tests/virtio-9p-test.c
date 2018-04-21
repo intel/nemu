@@ -11,7 +11,6 @@
 #include "libqtest.h"
 #include "qemu-common.h"
 #include "libqos/libqos-pc.h"
-#include "libqos/libqos-spapr.h"
 #include "libqos/virtio.h"
 #include "libqos/virtio-pci.h"
 #include "standard-headers/linux/virtio_ids.h"

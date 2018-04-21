@@ -12,7 +12,6 @@
 #include "libqtest.h"
 #include "scsi/constants.h"
 #include "libqos/libqos-pc.h"
-#include "libqos/libqos-spapr.h"
 #include "libqos/virtio.h"
 #include "libqos/virtio-pci.h"
 #include "standard-headers/linux/virtio_ids.h"
@@ -42,10 +41,8 @@ static QOSState *qvirtio_scsi_start(const char *extra_opts)
 
     if (strcmp(arch, "i386") == 0 || strcmp(arch, "x86_64") == 0) {
         qs = qtest_pc_boot(cmd, extra_opts ? : "");
-    } else if (strcmp(arch, "ppc64") == 0) {
-        qs = qtest_spapr_boot(cmd, extra_opts ? : "");
     } else {
-        g_printerr("virtio-scsi tests are only available on x86 or ppc64\n");
+        g_printerr("virtio-scsi tests are only available on x86\n");
         exit(EXIT_FAILURE);
     }
     global_qtest = qs->qts;

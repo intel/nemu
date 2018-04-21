@@ -105,7 +105,6 @@
 #define PCI_BASE_CLASS_PROCESSOR         0x0b
 #define PCI_CLASS_PROCESSOR_PENTIUM      0x0b02
 #define PCI_CLASS_PROCESSOR_POWERPC      0x0b20
-#define PCI_CLASS_PROCESSOR_MIPS         0x0b30
 #define PCI_CLASS_PROCESSOR_CO           0x0b40
 
 #define PCI_BASE_CLASS_SERIAL            0x0c

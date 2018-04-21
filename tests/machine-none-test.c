@@ -29,34 +29,6 @@ static struct arch2cpu cpus_map[] = {
     { "aarch64", "cortex-a57" },
     { "x86_64", "qemu64,apic-id=0" },
     { "i386", "qemu32,apic-id=0" },
-    { "alpha", "ev67" },
-    { "cris", "crisv32" },
-    { "lm32", "lm32-full" },
-    { "m68k", "m5206" },
-    /* FIXME: { "microblaze", "any" }, doesn't work with -M none -cpu any */
-    /* FIXME: { "microblazeel", "any" }, doesn't work with -M none -cpu any */
-    { "mips", "4Kc" },
-    { "mipsel", "4Kc" },
-    { "mips64", "20Kc" },
-    { "mips64el", "20Kc" },
-    { "moxie", "MoxieLite" },
-    { "nios2", "FIXME" },
-    { "or1k", "or1200" },
-    { "ppc", "604" },
-    { "ppc64", "power8e_v2.1" },
-    { "ppcemb", "440epb" },
-    { "s390x", "qemu" },
-    { "sh4", "sh7750r" },
-    { "sh4eb", "sh7751r" },
-    { "sparc", "LEON2" },
-    { "sparc64", "Fujitsu Sparc64" },
-    { "tricore", "tc1796" },
-    { "unicore32", "UniCore-II" },
-    { "xtensa", "dc233c" },
-    { "xtensaeb", "fsf" },
-    { "hppa", "hppa" },
-    { "riscv64", "rv64gcsu-v1.10.0" },
-    { "riscv32", "rv32gcsu-v1.9.1" },
 };
 
 static const char *get_cpu_model_by_arch(const char *arch)
@@ -77,13 +49,6 @@ static void test_machine_cpu_cli(void)
     const char *arch = qtest_get_arch();
     const char *cpu_model = get_cpu_model_by_arch(arch);
 
-    if (!cpu_model) {
-        if (!(!strcmp(arch, "microblaze") || !strcmp(arch, "microblazeel"))) {
-            fprintf(stderr, "WARNING: cpu name for target '%s' isn't defined,"
-                    " add it to cpus_map\n", arch);
-        }
-        return; /* TODO: die here to force all targets have a test */
-    }
     global_qtest = qtest_startf("-machine none -cpu '%s'", cpu_model);
 
     response = qmp("{ 'execute': 'quit' }");

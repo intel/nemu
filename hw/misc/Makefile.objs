@@ -7,9 +7,5 @@ common-obj-y += unimp.o
 
 # PKUnity SoC devices
 
-
-
-
-
 obj-$(CONFIG_PVPANIC) += pvpanic.o
 obj-y += mmio_interface.o

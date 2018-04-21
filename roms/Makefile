@@ -18,8 +18,6 @@ find-cross-gcc = $(firstword $(wildcard $(patsubst %ld,%gcc,$(call find-cross-ld
 # finally strip off path + toolname so we get the prefix
 find-cross-prefix = $(subst gcc,,$(notdir $(call find-cross-gcc,$(1))))
 
-powerpc64_cross_prefix := $(call find-cross-prefix,powerpc64)
-powerpc_cross_prefix := $(call find-cross-prefix,powerpc)
 x86_64_cross_prefix := $(call find-cross-prefix,x86_64)
 
 # tag our seabios builds
@@ -98,27 +96,6 @@ build-efi-roms: build-pxe-roms
 		CROSS_COMPILE=$(x86_64_cross_prefix) \
 		$(patsubst %,bin-i386-efi/%.efidrv,$(pxerom_targets)) \
 		$(patsubst %,bin-x86_64-efi/%.efidrv,$(pxerom_targets))
-
-
-slof:
-	$(MAKE) -C SLOF CROSS=$(powerpc64_cross_prefix) qemu
-	cp SLOF/boot_rom.bin ../pc-bios/slof.bin
-
-u-boot.e500:
-	$(MAKE) -C u-boot O=build.e500 qemu-ppce500_config
-	$(MAKE) -C u-boot CROSS_COMPILE=$(powerpc_cross_prefix) \
-		O=build.e500
-	$(powerpc_cross_prefix)strip u-boot/build.e500/u-boot -o \
-		../pc-bios/u-boot.e500
-
-u-boot.sam460:
-	$(MAKE) -C u-boot-sam460ex Sam460ex_config
-	$(MAKE) -C u-boot-sam460ex CROSS_COMPILE=$(powerpc_cross_prefix)
-	cp u-boot-sam460ex/u-boot.bin ../pc-bios/u-boot-sam460-20100605.bin
-
-skiboot:
-	$(MAKE) -C skiboot CROSS=$(powerpc64_cross_prefix)
-	cp skiboot/skiboot.lid ../pc-bios/skiboot.lid
 
 clean:
 	rm -rf seabios/.config seabios/out seabios/builds

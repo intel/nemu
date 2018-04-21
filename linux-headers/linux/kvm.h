@@ -53,7 +53,6 @@
 #define KVM_TRC_GTLB_WRITE       (KVM_TRC_HANDLER + 0x16)
 #define KVM_TRC_STLB_WRITE       (KVM_TRC_HANDLER + 0x17)
 #define KVM_TRC_STLB_INVAL       (KVM_TRC_HANDLER + 0x18)
-#define KVM_TRC_PPC_INSTR        (KVM_TRC_HANDLER + 0x19)
 
 struct kvm_user_trace_setup {
 	__u32 buf_size;
@@ -148,43 +147,6 @@ struct kvm_pit_config {
 
 #define KVM_PIT_SPEAKER_DUMMY     1
 
-struct kvm_s390_skeys {
-	__u64 start_gfn;
-	__u64 count;
-	__u64 skeydata_addr;
-	__u32 flags;
-	__u32 reserved[9];
-};
-
-#define KVM_S390_CMMA_PEEK (1 << 0)
-
-/**
- * kvm_s390_cmma_log - Used for CMMA migration.
- *
- * Used both for input and output.
- *
- * @start_gfn: Guest page number to start from.
- * @count: Size of the result buffer.
- * @flags: Control operation mode via KVM_S390_CMMA_* flags
- * @remaining: Used with KVM_S390_GET_CMMA_BITS. Indicates how many dirty
- *             pages are still remaining.
- * @mask: Used with KVM_S390_SET_CMMA_BITS. Bitmap of bits to actually set
- *        in the PGSTE.
- * @values: Pointer to the values buffer.
- *
- * Used in KVM_S390_{G,S}ET_CMMA_BITS ioctls.
- */
-struct kvm_s390_cmma_log {
-	__u64 start_gfn;
-	__u32 count;
-	__u32 flags;
-	union {
-		__u64 remaining;
-		__u64 mask;
-	};
-	__u64 values;
-};
-
 struct kvm_hyperv_exit {
 #define KVM_EXIT_HYPERV_SYNIC          1
 #define KVM_EXIT_HYPERV_HCALL          2
@@ -204,9 +166,6 @@ struct kvm_hyperv_exit {
 	} u;
 };
 
-#define KVM_S390_GET_SKEYS_NONE   1
-#define KVM_S390_SKEYS_MAX        1048576
-
 #define KVM_EXIT_UNKNOWN          0
 #define KVM_EXIT_EXCEPTION        1
 #define KVM_EXIT_IO               2
@@ -220,19 +179,14 @@ struct kvm_hyperv_exit {
 #define KVM_EXIT_INTR             10
 #define KVM_EXIT_SET_TPR          11
 #define KVM_EXIT_TPR_ACCESS       12
-#define KVM_EXIT_S390_SIEIC       13
-#define KVM_EXIT_S390_RESET       14
 #define KVM_EXIT_DCR              15 /* deprecated */
 #define KVM_EXIT_NMI              16
 #define KVM_EXIT_INTERNAL_ERROR   17
 #define KVM_EXIT_OSI              18
 #define KVM_EXIT_PAPR_HCALL	  19
-#define KVM_EXIT_S390_UCONTROL	  20
 #define KVM_EXIT_WATCHDOG         21
-#define KVM_EXIT_S390_TSCH        22
 #define KVM_EXIT_EPR              23
 #define KVM_EXIT_SYSTEM_EVENT     24
-#define KVM_EXIT_S390_STSI        25
 #define KVM_EXIT_IOAPIC_EOI       26
 #define KVM_EXIT_HYPERV           27
 
@@ -261,11 +215,6 @@ struct kvm_run {
 	__u64 cr8;
 	__u64 apic_base;
 
-#ifdef __KVM_S390
-	/* the processor status word for s390 */
-	__u64 psw_mask; /* psw upper half */
-	__u64 psw_addr; /* psw lower half */
-#endif
 	union {
 		/* KVM_EXIT_UNKNOWN */
 		struct {
@@ -315,24 +264,6 @@ struct kvm_run {
 			__u32 is_write;
 			__u32 pad;
 		} tpr_access;
-		/* KVM_EXIT_S390_SIEIC */
-		struct {
-			__u8 icptcode;
-			__u16 ipa;
-			__u32 ipb;
-		} s390_sieic;
-		/* KVM_EXIT_S390_RESET */
-#define KVM_S390_RESET_POR       1
-#define KVM_S390_RESET_CLEAR     2
-#define KVM_S390_RESET_SUBSYSTEM 4
-#define KVM_S390_RESET_CPU_INIT  8
-#define KVM_S390_RESET_IPL       16
-		__u64 s390_reset_flags;
-		/* KVM_EXIT_S390_UCONTROL */
-		struct {
-			__u64 trans_exc_code;
-			__u32 pgm_code;
-		} s390_ucontrol;
 		/* KVM_EXIT_DCR (deprecated) */
 		struct {
 			__u32 dcrn;
@@ -356,15 +287,6 @@ struct kvm_run {
 			__u64 ret;
 			__u64 args[9];
 		} papr_hcall;
-		/* KVM_EXIT_S390_TSCH */
-		struct {
-			__u16 subchannel_id;
-			__u16 subchannel_nr;
-			__u32 io_int_parm;
-			__u32 io_int_word;
-			__u32 ipb;
-			__u8 dequeued;
-		} s390_tsch;
 		/* KVM_EXIT_EPR */
 		struct {
 			__u32 epr;
@@ -377,15 +299,6 @@ struct kvm_run {
 			__u32 type;
 			__u64 flags;
 		} system_event;
-		/* KVM_EXIT_S390_STSI */
-		struct {
-			__u64 addr;
-			__u8 ar;
-			__u8 reserved;
-			__u8 fc;
-			__u8 sel1;
-			__u16 sel2;
-		} s390_stsi;
 		/* KVM_EXIT_IOAPIC_EOI */
 		struct {
 			__u8 vector;
@@ -448,24 +361,6 @@ struct kvm_translation {
 	__u8  pad[5];
 };
 
-/* for KVM_S390_MEM_OP */
-struct kvm_s390_mem_op {
-	/* in */
-	__u64 gaddr;		/* the guest address */
-	__u64 flags;		/* flags */
-	__u32 size;		/* amount of bytes */
-	__u32 op;		/* type of operation */
-	__u64 buf;		/* buffer in userspace */
-	__u8 ar;		/* the access register number */
-	__u8 reserved[31];	/* should be set to 0 */
-};
-/* types for kvm_s390_mem_op->op */
-#define KVM_S390_MEMOP_LOGICAL_READ	0
-#define KVM_S390_MEMOP_LOGICAL_WRITE	1
-/* flags for kvm_s390_mem_op->flags */
-#define KVM_S390_MEMOP_F_CHECK_ONLY		(1ULL << 0)
-#define KVM_S390_MEMOP_F_INJECT_EXCEPTION	(1ULL << 1)
-
 /* for KVM_INTERRUPT */
 struct kvm_interrupt {
 	/* in */
@@ -517,124 +412,6 @@ struct kvm_mp_state {
 	__u32 mp_state;
 };
 
-struct kvm_s390_psw {
-	__u64 mask;
-	__u64 addr;
-};
-
-/* valid values for type in kvm_s390_interrupt */
-#define KVM_S390_SIGP_STOP		0xfffe0000u
-#define KVM_S390_PROGRAM_INT		0xfffe0001u
-#define KVM_S390_SIGP_SET_PREFIX	0xfffe0002u
-#define KVM_S390_RESTART		0xfffe0003u
-#define KVM_S390_INT_PFAULT_INIT	0xfffe0004u
-#define KVM_S390_INT_PFAULT_DONE	0xfffe0005u
-#define KVM_S390_MCHK			0xfffe1000u
-#define KVM_S390_INT_CLOCK_COMP		0xffff1004u
-#define KVM_S390_INT_CPU_TIMER		0xffff1005u
-#define KVM_S390_INT_VIRTIO		0xffff2603u
-#define KVM_S390_INT_SERVICE		0xffff2401u
-#define KVM_S390_INT_EMERGENCY		0xffff1201u
-#define KVM_S390_INT_EXTERNAL_CALL	0xffff1202u
-/* Anything below 0xfffe0000u is taken by INT_IO */
-#define KVM_S390_INT_IO(ai,cssid,ssid,schid)   \
-	(((schid)) |			       \
-	 ((ssid) << 16) |		       \
-	 ((cssid) << 18) |		       \
-	 ((ai) << 26))
-#define KVM_S390_INT_IO_MIN		0x00000000u
-#define KVM_S390_INT_IO_MAX		0xfffdffffu
-#define KVM_S390_INT_IO_AI_MASK		0x04000000u
-
-
-struct kvm_s390_interrupt {
-	__u32 type;
-	__u32 parm;
-	__u64 parm64;
-};
-
-struct kvm_s390_io_info {
-	__u16 subchannel_id;
-	__u16 subchannel_nr;
-	__u32 io_int_parm;
-	__u32 io_int_word;
-};
-
-struct kvm_s390_ext_info {
-	__u32 ext_params;
-	__u32 pad;
-	__u64 ext_params2;
-};
-
-struct kvm_s390_pgm_info {
-	__u64 trans_exc_code;
-	__u64 mon_code;
-	__u64 per_address;
-	__u32 data_exc_code;
-	__u16 code;
-	__u16 mon_class_nr;
-	__u8 per_code;
-	__u8 per_atmid;
-	__u8 exc_access_id;
-	__u8 per_access_id;
-	__u8 op_access_id;
-#define KVM_S390_PGM_FLAGS_ILC_VALID	0x01
-#define KVM_S390_PGM_FLAGS_ILC_0	0x02
-#define KVM_S390_PGM_FLAGS_ILC_1	0x04
-#define KVM_S390_PGM_FLAGS_ILC_MASK	0x06
-#define KVM_S390_PGM_FLAGS_NO_REWIND	0x08
-	__u8 flags;
-	__u8 pad[2];
-};
-
-struct kvm_s390_prefix_info {
-	__u32 address;
-};
-
-struct kvm_s390_extcall_info {
-	__u16 code;
-};
-
-struct kvm_s390_emerg_info {
-	__u16 code;
-};
-
-#define KVM_S390_STOP_FLAG_STORE_STATUS	0x01
-struct kvm_s390_stop_info {
-	__u32 flags;
-};
-
-struct kvm_s390_mchk_info {
-	__u64 cr14;
-	__u64 mcic;
-	__u64 failing_storage_address;
-	__u32 ext_damage_code;
-	__u32 pad;
-	__u8 fixed_logout[16];
-};
-
-struct kvm_s390_irq {
-	__u64 type;
-	union {
-		struct kvm_s390_io_info io;
-		struct kvm_s390_ext_info ext;
-		struct kvm_s390_pgm_info pgm;
-		struct kvm_s390_emerg_info emerg;
-		struct kvm_s390_extcall_info extcall;
-		struct kvm_s390_prefix_info prefix;
-		struct kvm_s390_stop_info stop;
-		struct kvm_s390_mchk_info mchk;
-		char reserved[64];
-	} u;
-};
-
-struct kvm_s390_irq_state {
-	__u64 buf;
-	__u32 flags;        /* will stay unused for compatibility reasons */
-	__u32 len;
-	__u32 reserved[4];  /* will stay unused for compatibility reasons */
-};
-
 /* for KVM_SET_GUEST_DEBUG */
 
 #define KVM_GUESTDBG_ENABLE		0x00000001
@@ -681,63 +458,9 @@ struct kvm_enable_cap {
 	__u8  pad[64];
 };
 
-/* for KVM_PPC_GET_PVINFO */
-
-#define KVM_PPC_PVINFO_FLAGS_EV_IDLE   (1<<0)
-
-struct kvm_ppc_pvinfo {
-	/* out */
-	__u32 flags;
-	__u32 hcall[4];
-	__u8  pad[108];
-};
-
-/* for KVM_PPC_GET_SMMU_INFO */
-#define KVM_PPC_PAGE_SIZES_MAX_SZ	8
-
-struct kvm_ppc_one_page_size {
-	__u32 page_shift;	/* Page shift (or 0) */
-	__u32 pte_enc;		/* Encoding in the HPTE (>>12) */
-};
-
-struct kvm_ppc_one_seg_page_size {
-	__u32 page_shift;	/* Base page shift of segment (or 0) */
-	__u32 slb_enc;		/* SLB encoding for BookS */
-	struct kvm_ppc_one_page_size enc[KVM_PPC_PAGE_SIZES_MAX_SZ];
-};
-
-#define KVM_PPC_PAGE_SIZES_REAL		0x00000001
-#define KVM_PPC_1T_SEGMENTS		0x00000002
-
-struct kvm_ppc_smmu_info {
-	__u64 flags;
-	__u32 slb_size;
-	__u16 data_keys;	/* # storage keys supported for data */
-	__u16 instr_keys;	/* # storage keys supported for instructions */
-	struct kvm_ppc_one_seg_page_size sps[KVM_PPC_PAGE_SIZES_MAX_SZ];
-};
-
-/* for KVM_PPC_RESIZE_HPT_{PREPARE,COMMIT} */
-struct kvm_ppc_resize_hpt {
-	__u64 flags;
-	__u32 shift;
-	__u32 pad;
-};
-
 #define KVMIO 0xAE
 
 /* machine type bits, to be used as argument to KVM_CREATE_VM */
-#define KVM_VM_S390_UCONTROL	1
-
-/* on ppc, 0 indicate default, 1 should force HV and 2 PR */
-#define KVM_VM_PPC_HV 1
-#define KVM_VM_PPC_PR 2
-
-/* on MIPS, 0 forces trap & emulate, 1 forces VZ ASE */
-#define KVM_VM_MIPS_TE		0
-#define KVM_VM_MIPS_VZ		1
-
-#define KVM_S390_SIE_PAGE_OFFSET 1
 
 /*
  * ioctls for /dev/kvm fds:
@@ -746,7 +469,6 @@ struct kvm_ppc_resize_hpt {
 #define KVM_CREATE_VM             _IO(KVMIO,   0x01) /* returns a VM fd */
 #define KVM_GET_MSR_INDEX_LIST    _IOWR(KVMIO, 0x02, struct kvm_msr_list)
 
-#define KVM_S390_ENABLE_SIE       _IO(KVMIO,   0x06)
 /*
  * Check if a kvm extension is available.  Argument is extension number,
  * return is 1 (yes) or 0 (no, sorry).
@@ -815,20 +537,15 @@ struct kvm_ppc_resize_hpt {
 #ifdef __KVM_HAVE_VCPU_EVENTS
 #define KVM_CAP_VCPU_EVENTS 41
 #endif
-#define KVM_CAP_S390_PSW 42
-#define KVM_CAP_PPC_SEGSTATE 43
 #define KVM_CAP_HYPERV 44
 #define KVM_CAP_HYPERV_VAPIC 45
 #define KVM_CAP_HYPERV_SPIN 46
 #define KVM_CAP_PCI_SEGMENT 47
-#define KVM_CAP_PPC_PAIRED_SINGLES 48
 #define KVM_CAP_INTR_SHADOW 49
 #ifdef __KVM_HAVE_DEBUGREGS
 #define KVM_CAP_DEBUGREGS 50
 #endif
 #define KVM_CAP_X86_ROBUST_SINGLESTEP 51
-#define KVM_CAP_PPC_OSI 52
-#define KVM_CAP_PPC_UNSET_IRQ 53
 #define KVM_CAP_ENABLE_CAP 54
 #ifdef __KVM_HAVE_XSAVE
 #define KVM_CAP_XSAVE 55
@@ -836,41 +553,24 @@ struct kvm_ppc_resize_hpt {
 #ifdef __KVM_HAVE_XCRS
 #define KVM_CAP_XCRS 56
 #endif
-#define KVM_CAP_PPC_GET_PVINFO 57
-#define KVM_CAP_PPC_IRQ_LEVEL 58
 #define KVM_CAP_ASYNC_PF 59
 #define KVM_CAP_TSC_CONTROL 60
 #define KVM_CAP_GET_TSC_KHZ 61
-#define KVM_CAP_PPC_BOOKE_SREGS 62
 #define KVM_CAP_SPAPR_TCE 63
-#define KVM_CAP_PPC_SMT 64
-#define KVM_CAP_PPC_RMA	65
 #define KVM_CAP_MAX_VCPUS 66       /* returns max vcpus per vm */
-#define KVM_CAP_PPC_HIOR 67
-#define KVM_CAP_PPC_PAPR 68
 #define KVM_CAP_SW_TLB 69
 #define KVM_CAP_ONE_REG 70
-#define KVM_CAP_S390_GMAP 71
 #define KVM_CAP_TSC_DEADLINE_TIMER 72
-#define KVM_CAP_S390_UCONTROL 73
 #define KVM_CAP_SYNC_REGS 74
 #define KVM_CAP_PCI_2_3 75
 #define KVM_CAP_KVMCLOCK_CTRL 76
 #define KVM_CAP_SIGNAL_MSI 77
-#define KVM_CAP_PPC_GET_SMMU_INFO 78
-#define KVM_CAP_S390_COW 79
-#define KVM_CAP_PPC_ALLOC_HTAB 80
 #define KVM_CAP_READONLY_MEM 81
 #define KVM_CAP_IRQFD_RESAMPLE 82
-#define KVM_CAP_PPC_BOOKE_WATCHDOG 83
-#define KVM_CAP_PPC_HTAB_FD 84
-#define KVM_CAP_S390_CSS_SUPPORT 85
-#define KVM_CAP_PPC_EPR 86
 #define KVM_CAP_ARM_PSCI 87
 #define KVM_CAP_ARM_SET_DEVICE_ADDR 88
 #define KVM_CAP_DEVICE_CTRL 89
 #define KVM_CAP_IRQ_MPIC 90
-#define KVM_CAP_PPC_RTAS 91
 #define KVM_CAP_IRQ_XICS 92
 #define KVM_CAP_ARM_EL1_32BIT 93
 #define KVM_CAP_SPAPR_MULTITCE 94
@@ -878,23 +578,10 @@ struct kvm_ppc_resize_hpt {
 #define KVM_CAP_HYPERV_TIME 96
 #define KVM_CAP_IOAPIC_POLARITY_IGNORED 97
 #define KVM_CAP_ENABLE_CAP_VM 98
-#define KVM_CAP_S390_IRQCHIP 99
 #define KVM_CAP_IOEVENTFD_NO_LENGTH 100
 #define KVM_CAP_VM_ATTRIBUTES 101
 #define KVM_CAP_ARM_PSCI_0_2 102
-#define KVM_CAP_PPC_FIXUP_HCALL 103
-#define KVM_CAP_PPC_ENABLE_HCALL 104
 #define KVM_CAP_CHECK_EXTENSION_VM 105
-#define KVM_CAP_S390_USER_SIGP 106
-#define KVM_CAP_S390_VECTOR_REGISTERS 107
-#define KVM_CAP_S390_MEM_OP 108
-#define KVM_CAP_S390_USER_STSI 109
-#define KVM_CAP_S390_SKEYS 110
-#define KVM_CAP_MIPS_FPU 111
-#define KVM_CAP_MIPS_MSA 112
-#define KVM_CAP_S390_INJECT_IRQ 113
-#define KVM_CAP_S390_IRQ_STATE 114
-#define KVM_CAP_PPC_HWRNG 115
 #define KVM_CAP_DISABLE_QUIRKS 116
 #define KVM_CAP_X86_SMM 117
 #define KVM_CAP_MULTI_ADDRESS_SPACE 118
@@ -903,35 +590,19 @@ struct kvm_ppc_resize_hpt {
 #define KVM_CAP_SPLIT_IRQCHIP 121
 #define KVM_CAP_IOEVENTFD_ANY_LENGTH 122
 #define KVM_CAP_HYPERV_SYNIC 123
-#define KVM_CAP_S390_RI 124
 #define KVM_CAP_SPAPR_TCE_64 125
 #define KVM_CAP_ARM_PMU_V3 126
 #define KVM_CAP_VCPU_ATTRIBUTES 127
 #define KVM_CAP_MAX_VCPU_ID 128
 #define KVM_CAP_X2APIC_API 129
-#define KVM_CAP_S390_USER_INSTR0 130
 #define KVM_CAP_MSI_DEVID 131
-#define KVM_CAP_PPC_HTM 132
 #define KVM_CAP_SPAPR_RESIZE_HPT 133
-#define KVM_CAP_PPC_MMU_RADIX 134
-#define KVM_CAP_PPC_MMU_HASH_V3 135
 #define KVM_CAP_IMMEDIATE_EXIT 136
-#define KVM_CAP_MIPS_VZ 137
-#define KVM_CAP_MIPS_TE 138
-#define KVM_CAP_MIPS_64BIT 139
-#define KVM_CAP_S390_GS 140
-#define KVM_CAP_S390_AIS 141
 #define KVM_CAP_SPAPR_TCE_VFIO 142
 #define KVM_CAP_X86_GUEST_MWAIT 143
 #define KVM_CAP_ARM_USER_IRQ 144
-#define KVM_CAP_S390_CMMA_MIGRATION 145
-#define KVM_CAP_PPC_FWNMI 146
-#define KVM_CAP_PPC_SMT_POSSIBLE 147
 #define KVM_CAP_HYPERV_SYNIC2 148
 #define KVM_CAP_HYPERV_VP_INDEX 149
-#define KVM_CAP_S390_AIS_MIGRATION 150
-#define KVM_CAP_PPC_GET_CPU_CHAR 151
-#define KVM_CAP_S390_BPB 152
 #define KVM_CAP_GET_MSR_FEATURES 153
 
 #ifdef KVM_CAP_IRQ_ROUTING
@@ -951,14 +622,6 @@ struct kvm_irq_routing_msi {
 	};
 };
 
-struct kvm_irq_routing_s390_adapter {
-	__u64 ind_addr;
-	__u64 summary_addr;
-	__u64 ind_offset;
-	__u32 summary_offset;
-	__u32 adapter_id;
-};
-
 struct kvm_irq_routing_hv_sint {
 	__u32 vcpu;
 	__u32 sint;
@@ -967,7 +630,6 @@ struct kvm_irq_routing_hv_sint {
 /* gsi routing entry types */
 #define KVM_IRQ_ROUTING_IRQCHIP 1
 #define KVM_IRQ_ROUTING_MSI 2
-#define KVM_IRQ_ROUTING_S390_ADAPTER 3
 #define KVM_IRQ_ROUTING_HV_SINT 4
 
 struct kvm_irq_routing_entry {
@@ -978,7 +640,6 @@ struct kvm_irq_routing_entry {
 	union {
 		struct kvm_irq_routing_irqchip irqchip;
 		struct kvm_irq_routing_msi msi;
-		struct kvm_irq_routing_s390_adapter adapter;
 		struct kvm_irq_routing_hv_sint hv_sint;
 		__u32 pad[8];
 	} u;
@@ -1060,13 +721,10 @@ struct kvm_dirty_tlb {
  * Architecture specific registers are to be defined in arch headers and
  * ORed with the arch identifier.
  */
-#define KVM_REG_PPC		0x1000000000000000ULL
 #define KVM_REG_X86		0x2000000000000000ULL
 #define KVM_REG_IA64		0x3000000000000000ULL
 #define KVM_REG_ARM		0x4000000000000000ULL
-#define KVM_REG_S390		0x5000000000000000ULL
 #define KVM_REG_ARM64		0x6000000000000000ULL
-#define KVM_REG_MIPS		0x7000000000000000ULL
 
 #define KVM_REG_SIZE_SHIFT	52
 #define KVM_REG_SIZE_MASK	0x00f0000000000000ULL
@@ -1171,16 +829,6 @@ struct kvm_vfio_spapr_tce {
 #define KVM_SET_TSS_ADDR          _IO(KVMIO,   0x47)
 #define KVM_SET_IDENTITY_MAP_ADDR _IOW(KVMIO,  0x48, __u64)
 
-/* enable ucontrol for s390 */
-struct kvm_s390_ucas_mapping {
-	__u64 user_addr;
-	__u64 vcpu_addr;
-	__u64 length;
-};
-#define KVM_S390_UCAS_MAP        _IOW(KVMIO, 0x50, struct kvm_s390_ucas_mapping)
-#define KVM_S390_UCAS_UNMAP      _IOW(KVMIO, 0x51, struct kvm_s390_ucas_mapping)
-#define KVM_S390_VCPU_FAULT	 _IOW(KVMIO, 0x52, unsigned long)
-
 /* Device model IOC */
 #define KVM_CREATE_IRQCHIP        _IO(KVMIO,   0x60)
 #define KVM_IRQ_LINE              _IOW(KVMIO,  0x61, struct kvm_irq_level)
@@ -1217,8 +865,6 @@ struct kvm_s390_ucas_mapping {
 /* Available with KVM_CAP_PIT_STATE2 */
 #define KVM_GET_PIT2              _IOR(KVMIO,  0x9f, struct kvm_pit_state2)
 #define KVM_SET_PIT2              _IOW(KVMIO,  0xa0, struct kvm_pit_state2)
-/* Available with KVM_CAP_PPC_GET_PVINFO */
-#define KVM_PPC_GET_PVINFO	  _IOW(KVMIO,  0xa1, struct kvm_ppc_pvinfo)
 /* Available with KVM_CAP_TSC_CONTROL */
 #define KVM_SET_TSC_KHZ           _IO(KVMIO,  0xa2)
 #define KVM_GET_TSC_KHZ           _IO(KVMIO,  0xa3)
@@ -1227,30 +873,14 @@ struct kvm_s390_ucas_mapping {
 				       struct kvm_assigned_pci_dev)
 /* Available with KVM_CAP_SIGNAL_MSI */
 #define KVM_SIGNAL_MSI            _IOW(KVMIO,  0xa5, struct kvm_msi)
-/* Available with KVM_CAP_PPC_GET_SMMU_INFO */
-#define KVM_PPC_GET_SMMU_INFO	  _IOR(KVMIO,  0xa6, struct kvm_ppc_smmu_info)
-/* Available with KVM_CAP_PPC_ALLOC_HTAB */
-#define KVM_PPC_ALLOCATE_HTAB	  _IOWR(KVMIO, 0xa7, __u32)
 #define KVM_CREATE_SPAPR_TCE	  _IOW(KVMIO,  0xa8, struct kvm_create_spapr_tce)
 #define KVM_CREATE_SPAPR_TCE_64	  _IOW(KVMIO,  0xa8, \
 				       struct kvm_create_spapr_tce_64)
 /* Available with KVM_CAP_RMA */
 #define KVM_ALLOCATE_RMA	  _IOR(KVMIO,  0xa9, struct kvm_allocate_rma)
-/* Available with KVM_CAP_PPC_HTAB_FD */
-#define KVM_PPC_GET_HTAB_FD	  _IOW(KVMIO,  0xaa, struct kvm_get_htab_fd)
 /* Available with KVM_CAP_ARM_SET_DEVICE_ADDR */
 #define KVM_ARM_SET_DEVICE_ADDR	  _IOW(KVMIO,  0xab, struct kvm_arm_device_addr)
-/* Available with KVM_CAP_PPC_RTAS */
-#define KVM_PPC_RTAS_DEFINE_TOKEN _IOW(KVMIO,  0xac, struct kvm_rtas_token_args)
 /* Available with KVM_CAP_SPAPR_RESIZE_HPT */
-#define KVM_PPC_RESIZE_HPT_PREPARE _IOR(KVMIO, 0xad, struct kvm_ppc_resize_hpt)
-#define KVM_PPC_RESIZE_HPT_COMMIT  _IOR(KVMIO, 0xae, struct kvm_ppc_resize_hpt)
-/* Available with KVM_CAP_PPC_RADIX_MMU or KVM_CAP_PPC_HASH_MMU_V3 */
-#define KVM_PPC_CONFIGURE_V3_MMU  _IOW(KVMIO,  0xaf, struct kvm_ppc_mmuv3_cfg)
-/* Available with KVM_CAP_PPC_RADIX_MMU */
-#define KVM_PPC_GET_RMMU_INFO	  _IOW(KVMIO,  0xb0, struct kvm_ppc_rmmu_info)
-/* Available with KVM_CAP_PPC_GET_CPU_CHAR */
-#define KVM_PPC_GET_CPU_CHAR	  _IOR(KVMIO,  0xb1, struct kvm_ppc_cpu_char)
 
 /* ioctl for vm fd */
 #define KVM_CREATE_DEVICE	  _IOWR(KVMIO,  0xe0, struct kvm_create_device)
@@ -1287,15 +917,6 @@ struct kvm_s390_ucas_mapping {
 /* Available with KVM_CAP_VAPIC */
 #define KVM_SET_VAPIC_ADDR        _IOW(KVMIO,  0x93, struct kvm_vapic_addr)
 /* valid for virtual machine (for floating interrupt)_and_ vcpu */
-#define KVM_S390_INTERRUPT        _IOW(KVMIO,  0x94, struct kvm_s390_interrupt)
-/* store status for s390 */
-#define KVM_S390_STORE_STATUS_NOADDR    (-1ul)
-#define KVM_S390_STORE_STATUS_PREFIXED  (-2ul)
-#define KVM_S390_STORE_STATUS	  _IOW(KVMIO,  0x95, unsigned long)
-/* initial ipl psw for s390 */
-#define KVM_S390_SET_INITIAL_PSW  _IOW(KVMIO,  0x96, struct kvm_s390_psw)
-/* initial reset for s390 */
-#define KVM_S390_INITIAL_RESET    _IO(KVMIO,   0x97)
 #define KVM_GET_MP_STATE          _IOR(KVMIO,  0x98, struct kvm_mp_state)
 #define KVM_SET_MP_STATE          _IOW(KVMIO,  0x99, struct kvm_mp_state)
 /* Available with KVM_CAP_USER_NMI */
@@ -1333,21 +954,8 @@ struct kvm_s390_ucas_mapping {
 #define KVM_ARM_VCPU_INIT	  _IOW(KVMIO,  0xae, struct kvm_vcpu_init)
 #define KVM_ARM_PREFERRED_TARGET  _IOR(KVMIO,  0xaf, struct kvm_vcpu_init)
 #define KVM_GET_REG_LIST	  _IOWR(KVMIO, 0xb0, struct kvm_reg_list)
-/* Available with KVM_CAP_S390_MEM_OP */
-#define KVM_S390_MEM_OP		  _IOW(KVMIO,  0xb1, struct kvm_s390_mem_op)
-/* Available with KVM_CAP_S390_SKEYS */
-#define KVM_S390_GET_SKEYS      _IOW(KVMIO, 0xb2, struct kvm_s390_skeys)
-#define KVM_S390_SET_SKEYS      _IOW(KVMIO, 0xb3, struct kvm_s390_skeys)
-/* Available with KVM_CAP_S390_INJECT_IRQ */
-#define KVM_S390_IRQ              _IOW(KVMIO,  0xb4, struct kvm_s390_irq)
-/* Available with KVM_CAP_S390_IRQ_STATE */
-#define KVM_S390_SET_IRQ_STATE	  _IOW(KVMIO, 0xb5, struct kvm_s390_irq_state)
-#define KVM_S390_GET_IRQ_STATE	  _IOW(KVMIO, 0xb6, struct kvm_s390_irq_state)
 /* Available with KVM_CAP_X86_SMM */
 #define KVM_SMI                   _IO(KVMIO,   0xb7)
-/* Available with KVM_CAP_S390_CMMA_MIGRATION */
-#define KVM_S390_GET_CMMA_BITS      _IOWR(KVMIO, 0xb8, struct kvm_s390_cmma_log)
-#define KVM_S390_SET_CMMA_BITS      _IOW(KVMIO, 0xb9, struct kvm_s390_cmma_log)
 /* Memory Encryption Commands */
 #define KVM_MEMORY_ENCRYPT_OP      _IOWR(KVMIO, 0xba, unsigned long)
 

@@ -15,7 +15,6 @@ struct sysinfo {
 	unsigned long totalswap;	/* Total swap space size */
 	unsigned long freeswap;	/* swap space still available */
 	uint16_t procs;		   	/* Number of current processes */
-	uint16_t pad;		   	/* Explicit padding for m68k */
 	unsigned long totalhigh;	/* Total high memory size */
 	unsigned long freehigh;	/* Available high memory size */
 	uint32_t mem_unit;			/* Memory unit size in bytes */

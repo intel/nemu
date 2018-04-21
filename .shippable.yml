@@ -24,7 +24,7 @@ build:
   ci:
     - unset CC
     # some targets require newer up to date packages, for example TARGET_LIST matching
-    # aarch64*-softmmu|arm*-softmmu|ppc*-softmmu|microblaze*-softmmu|mips64el-softmmu)
+    # aarch64*-softmmu|arm*-softmmu)
     # see the configure script:
     #    error_exit "DTC (libfdt) version >= 1.4.2 not present. Your options:"
     #    "  (1) Preferred: Install the DTC (libfdt) devel package"

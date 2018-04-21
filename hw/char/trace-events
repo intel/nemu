@@ -16,17 +16,6 @@ grlib_apbuart_event(int event) "event:%d"
 grlib_apbuart_writel_unknown(uint64_t addr, uint32_t value) "addr 0x%"PRIx64" value 0x%x"
 grlib_apbuart_readl_unknown(uint64_t addr) "addr 0x%"PRIx64
 
-# hw/char/lm32_juart.c
-lm32_juart_get_jtx(uint32_t value) "jtx 0x%08x"
-lm32_juart_set_jtx(uint32_t value) "jtx 0x%08x"
-lm32_juart_get_jrx(uint32_t value) "jrx 0x%08x"
-lm32_juart_set_jrx(uint32_t value) "jrx 0x%08x"
-
-# hw/char/lm32_uart.c
-lm32_uart_memory_write(uint32_t addr, uint32_t value) "addr 0x%08x value 0x%08x"
-lm32_uart_memory_read(uint32_t addr, uint32_t value) "addr 0x%08x value 0x%08x"
-lm32_uart_irq_state(int level) "irq state %d"
-
 # hw/char/milkymist-uart.c
 milkymist_uart_memory_read(uint32_t addr, uint32_t value) "addr 0x%08x value 0x%08x"
 milkymist_uart_memory_write(uint32_t addr, uint32_t value) "addr 0x%08x value 0x%08x"

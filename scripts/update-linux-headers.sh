@@ -84,7 +84,7 @@ for arch in $ARCHLIST; do
     fi
 
     # Blacklist architectures which have KVM headers but are actually dead
-    if [ "$arch" = "ia64" -o "$arch" = "mips" ]; then
+    if [ "$arch" = "ia64" ]; then
         continue
     fi
 
@@ -107,11 +107,6 @@ for arch in $ARCHLIST; do
 
     rm -rf "$output/include/standard-headers/asm-$arch"
     mkdir -p "$output/include/standard-headers/asm-$arch"
-    if [ $arch = s390 ]; then
-        cp_portable "$tmpdir/include/asm/virtio-ccw.h" "$output/include/standard-headers/asm-s390/"
-        cp "$tmpdir/include/asm/unistd_32.h" "$output/linux-headers/asm-s390/"
-        cp "$tmpdir/include/asm/unistd_64.h" "$output/linux-headers/asm-s390/"
-    fi
     if [ $arch = arm ]; then
         cp "$tmpdir/include/asm/unistd-eabi.h" "$output/linux-headers/asm-arm/"
         cp "$tmpdir/include/asm/unistd-oabi.h" "$output/linux-headers/asm-arm/"

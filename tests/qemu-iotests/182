@@ -45,14 +45,7 @@ _supported_os Linux
 
 size=32M
 
-case "$QEMU_DEFAULT_MACHINE" in
-  s390-ccw-virtio)
-      virtioblk=virtio-blk-ccw
-      ;;
-  *)
-      virtioblk=virtio-blk-pci
-      ;;
-esac
+virtioblk=virtio-blk-pci
 
 _make_test_img $size
 

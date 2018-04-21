@@ -1542,15 +1542,6 @@ STEXI
 Start in full screen.
 ETEXI
 
-DEF("g", 1, QEMU_OPTION_g ,
-    "-g WxH[xDEPTH]  Set the initial graphical resolution and depth\n",
-    QEMU_ARCH_PPC | QEMU_ARCH_SPARC)
-STEXI
-@item -g @var{width}x@var{height}[x@var{depth}]
-@findex -g
-Set the initial graphical resolution and depth (PPC, SPARC only).
-ETEXI
-
 DEF("vnc", HAS_ARG, QEMU_OPTION_vnc ,
     "-vnc <display>  shorthand for -display vnc=<display>\n", QEMU_ARCH_ALL)
 STEXI
@@ -3656,33 +3647,22 @@ Immediately before starting guest execution, drop root privileges, switching
 to the specified user.
 ETEXI
 
-DEF("prom-env", HAS_ARG, QEMU_OPTION_prom_env,
-    "-prom-env variable=value\n"
-    "                set OpenBIOS nvram variables\n",
-    QEMU_ARCH_PPC | QEMU_ARCH_SPARC)
-STEXI
-@item -prom-env @var{variable}=@var{value}
-@findex -prom-env
-Set OpenBIOS nvram @var{variable} to given @var{value} (PPC, SPARC only).
-ETEXI
 DEF("semihosting", 0, QEMU_OPTION_semihosting,
     "-semihosting    semihosting mode\n",
-    QEMU_ARCH_ARM | QEMU_ARCH_M68K | QEMU_ARCH_XTENSA | QEMU_ARCH_LM32 |
-    QEMU_ARCH_MIPS)
+    QEMU_ARCH_ARM)
 STEXI
 @item -semihosting
 @findex -semihosting
-Enable semihosting mode (ARM, M68K, Xtensa, MIPS only).
+Enable semihosting mode (ARM only).
 ETEXI
 DEF("semihosting-config", HAS_ARG, QEMU_OPTION_semihosting_config,
     "-semihosting-config [enable=on|off][,target=native|gdb|auto][,arg=str[,...]]\n" \
     "                semihosting configuration\n",
-QEMU_ARCH_ARM | QEMU_ARCH_M68K | QEMU_ARCH_XTENSA | QEMU_ARCH_LM32 |
-QEMU_ARCH_MIPS)
+    QEMU_ARCH_ARM)
 STEXI
 @item -semihosting-config [enable=on|off][,target=native|gdb|auto][,arg=str[,...]]
 @findex -semihosting-config
-Enable and configure semihosting (ARM, M68K, Xtensa, MIPS only).
+Enable and configure semihosting (ARM only).
 @table @option
 @item target=@code{native|gdb|auto}
 Defines where the semihosting calls will be addressed, to QEMU (@code{native})

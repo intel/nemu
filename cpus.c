@@ -1878,15 +1878,6 @@ CpuInfoList *qmp_query_cpus(Error **errp)
 #if defined(TARGET_I386)
         X86CPU *x86_cpu = X86_CPU(cpu);
         CPUX86State *env = &x86_cpu->env;
-#elif defined(TARGET_RISCV)
-        RISCVCPU *riscv_cpu = RISCV_CPU(cpu);
-        CPURISCVState *env = &riscv_cpu->env;
-#elif defined(TARGET_MIPS)
-        MIPSCPU *mips_cpu = MIPS_CPU(cpu);
-        CPUMIPSState *env = &mips_cpu->env;
-#elif defined(TARGET_TRICORE)
-        TriCoreCPU *tricore_cpu = TRICORE_CPU(cpu);
-        CPUTriCoreState *env = &tricore_cpu->env;
 #endif
 
         cpu_synchronize_state(cpu);
@@ -1901,15 +1892,6 @@ CpuInfoList *qmp_query_cpus(Error **errp)
 #if defined(TARGET_I386)
         info->value->arch = CPU_INFO_ARCH_X86;
         info->value->u.x86.pc = env->eip + env->segs[R_CS].base;
-#elif defined(TARGET_MIPS)
-        info->value->arch = CPU_INFO_ARCH_MIPS;
-        info->value->u.q_mips.PC = env->active_tc.PC;
-#elif defined(TARGET_TRICORE)
-        info->value->arch = CPU_INFO_ARCH_TRICORE;
-        info->value->u.tricore.PC = env->PC;
-#elif defined(TARGET_RISCV)
-        info->value->arch = CPU_INFO_ARCH_RISCV;
-        info->value->u.riscv.pc = env->pc;
 #else
         info->value->arch = CPU_INFO_ARCH_OTHER;
 #endif

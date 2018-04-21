@@ -617,12 +617,8 @@ static inline floatx80 floatx80_chs(floatx80 a)
 
 static inline int floatx80_is_infinity(floatx80 a)
 {
-#if defined(TARGET_M68K)
-    return (a.high & 0x7fff) == floatx80_infinity.high && !(a.low << 1);
-#else
     return (a.high & 0x7fff) == floatx80_infinity.high &&
                        a.low == floatx80_infinity.low;
-#endif
 }
 
 static inline int floatx80_is_neg(floatx80 a)

@@ -517,9 +517,6 @@ void *qemu_alloc_stack(size_t *sz)
 #if defined(HOST_IA64)
     /* separate register stack */
     guardpage = ptr + (((*sz - pagesz) / 2) & ~pagesz);
-#elif defined(HOST_HPPA)
-    /* stack grows up */
-    guardpage = ptr + *sz - pagesz;
 #else
     /* stack grows down */
     guardpage = ptr;
