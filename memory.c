@@ -51,6 +51,12 @@ static GHashTable *flat_views;
 
 typedef struct AddrRange AddrRange;
 
+static void memory_region_add_coalescing(MemoryRegion *mr,
+                                  hwaddr offset,
+                                  uint64_t size);
+static void memory_region_clear_coalescing(MemoryRegion *mr);
+
+
 /*
  * Note that signed integers are needed for negative offsetting in aliases
  * (large MemoryRegion::alias_offset).
@@ -1636,7 +1642,7 @@ void memory_region_init_rom_nomigrate(MemoryRegion *mr,
     mr->dirty_log_mask = 0;
 }
 
-void memory_region_init_rom_device_nomigrate(MemoryRegion *mr,
+static void memory_region_init_rom_device_nomigrate(MemoryRegion *mr,
                                              Object *owner,
                                              const MemoryRegionOps *ops,
                                              void *opaque,
@@ -1758,11 +1764,6 @@ uint8_t memory_region_get_dirty_log_mask(MemoryRegion *mr)
         mask |= (1 << DIRTY_MEMORY_MIGRATION);
     }
     return mask;
-}
-
-bool memory_region_is_logging(MemoryRegion *mr, uint8_t client)
-{
-    return memory_region_get_dirty_log_mask(mr) & (1 << client);
 }
 
 static void memory_region_update_iommu_notify_flags(IOMMUMemoryRegion *iommu_mr)
@@ -1932,14 +1933,6 @@ void memory_region_set_log(MemoryRegion *mr, bool log, unsigned client)
     memory_region_transaction_commit();
 }
 
-bool memory_region_get_dirty(MemoryRegion *mr, hwaddr addr,
-                             hwaddr size, unsigned client)
-{
-    assert(mr->ram_block);
-    return cpu_physical_memory_get_dirty(memory_region_get_ram_addr(mr) + addr,
-                                         size, client);
-}
-
 void memory_region_set_dirty(MemoryRegion *mr, hwaddr addr,
                              hwaddr size)
 {
@@ -2014,14 +2007,6 @@ void memory_region_rom_device_set_romd(MemoryRegion *mr, bool romd_mode)
         memory_region_update_pending |= mr->enabled;
         memory_region_transaction_commit();
     }
-}
-
-void memory_region_reset_dirty(MemoryRegion *mr, hwaddr addr,
-                               hwaddr size, unsigned client)
-{
-    assert(mr->ram_block);
-    cpu_physical_memory_test_and_clear_dirty(
-        memory_region_get_ram_addr(mr) + addr, size, client);
 }
 
 int memory_region_get_fd(MemoryRegion *mr)
@@ -2131,7 +2116,7 @@ void memory_region_set_coalescing(MemoryRegion *mr)
     memory_region_add_coalescing(mr, 0, int128_get64(mr->size));
 }
 
-void memory_region_add_coalescing(MemoryRegion *mr,
+static void memory_region_add_coalescing(MemoryRegion *mr,
                                   hwaddr offset,
                                   uint64_t size)
 {
@@ -2143,7 +2128,7 @@ void memory_region_add_coalescing(MemoryRegion *mr,
     memory_region_set_flush_coalesced(mr);
 }
 
-void memory_region_clear_coalescing(MemoryRegion *mr)
+static void memory_region_clear_coalescing(MemoryRegion *mr)
 {
     CoalescedMemoryRange *cmr;
     bool updated = false;
@@ -2166,14 +2151,6 @@ void memory_region_clear_coalescing(MemoryRegion *mr)
 void memory_region_set_flush_coalesced(MemoryRegion *mr)
 {
     mr->flush_coalesced_mmio = true;
-}
-
-void memory_region_clear_flush_coalesced(MemoryRegion *mr)
-{
-    qemu_flush_coalesced_mmio_buffer();
-    if (QTAILQ_EMPTY(&mr->coalesced)) {
-        mr->flush_coalesced_mmio = false;
-    }
 }
 
 void memory_region_clear_global_locking(MemoryRegion *mr)
@@ -2647,43 +2624,6 @@ void memory_listener_unregister(MemoryListener *listener)
     QTAILQ_REMOVE(&memory_listeners, listener, link);
     QTAILQ_REMOVE(&listener->address_space->listeners, listener, link_as);
     listener->address_space = NULL;
-}
-
-bool memory_region_request_mmio_ptr(MemoryRegion *mr, hwaddr addr)
-{
-    void *host;
-    unsigned size = 0;
-    unsigned offset = 0;
-    Object *new_interface;
-
-    if (!mr || !mr->ops->request_ptr) {
-        return false;
-    }
-
-    /*
-     * Avoid an update if the request_ptr call
-     * memory_region_invalidate_mmio_ptr which seems to be likely when we use
-     * a cache.
-     */
-    memory_region_transaction_begin();
-
-    host = mr->ops->request_ptr(mr->opaque, addr - mr->addr, &size, &offset);
-
-    if (!host || !size) {
-        memory_region_transaction_commit();
-        return false;
-    }
-
-    new_interface = object_new("mmio_interface");
-    qdev_prop_set_uint64(DEVICE(new_interface), "start", offset);
-    qdev_prop_set_uint64(DEVICE(new_interface), "end", offset + size - 1);
-    qdev_prop_set_bit(DEVICE(new_interface), "ro", true);
-    qdev_prop_set_ptr(DEVICE(new_interface), "host_ptr", host);
-    qdev_prop_set_ptr(DEVICE(new_interface), "subregion", mr);
-    object_property_set_bool(OBJECT(new_interface), true, "realized", NULL);
-
-    memory_region_transaction_commit();
-    return true;
 }
 
 typedef struct MMIOPtrInvalidate {

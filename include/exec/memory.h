@@ -648,31 +648,6 @@ void memory_region_init_rom_nomigrate(MemoryRegion *mr,
                                       Error **errp);
 
 /**
- * memory_region_init_rom_device_nomigrate:  Initialize a ROM memory region.
- *                                 Writes are handled via callbacks.
- *
- * Note that this function does not do anything to cause the data in the
- * RAM side of the memory region to be migrated; that is the responsibility
- * of the caller.
- *
- * @mr: the #MemoryRegion to be initialized.
- * @owner: the object that tracks the region's reference count
- * @ops: callbacks for write access handling (must not be NULL).
- * @opaque: passed to the read and write callbacks of the @ops structure.
- * @name: Region name, becomes part of RAMBlock name used in migration stream
- *        must be unique within any device
- * @size: size of the region.
- * @errp: pointer to Error*, to store an error if it happens.
- */
-void memory_region_init_rom_device_nomigrate(MemoryRegion *mr,
-                                             struct Object *owner,
-                                             const MemoryRegionOps *ops,
-                                             void *opaque,
-                                             const char *name,
-                                             uint64_t size,
-                                             Error **errp);
-
-/**
  * memory_region_init_reservation: Initialize a memory region that reserves
  *                                 I/O space.
  *
@@ -998,16 +973,6 @@ int memory_region_iommu_get_attr(IOMMUMemoryRegion *iommu_mr,
 const char *memory_region_name(const MemoryRegion *mr);
 
 /**
- * memory_region_is_logging: return whether a memory region is logging writes
- *
- * Returns %true if the memory region is logging writes for the given client
- *
- * @mr: the memory region being queried
- * @client: the client being queried
- */
-bool memory_region_is_logging(MemoryRegion *mr, uint8_t client);
-
-/**
  * memory_region_get_dirty_log_mask: return the clients for which a
  * memory region is logging writes.
  *
@@ -1101,23 +1066,6 @@ void memory_region_ram_resize(MemoryRegion *mr, ram_addr_t newsize,
 void memory_region_set_log(MemoryRegion *mr, bool log, unsigned client);
 
 /**
- * memory_region_get_dirty: Check whether a range of bytes is dirty
- *                          for a specified client.
- *
- * Checks whether a range of bytes has been written to since the last
- * call to memory_region_reset_dirty() with the same @client.  Dirty logging
- * must be enabled.
- *
- * @mr: the memory region being queried.
- * @addr: the address (relative to the start of the region) being queried.
- * @size: the size of the range being queried.
- * @client: the user of the logging information; %DIRTY_MEMORY_MIGRATION or
- *          %DIRTY_MEMORY_VGA.
- */
-bool memory_region_get_dirty(MemoryRegion *mr, hwaddr addr,
-                             hwaddr size, unsigned client);
-
-/**
  * memory_region_set_dirty: Mark a range of bytes as dirty in a memory region.
  *
  * Marks a range of bytes as dirty, after it has been dirtied outside
@@ -1176,21 +1124,6 @@ bool memory_region_snapshot_get_dirty(MemoryRegion *mr,
                                       hwaddr addr, hwaddr size);
 
 /**
- * memory_region_reset_dirty: Mark a range of pages as clean, for a specified
- *                            client.
- *
- * Marks a range of pages as no longer dirty.
- *
- * @mr: the region being updated.
- * @addr: the start of the subrange being cleaned.
- * @size: the size of the subrange being cleaned.
- * @client: the user of the logging information; %DIRTY_MEMORY_MIGRATION or
- *          %DIRTY_MEMORY_VGA.
- */
-void memory_region_reset_dirty(MemoryRegion *mr, hwaddr addr,
-                               hwaddr size, unsigned client);
-
-/**
  * memory_region_set_readonly: Turn a memory region read-only (or read-write)
  *
  * Allows a memory region to be marked as read-only (turning it into a ROM).
@@ -1227,32 +1160,6 @@ void memory_region_rom_device_set_romd(MemoryRegion *mr, bool romd_mode);
 void memory_region_set_coalescing(MemoryRegion *mr);
 
 /**
- * memory_region_add_coalescing: Enable memory coalescing for a sub-range of
- *                               a region.
- *
- * Like memory_region_set_coalescing(), but works on a sub-range of a region.
- * Multiple calls can be issued coalesced disjoint ranges.
- *
- * @mr: the memory region to be updated.
- * @offset: the start of the range within the region to be coalesced.
- * @size: the size of the subrange to be coalesced.
- */
-void memory_region_add_coalescing(MemoryRegion *mr,
-                                  hwaddr offset,
-                                  uint64_t size);
-
-/**
- * memory_region_clear_coalescing: Disable MMIO coalescing for the region.
- *
- * Disables any coalescing caused by memory_region_set_coalescing() or
- * memory_region_add_coalescing().  Roughly equivalent to uncacheble memory
- * hardware.
- *
- * @mr: the memory region to be updated.
- */
-void memory_region_clear_coalescing(MemoryRegion *mr);
-
-/**
  * memory_region_set_flush_coalesced: Enforce memory coalescing flush before
  *                                    accesses.
  *
@@ -1263,19 +1170,6 @@ void memory_region_clear_coalescing(MemoryRegion *mr);
  * @mr: the memory region to be updated.
  */
 void memory_region_set_flush_coalesced(MemoryRegion *mr);
-
-/**
- * memory_region_clear_flush_coalesced: Disable memory coalescing flush before
- *                                      accesses.
- *
- * Clear the automatic coalesced MMIO flushing enabled via
- * memory_region_set_flush_coalesced. Note that this service has no effect on
- * memory regions that have MMIO coalescing enabled for themselves. For them,
- * automatic flushing will stop once coalescing is disabled.
- *
- * @mr: the memory region to be updated.
- */
-void memory_region_clear_flush_coalesced(MemoryRegion *mr);
 
 /**
  * memory_region_clear_global_locking: Declares that access processing does
@@ -1539,19 +1433,6 @@ void memory_global_dirty_log_stop(void);
 
 void mtree_info(fprintf_function mon_printf, void *f, bool flatview,
                 bool dispatch_tree);
-
-/**
- * memory_region_request_mmio_ptr: request a pointer to an mmio
- * MemoryRegion. If it is possible map a RAM MemoryRegion with this pointer.
- * When the device wants to invalidate the pointer it will call
- * memory_region_invalidate_mmio_ptr.
- *
- * @mr: #MemoryRegion to check
- * @addr: address within that region
- *
- * Returns true on success, false otherwise.
- */
-bool memory_region_request_mmio_ptr(MemoryRegion *mr, hwaddr addr);
 
 /**
  * memory_region_invalidate_mmio_ptr: invalidate the pointer to an mmio
