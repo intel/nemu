@@ -3803,7 +3803,7 @@ fi
 if test "$bigendian" = "yes" ; then
   echo "HOST_WORDS_BIGENDIAN=y" >> $config_host_mak
 fi
-  echo "CONFIG_POSIX=y" >> $config_host_mak
+echo "CONFIG_POSIX=y" >> $config_host_mak
 
 if test "$linux" = "yes" ; then
   echo "CONFIG_LINUX=y" >> $config_host_mak

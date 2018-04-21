@@ -452,7 +452,6 @@ bool fips_get_state(void)
     return fips_enabled;
 }
 
-
 int socket_init(void)
 {
     return 0;

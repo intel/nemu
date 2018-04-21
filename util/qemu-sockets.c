@@ -816,7 +816,6 @@ static int vsock_parse(VsockSocketAddress *addr, const char *str,
 }
 #endif /* CONFIG_AF_VSOCK */
 
-
 static int unix_listen_saddr(UnixSocketAddress *saddr,
                              Error **errp)
 {
@@ -938,7 +937,6 @@ static int unix_connect_saddr(UnixSocketAddress *saddr, Error **errp)
     close(sock);
     return -1;
 }
-
 
 /* compatibility wrapper */
 int unix_listen(const char *str, Error **errp)

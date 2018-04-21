@@ -47,8 +47,6 @@
 #include "qemu/cutils.h"
 #include "qemu/id.h"
 
-
-
 #define NOT_DONE 0x7fffffff /* used while emulated sync operation in progress */
 
 static QTAILQ_HEAD(, BlockDriverState) graph_bdrv_states =
@@ -69,7 +67,6 @@ static BlockDriverState *bdrv_open_inherit(const char *filename,
 
 /* If non-zero, use only whitelisted block drivers */
 static int use_bdrv_whitelist;
-
 
 size_t bdrv_opt_mem_align(BlockDriverState *bs)
 {

@@ -2,4 +2,3 @@ qga-obj-y = commands.o guest-agent-command-state.o main.o
 qga-obj-$(CONFIG_POSIX) += commands-posix.o channel-posix.o
 qga-obj-y += qapi-generated/qga-qapi-types.o qapi-generated/qga-qapi-visit.o
 qga-obj-y += qapi-generated/qga-qapi-commands.o
-

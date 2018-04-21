@@ -29,9 +29,6 @@ struct QIOChannelFDSource {
     GIOCondition condition;
 };
 
-
-
-
 typedef struct QIOChannelFDPairSource QIOChannelFDPairSource;
 struct QIOChannelFDPairSource {
     GSource parent;
@@ -82,9 +79,6 @@ qio_channel_fd_source_finalize(GSource *source)
 
     object_unref(OBJECT(ssource->ioc));
 }
-
-
-
 
 static gboolean
 qio_channel_fd_pair_source_prepare(GSource *source G_GNUC_UNUSED,

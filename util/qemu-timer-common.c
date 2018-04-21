@@ -27,7 +27,6 @@
 /***********************************************************/
 /* real time host monotonic timer */
 
-
 int use_rt_clock;
 
 static void __attribute__((constructor)) init_get_clock(void)

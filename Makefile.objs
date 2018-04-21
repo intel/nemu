@@ -149,9 +149,6 @@ common-obj-y += qom/
 common-obj-y += disas/
 
 ######################################################################
-# Resource file for Windows executables
-
-######################################################################
 # tracing
 util-obj-y +=  trace/
 target-obj-y += trace/

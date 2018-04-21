@@ -4,8 +4,3 @@ obj-$(CONFIG_KVM) += kvm.o hyperv.o
 obj-$(CONFIG_SEV) += sev.o
 obj-$(call lnot,$(CONFIG_KVM)) += kvm-stub.o
 obj-$(call lnot,$(CONFIG_SEV)) += sev-stub.o
-# HAX support
-ifdef CONFIG_WIN32
-endif
-ifdef CONFIG_DARWIN
-endif

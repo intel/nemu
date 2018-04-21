@@ -67,4 +67,3 @@ unsigned int check_socket_activation(void)
 
     return (unsigned int) nr_fds;
 }
-
