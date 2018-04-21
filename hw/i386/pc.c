@@ -290,16 +290,10 @@ static void pc_boot_set(void *opaque, const char *boot_device, Error **errp)
 
 static void pc_cmos_init_floppy(ISADevice *rtc_state, ISADevice *floppy)
 {
-    int val, nb, i;
+    int val, nb;
     FloppyDriveType fd_type[2] = { FLOPPY_DRIVE_TYPE_NONE,
                                    FLOPPY_DRIVE_TYPE_NONE };
 
-    /* floppy type */
-    if (floppy) {
-        for (i = 0; i < 2; i++) {
-            fd_type[i] = isa_fdc_get_drive_type(floppy, i);
-        }
-    }
     val = (cmos_get_fd_drive_type(fd_type[0]) << 4) |
         cmos_get_fd_drive_type(fd_type[1]);
     rtc_set_memory(rtc_state, 0x10, val);

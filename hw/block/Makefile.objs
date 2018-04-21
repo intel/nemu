@@ -1,5 +1,4 @@
 common-obj-y += block.o cdrom.o hd-geometry.o
-common-obj-$(CONFIG_FDC) += fdc.o
 common-obj-$(CONFIG_PFLASH_CFI01) += pflash_cfi01.o
 
 

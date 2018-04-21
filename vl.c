@@ -2782,14 +2782,6 @@ int main(int argc, char **argv, char **envp)
                     exit(1);
                 }
                 break;
-            case QEMU_OPTION_fda:
-            case QEMU_OPTION_fdb:
-                drive_add(IF_FLOPPY, popt->index - QEMU_OPTION_fda,
-                          optarg, FD_OPTS);
-                break;
-            case QEMU_OPTION_no_fd_bootchk:
-                fd_bootchk = 0;
-                break;
             case QEMU_OPTION_netdev:
                 default_net = 0;
                 if (net_client_parse(qemu_find_opts("netdev"), optarg) == -1) {
