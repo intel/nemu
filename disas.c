@@ -234,8 +234,6 @@ void target_disas(FILE *out, CPUState *cpu, target_ulong code,
 /* Disassemble this for me please... (debugging). */
 void disas(FILE *out, void *code, unsigned long size)
 {
-    uintptr_t pc;
-    int count;
     CPUDebug s;
     int (*print_insn)(bfd_vma pc, disassemble_info *info) = NULL;
 
@@ -284,13 +282,6 @@ void disas(FILE *out, void *code, unsigned long size)
 
     if (print_insn == NULL) {
         print_insn = print_insn_od_host;
-    }
-    for (pc = (uintptr_t)code; size > 0; pc += count, size -= count) {
-        fprintf(out, "0x%08" PRIxPTR ":  ", pc);
-        count = print_insn(pc, &s.info);
-	fprintf(out, "\n");
-	if (count < 0)
-	    break;
     }
 }
 

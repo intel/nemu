@@ -7,7 +7,3 @@ libvixldir = $(SRC_PATH)/disas/libvixl
 # some signed-unsigned equality comparisons in libvixl which later gcc
 # versions do not.
 arm-a64.o-cflags := -I$(libvixldir) -Wno-sign-compare
-common-obj-$(CONFIG_I386_DIS) += i386.o
-
-# TODO: As long as the TCG interpreter and its generated code depend
-# on the QEMU target, we cannot compile the disassembler here.
