@@ -1846,7 +1846,7 @@ static DisplayState *get_alloc_displaystate(void)
 
 /*
  * Called by main(), after creating QemuConsoles
- * and before initializing ui (sdl...).
+ * and before initializing ui.
  */
 DisplayState *init_displaystate(void)
 {
@@ -2286,7 +2286,6 @@ bool qemu_display_find_default(DisplayOptions *opts)
 {
     static DisplayType prio[] = {
         DISPLAY_TYPE_GTK,
-        DISPLAY_TYPE_SDL,
         DISPLAY_TYPE_COCOA
     };
     int i;

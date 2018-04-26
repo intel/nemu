@@ -286,8 +286,6 @@ unset target_list
 
 fdt=""
 netmap="no"
-sdl=""
-sdlabi=""
 virtfs=""
 mpath=""
 sparse="no"
@@ -451,8 +449,6 @@ query_pkg_config() {
     "${pkg_config_exe}" ${QEMU_PKG_CONFIG_FLAGS} "$@"
 }
 pkg_config=query_pkg_config
-sdl_config="${SDL_CONFIG-${cross_prefix}sdl-config}"
-sdl2_config="${SDL2_CONFIG-${cross_prefix}sdl2-config}"
 
 # If the user hasn't specified ARFLAGS, default to 'rv', just as make does.
 ARFLAGS="${ARFLAGS-rv}"
@@ -557,7 +553,7 @@ HOST_VARIANT_DIR=""
 case $targetos in
 Linux)
   audio_drv_list="oss"
-  audio_possible_drivers="oss alsa sdl pa"
+  audio_possible_drivers="oss alsa pa"
   linux="yes"
   kvm="yes"
   vhost_net="yes"
@@ -683,12 +679,6 @@ for opt do
     # autoconf-generated configure scripts. This allows QEMU's
     # configure to be used by RPM and similar macros that set
     # lots of directory switches by default.
-  ;;
-  --disable-sdl) sdl="no"
-  ;;
-  --enable-sdl) sdl="yes"
-  ;;
-  --with-sdlabi=*) sdlabi="$optarg"
   ;;
   --disable-qom-cast-debug) qom_cast_debug="no"
   ;;
@@ -1103,8 +1093,6 @@ disabled with --disable-FEATURE, default is enabled if available:
   modules         modules support
   debug-info      debugging information
   sparse          sparse checker
-  sdl             SDL UI
-  --with-sdlabi     select preferred SDL ABI 1.2 or 2.0
   virtfs          VirtFS
   mpath           Multipath persistent reservation passthrough
   membarrier      membarrier system call (for Linux 4.14+ or Windows)
@@ -1702,122 +1690,6 @@ if ! check_include "ifaddrs.h" ; then
 fi
 
 ##########################################
-# SDL probe
-
-# Look for sdl configuration program (pkg-config or sdl-config).  Try
-# sdl-config even without cross prefix, and favour pkg-config over sdl-config.
-
-sdl_probe ()
-{
-  sdl_too_old=no
-  if test "$sdlabi" = ""; then
-      if $pkg_config --exists "sdl2"; then
-          sdlabi=2.0
-      elif $pkg_config --exists "sdl"; then
-          sdlabi=1.2
-      else
-          sdlabi=2.0
-      fi
-  fi
-
-  if test $sdlabi = "2.0"; then
-      sdl_config=$sdl2_config
-      sdlname=sdl2
-      sdlconfigname=sdl2_config
-  elif test $sdlabi = "1.2"; then
-      sdlname=sdl
-      sdlconfigname=sdl_config
-  else
-      error_exit "Unknown sdlabi $sdlabi, must be 1.2 or 2.0"
-  fi
-
-  if test "$(basename $sdl_config)" != $sdlconfigname && ! has ${sdl_config}; then
-    sdl_config=$sdlconfigname
-  fi
-
-  if $pkg_config $sdlname --exists; then
-    sdlconfig="$pkg_config $sdlname"
-    sdlversion=$($sdlconfig --modversion 2>/dev/null)
-  elif has ${sdl_config}; then
-    sdlconfig="$sdl_config"
-    sdlversion=$($sdlconfig --version)
-  else
-    if test "$sdl" = "yes" ; then
-      feature_not_found "sdl" "Install SDL2-devel"
-    fi
-    sdl=no
-    # no need to do the rest
-    return
-  fi
-  if test -n "$cross_prefix" && test "$(basename "$sdlconfig")" = sdl-config; then
-    echo warning: using "\"$sdlconfig\"" to detect cross-compiled sdl >&2
-  fi
-
-  cat > $TMPC << EOF
-#include <SDL.h>
-#undef main /* We don't want SDL to override our main() */
-int main( void ) { return SDL_Init (SDL_INIT_VIDEO); }
-EOF
-  sdl_cflags=$($sdlconfig --cflags 2>/dev/null)
-  sdl_cflags="$sdl_cflags -Wno-undef"  # workaround 2.0.8 bug
-  if test "$static" = "yes" ; then
-    if $pkg_config $sdlname --exists; then
-      sdl_libs=$($pkg_config $sdlname --static --libs 2>/dev/null)
-    else
-      sdl_libs=$($sdlconfig --static-libs 2>/dev/null)
-    fi
-  else
-    sdl_libs=$($sdlconfig --libs 2>/dev/null)
-  fi
-  if compile_prog "$sdl_cflags" "$sdl_libs" ; then
-    if test $(echo $sdlversion | sed 's/[^0-9]//g') -lt 121 ; then
-      sdl_too_old=yes
-    else
-      sdl=yes
-    fi
-
-    # static link with sdl ? (note: sdl.pc's --static --libs is broken)
-    if test "$sdl" = "yes" -a "$static" = "yes" ; then
-      if test $? = 0 && echo $sdl_libs | grep -- -laa > /dev/null; then
-         sdl_libs="$sdl_libs $(aalib-config --static-libs 2>/dev/null)"
-         sdl_cflags="$sdl_cflags $(aalib-config --cflags 2>/dev/null)"
-      fi
-      if compile_prog "$sdl_cflags" "$sdl_libs" ; then
-	:
-      else
-        sdl=no
-      fi
-    fi # static link
-  else # sdl not found
-    if test "$sdl" = "yes" ; then
-      feature_not_found "sdl" "Install SDL devel"
-    fi
-    sdl=no
-  fi # sdl compile test
-}
-
-if test "$sdl" != "no" ; then
-  sdl_probe
-fi
-
-if test "$sdl" = "yes" ; then
-  cat > $TMPC <<EOF
-#include <SDL.h>
-#if defined(SDL_VIDEO_DRIVER_X11)
-#include <X11/XKBlib.h>
-#else
-#error No x11 support
-#endif
-int main(void) { return 0; }
-EOF
-  if compile_prog "$sdl_cflags $x11_cflags" "$sdl_libs $x11_libs" ; then
-    need_x11=yes
-    sdl_cflags="$sdl_cflags $x11_cflags"
-    sdl_libs="$sdl_libs $x11_libs"
-  fi
-fi
-
-##########################################
 # RDMA needs OpenFabrics libraries
 if test "$rdma" != "no" ; then
   cat > $TMPC <<EOF
@@ -2004,12 +1876,6 @@ for drv in $audio_drv_list; do
         "pa_context_set_source_output_volume(NULL, 0, NULL, NULL, NULL); return 0;"
     pulse_libs="-lpulse"
     audio_pt_int="yes"
-    ;;
-
-    sdl)
-    if test "$sdl" = "no"; then
-        error_exit "sdl not found or disabled, can not use sdl audio driver"
-    fi
     ;;
 
     coreaudio)
@@ -2467,7 +2333,7 @@ fi
 libs_softmmu="$libs_softmmu $fdt_libs"
 
 ##########################################
-# opengl probe (for sdl2, gtk, milkymist-tmu2)
+# opengl probe (for gtk, milkymist-tmu2)
 
 if test "$opengl" != "no" ; then
   opengl_pkgs="epoxy libdrm gbm"
@@ -4235,7 +4101,6 @@ echo "sparse enabled    $sparse"
 echo "strip binaries    $strip_opt"
 echo "profiler          $profiler"
 echo "static build      $static"
-echo "SDL support       $sdl $(echo_version $sdl $sdlversion)"
 echo "TLS priority      $tls_priority"
 echo "libtasn1          $tasn1"
 echo "virgl support     $virglrenderer"
@@ -4313,16 +4178,6 @@ echo "avx2 optimization $avx2_opt"
 echo "replication support $replication"
 echo "VxHS block device $vxhs"
 echo "capstone          $capstone"
-
-if test "$sdl_too_old" = "yes"; then
-echo "-> Your SDL version is too old - please upgrade to have SDL support"
-fi
-
-if test "$sdlabi" = "1.2"; then
-    echo
-    echo "WARNING: Use of SDL 1.2 is deprecated and will be removed in"
-    echo "WARNING: future releases. Please switch to using SDL 2.0"
-fi
 
 if test "$supported_cpu" = "no"; then
     echo
@@ -4451,7 +4306,7 @@ echo "CONFIG_AUDIO_DRIVERS=$audio_drv_list" >> $config_host_mak
 for drv in $audio_drv_list; do
     def=CONFIG_AUDIO_$(echo $drv | LC_ALL=C tr '[a-z]' '[A-Z]')
     case "$drv" in
-	alsa | oss | pa | sdl)
+	alsa | oss | pa)
 	    echo "$def=m" >> $config_host_mak ;;
 	*)
 	    echo "$def=y" >> $config_host_mak ;;
@@ -4495,12 +4350,6 @@ if test "$have_x11" = "yes" -a "$need_x11" = "yes"; then
   echo "CONFIG_X11=y" >> $config_host_mak
   echo "X11_CFLAGS=$x11_cflags" >> $config_host_mak
   echo "X11_LIBS=$x11_libs" >> $config_host_mak
-fi
-if test "$sdl" = "yes" ; then
-  echo "CONFIG_SDL=m" >> $config_host_mak
-  echo "CONFIG_SDLABI=$sdlabi" >> $config_host_mak
-  echo "SDL_CFLAGS=$sdl_cflags" >> $config_host_mak
-  echo "SDL_LIBS=$sdl_libs" >> $config_host_mak
 fi
 if test "$pipe2" = "yes" ; then
   echo "CONFIG_PIPE2=y" >> $config_host_mak

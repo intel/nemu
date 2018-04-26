@@ -16,8 +16,3 @@ oss.mo-libs := $(OSS_LIBS)
 # pulseaudio module
 pa.mo-objs = paaudio.o
 pa.mo-libs := $(PULSE_LIBS)
-
-# sdl module
-sdl.mo-objs = sdlaudio.o
-sdl.mo-cflags := $(SDL_CFLAGS)
-sdl.mo-libs := $(SDL_LIBS)

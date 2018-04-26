@@ -15,6 +15,4 @@ chardev-obj-y += char-stdio.o
 chardev-obj-y += char-udp.o
 
 common-obj-y += msmouse.o wctablet.o testdev.o
-baum.o-cflags := $(SDL_CFLAGS)
-baum.o-libs := $(BRLAPI_LIBS)
 

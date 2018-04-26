@@ -34,9 +34,6 @@
 #include "sysemu/seccomp.h"
 #endif
 
-
-
-
 #include "qemu/error-report.h"
 #include "qemu/sockets.h"
 #include "hw/hw.h"
@@ -1889,68 +1886,7 @@ static void parse_display(const char *p)
 {
     const char *opts;
 
-    if (strstart(p, "sdl", &opts)) {
-        dpy.type = DISPLAY_TYPE_SDL;
-        while (*opts) {
-            const char *nextopt;
-
-            if (strstart(opts, ",frame=", &nextopt)) {
-                g_printerr("The frame= sdl option is deprecated, and will be\n"
-                           "removed in a future release.\n");
-                opts = nextopt;
-                if (strstart(opts, "on", &nextopt)) {
-                    no_frame = 0;
-                } else if (strstart(opts, "off", &nextopt)) {
-                    no_frame = 1;
-                } else {
-                    goto invalid_sdl_args;
-                }
-            } else if (strstart(opts, ",alt_grab=", &nextopt)) {
-                opts = nextopt;
-                if (strstart(opts, "on", &nextopt)) {
-                    alt_grab = 1;
-                } else if (strstart(opts, "off", &nextopt)) {
-                    alt_grab = 0;
-                } else {
-                    goto invalid_sdl_args;
-                }
-            } else if (strstart(opts, ",ctrl_grab=", &nextopt)) {
-                opts = nextopt;
-                if (strstart(opts, "on", &nextopt)) {
-                    ctrl_grab = 1;
-                } else if (strstart(opts, "off", &nextopt)) {
-                    ctrl_grab = 0;
-                } else {
-                    goto invalid_sdl_args;
-                }
-            } else if (strstart(opts, ",window_close=", &nextopt)) {
-                opts = nextopt;
-                dpy.has_window_close = true;
-                if (strstart(opts, "on", &nextopt)) {
-                    dpy.window_close = true;
-                } else if (strstart(opts, "off", &nextopt)) {
-                    dpy.window_close = false;
-                } else {
-                    goto invalid_sdl_args;
-                }
-            } else if (strstart(opts, ",gl=", &nextopt)) {
-                opts = nextopt;
-                dpy.has_gl = true;
-                if (strstart(opts, "on", &nextopt)) {
-                    dpy.gl = true;
-                } else if (strstart(opts, "off", &nextopt)) {
-                    dpy.gl = false;
-                } else {
-                    goto invalid_sdl_args;
-                }
-            } else {
-            invalid_sdl_args:
-                error_report("invalid SDL option string");
-                exit(1);
-            }
-            opts = nextopt;
-        }
-    } else if (strstart(p, "egl-headless", &opts)) {
+    if (strstart(p, "egl-headless", &opts)) {
         dpy.type = DISPLAY_TYPE_EGL_HEADLESS;
     } else if (strstart(p, "curses", &opts)) {
         dpy.type = DISPLAY_TYPE_CURSES;
@@ -3434,9 +3370,6 @@ int main(int argc, char **argv, char **envp)
                 dpy.has_window_close = true;
                 dpy.window_close = false;
                 break;
-            case QEMU_OPTION_sdl:
-                error_report("SDL support is disabled");
-                exit(1);
             case QEMU_OPTION_pidfile:
                 pid_file = optarg;
                 break;
@@ -4038,13 +3971,13 @@ int main(int argc, char **argv, char **envp)
         dpy.type = DISPLAY_TYPE_NONE;
     }
 
-    if ((no_frame || alt_grab || ctrl_grab) && dpy.type != DISPLAY_TYPE_SDL) {
+    if (no_frame || alt_grab || ctrl_grab) {
         error_report("-no-frame, -alt-grab and -ctrl-grab are only valid "
                      "for SDL, ignoring option");
     }
     if (dpy.has_window_close &&
-        (dpy.type != DISPLAY_TYPE_GTK && dpy.type != DISPLAY_TYPE_SDL)) {
-        error_report("-no-quit is only valid for GTK and SDL, "
+        dpy.type != DISPLAY_TYPE_GTK) {
+        error_report("-no-quit is only valid for GTK, "
                      "ignoring option");
     }
 

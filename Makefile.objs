@@ -113,7 +113,7 @@ common-obj-m += ui/
 
 common-obj-y += dma-helpers.o
 common-obj-y += vl.o
-vl.o-cflags := $(GPROF_CFLAGS) $(SDL_CFLAGS)
+vl.o-cflags := $(GPROF_CFLAGS)
 
 common-obj-$(CONFIG_SLIRP) += slirp/
 

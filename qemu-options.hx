@@ -1244,8 +1244,6 @@ DEF("display", HAS_ARG, QEMU_OPTION_display,
     "The default display is equivalent to\n"
 #if defined(CONFIG_GTK)
             "\t\"-display gtk\"\n"
-#elif defined(CONFIG_SDL)
-            "\t\"-display sdl\"\n"
 #elif defined(CONFIG_COCOA)
             "\t\"-display cocoa\"\n"
 #elif defined(CONFIG_VNC)

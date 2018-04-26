@@ -714,7 +714,7 @@
 #
 ##
 { 'enum'    : 'DisplayType',
-  'data'    : [ 'default', 'none', 'gtk', 'sdl',
+  'data'    : [ 'default', 'none', 'gtk',
                 'egl-headless', 'curses', 'cocoa' ] }
 
 ##
@@ -739,7 +739,6 @@
   'data'    : { 'default'        : 'DisplayNoOpts',
                 'none'           : 'DisplayNoOpts',
                 'gtk'            : 'DisplayGTK',
-                'sdl'            : 'DisplayNoOpts',
                 'egl-headless'   : 'DisplayNoOpts',
                 'curses'         : 'DisplayNoOpts',
                 'cocoa'          : 'DisplayNoOpts' } }
