@@ -126,9 +126,6 @@ Section "${PRODUCT} (required)"
     File "${BINDIR}\openbios-*"
 
     File /r "${BINDIR}\keymaps"
-!ifdef CONFIG_GTK
-    File /r "${BINDIR}\share"
-!endif
 
 !ifdef W64
     SetRegView 64

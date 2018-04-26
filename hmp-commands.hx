@@ -1511,56 +1511,6 @@ Change I/O throttle limits for a block drive to @var{bps} @var{bps_rd} @var{bps_
 ETEXI
 
     {
-        .name       = "set_password",
-        .args_type  = "protocol:s,password:s,connected:s?",
-        .params     = "protocol password action-if-connected",
-        .help       = "set spice/vnc password",
-        .cmd        = hmp_set_password,
-    },
-
-STEXI
-@item set_password [ vnc | spice ] password [ action-if-connected ]
-@findex set_password
-Change spice/vnc password.  Use zero to make the password stay valid
-forever.  @var{action-if-connected} specifies what should happen in
-case a connection is established: @var{fail} makes the password change
-fail.  @var{disconnect} changes the password and disconnects the
-client.  @var{keep} changes the password and keeps the connection up.
-@var{keep} is the default.
-ETEXI
-
-    {
-        .name       = "expire_password",
-        .args_type  = "protocol:s,time:s",
-        .params     = "protocol time",
-        .help       = "set spice/vnc password expire-time",
-        .cmd        = hmp_expire_password,
-    },
-
-STEXI
-@item expire_password [ vnc | spice ] expire-time
-@findex expire_password
-Specify when a password for spice/vnc becomes
-invalid. @var{expire-time} accepts:
-
-@table @var
-@item now
-Invalidate password instantly.
-
-@item never
-Password stays valid forever.
-
-@item +nsec
-Password stays valid for @var{nsec} seconds starting now.
-
-@item nsec
-Password is invalidated at the given time.  @var{nsec} are the seconds
-passed since 1970, i.e. unix epoch.
-
-@end table
-ETEXI
-
-    {
         .name       = "chardev-add",
         .args_type  = "args:s",
         .params     = "args",

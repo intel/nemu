@@ -88,7 +88,6 @@
 #include "qemu/queue.h"
 #include "sysemu/arch_init.h"
 
-#include "ui/qemu-spice.h"
 #include "qapi/string-input-visitor.h"
 #include "qapi/opts-visitor.h"
 #include "qom/object_interfaces.h"
@@ -1710,54 +1709,6 @@ static const QEMUOption qemu_options[] = {
     { NULL },
 };
 
-static void parse_display(const char *p)
-{
-    const char *opts;
-
-    if (strstart(p, "egl-headless", &opts)) {
-        dpy.type = DISPLAY_TYPE_EGL_HEADLESS;
-    } else if (strstart(p, "curses", &opts)) {
-        dpy.type = DISPLAY_TYPE_CURSES;
-    } else if (strstart(p, "gtk", &opts)) {
-        dpy.type = DISPLAY_TYPE_GTK;
-        while (*opts) {
-            const char *nextopt;
-
-            if (strstart(opts, ",grab_on_hover=", &nextopt)) {
-                opts = nextopt;
-                dpy.u.gtk.has_grab_on_hover = true;
-                if (strstart(opts, "on", &nextopt)) {
-                    dpy.u.gtk.grab_on_hover = true;
-                } else if (strstart(opts, "off", &nextopt)) {
-                    dpy.u.gtk.grab_on_hover = false;
-                } else {
-                    goto invalid_gtk_args;
-                }
-            } else if (strstart(opts, ",gl=", &nextopt)) {
-                opts = nextopt;
-                dpy.has_gl = true;
-                if (strstart(opts, "on", &nextopt)) {
-                    dpy.gl = true;
-                } else if (strstart(opts, "off", &nextopt)) {
-                    dpy.gl = false;
-                } else {
-                    goto invalid_gtk_args;
-                }
-            } else {
-            invalid_gtk_args:
-                error_report("invalid GTK option string");
-                exit(1);
-            }
-            opts = nextopt;
-        }
-    } else if (strstart(p, "none", &opts)) {
-        dpy.type = DISPLAY_TYPE_NONE;
-    } else {
-        error_report("unknown display type");
-        exit(1);
-    }
-}
-
 static int balloon_parse(const char *arg)
 {
     QemuOpts *opts;
@@ -2724,9 +2675,6 @@ int main(int argc, char **argv, char **envp)
                     exit(1);
                 }
                 break;
-            case QEMU_OPTION_display:
-                parse_display(optarg);
-                break;
             case QEMU_OPTION_nographic:
                 olist = qemu_find_opts("machine");
                 qemu_opts_parse_noisily(olist, "graphics=off", false);
@@ -3618,11 +3566,7 @@ int main(int argc, char **argv, char **envp)
     qemu_console_early_init();
 
     if (dpy.has_gl && dpy.gl && display_opengl == 0) {
-#if defined(CONFIG_OPENGL)
-        error_report("OpenGL is not supported by the display");
-#else
         error_report("OpenGL support is disabled");
-#endif
         exit(1);
     }
 
@@ -3726,9 +3670,6 @@ int main(int argc, char **argv, char **envp)
     }
 
     os_set_line_buffering();
-
-    /* spice needs the timers to be initialized by this point */
-    qemu_spice_init();
 
     cpu_ticks_init();
 
@@ -3876,10 +3817,6 @@ int main(int argc, char **argv, char **envp)
     os_setup_signal_handling();
 
     /* init remote displays */
-
-    if (using_spice) {
-        qemu_spice_display_init();
-    }
 
     if (foreach_device_config(DEV_GDB, gdbserver_start) < 0) {
         exit(1);

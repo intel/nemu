@@ -45,7 +45,6 @@
 #include "sysemu/kvm.h"
 #include "sysemu/qtest.h"
 #include "kvm_i386.h"
-#include "ui/qemu-spice.h"
 #include "exec/memory.h"
 #include "exec/address-spaces.h"
 #include "sysemu/arch_init.h"

@@ -35,7 +35,6 @@
 #include "chardev/char-fe.h"
 #include "chardev/char-io.h"
 #include "chardev/char-mux.h"
-#include "ui/qemu-spice.h"
 #include "sysemu/numa.h"
 #include "monitor/monitor.h"
 #include "qemu/config-file.h"
@@ -1437,26 +1436,6 @@ void qmp_client_migrate_info(const char *protocol, const char *hostname,
                              bool has_cert_subject, const char *cert_subject,
                              Error **errp)
 {
-    if (strcmp(protocol, "spice") == 0) {
-        if (!qemu_using_spice(errp)) {
-            return;
-        }
-
-        if (!has_port && !has_tls_port) {
-            error_setg(errp, QERR_MISSING_PARAMETER, "port/tls-port");
-            return;
-        }
-
-        if (qemu_spice_migrate_info(hostname,
-                                    has_port ? port : -1,
-                                    has_tls_port ? tls_port : -1,
-                                    cert_subject)) {
-            error_setg(errp, QERR_UNDEFINED_ERROR);
-            return;
-        }
-        return;
-    }
-
     error_setg(errp, QERR_INVALID_PARAMETER_VALUE, "protocol", "spice");
 }
 

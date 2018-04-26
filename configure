@@ -301,11 +301,8 @@ pie=""
 qom_cast_debug="yes"
 trace_backends="log"
 trace_file="trace"
-spice=""
 rbd=""
 smartcard=""
-opengl=""
-opengl_dmabuf="no"
 cpuid_h="no"
 avx2_opt="no"
 zlib="yes"
@@ -688,10 +685,6 @@ for opt do
   ;;
   --enable-malloc-trim) malloc_trim="yes"
   ;;
-  --disable-spice) spice="no"
-  ;;
-  --enable-spice) spice="yes"
-  ;;
   --disable-libiscsi) libiscsi="no"
   ;;
   --enable-libiscsi) libiscsi="yes"
@@ -766,10 +759,6 @@ for opt do
   --disable-vhost-vsock) vhost_vsock="no"
   ;;
   --enable-vhost-vsock) vhost_vsock="yes"
-  ;;
-  --disable-opengl) opengl="no"
-  ;;
-  --enable-opengl) opengl="yes"
   ;;
   --disable-rbd) rbd="no"
   ;;
@@ -1023,7 +1012,6 @@ disabled with --disable-FEATURE, default is enabled if available:
   attr            attr and xattr support
   vhost-net       vhost-net acceleration support
   vhost-crypto    vhost-crypto acceleration support
-  spice           spice
   rbd             rados block device (rbd)
   libiscsi        iscsi support
   libnfs          nfs support
@@ -1041,7 +1029,6 @@ disabled with --disable-FEATURE, default is enabled if available:
   jemalloc        jemalloc support
   replication     replication support
   vhost-vsock     virtio sockets device support
-  opengl          opengl support
   virglrenderer   virgl rendering support
   xfsctl          xfsctl support
   qom-cast-debug  cast debugging support
@@ -2090,39 +2077,6 @@ fi
 libs_softmmu="$libs_softmmu $fdt_libs"
 
 ##########################################
-# opengl probe (for gtk, milkymist-tmu2)
-
-if test "$opengl" != "no" ; then
-  opengl_pkgs="epoxy libdrm gbm"
-  if $pkg_config $opengl_pkgs; then
-    opengl_cflags="$($pkg_config --cflags $opengl_pkgs)"
-    opengl_libs="$($pkg_config --libs $opengl_pkgs)"
-    opengl=yes
-    QEMU_CFLAGS="$QEMU_CFLAGS $opengl_cflags"
-  else
-    if test "$opengl" = "yes" ; then
-      feature_not_found "opengl" "Please install opengl (mesa) devel pkgs: $opengl_pkgs"
-    fi
-    opengl_cflags=""
-    opengl_libs=""
-    opengl=no
-  fi
-fi
-
-if test "$opengl" = "yes"; then
-  cat > $TMPC << EOF
-#include <epoxy/egl.h>
-#ifndef EGL_MESA_image_dma_buf_export
-# error mesa/epoxy lacks support for dmabufs (mesa 10.6+)
-#endif
-int main(void) { return 0; }
-EOF
-  if compile_prog "" "" ; then
-    opengl_dmabuf=yes
-  fi
-fi
-
-##########################################
 # libxml2 probe
 if test "$libxml2" != "no" ; then
     if $pkg_config --exists libxml-2.0; then
@@ -2642,48 +2596,6 @@ elif compile_prog "" "$pthread_lib -lrt" ; then
 fi
 
     libs_softmmu="-lutil $libs_softmmu"
-
-##########################################
-# spice probe
-if test "$spice" != "no" ; then
-  cat > $TMPC << EOF
-#include <spice.h>
-int main(void) { spice_server_new(); return 0; }
-EOF
-  spice_cflags=$($pkg_config --cflags spice-protocol spice-server 2>/dev/null)
-  spice_libs=$($pkg_config --libs spice-protocol spice-server 2>/dev/null)
-  if $pkg_config --atleast-version=0.12.0 spice-server && \
-     $pkg_config --atleast-version=0.12.3 spice-protocol && \
-     compile_prog "$spice_cflags" "$spice_libs" ; then
-    spice="yes"
-    libs_softmmu="$libs_softmmu $spice_libs"
-    QEMU_CFLAGS="$QEMU_CFLAGS $spice_cflags"
-    spice_protocol_version=$($pkg_config --modversion spice-protocol)
-    spice_server_version=$($pkg_config --modversion spice-server)
-  else
-    if test "$spice" = "yes" ; then
-      feature_not_found "spice" \
-          "Install spice-server(>=0.12.0) and spice-protocol(>=0.12.3) devel"
-    fi
-    spice="no"
-  fi
-fi
-
-# check for smartcard support
-if test "$smartcard" != "no"; then
-    if $pkg_config libcacard; then
-        libcacard_cflags=$($pkg_config --cflags libcacard)
-        libcacard_libs=$($pkg_config --libs libcacard)
-        smartcard="yes"
-    else
-        if test "$smartcard" = "yes"; then
-            feature_not_found "smartcard" "Install libcacard devel"
-        fi
-        smartcard="no"
-    fi
-fi
-
-
 
 ##########################################
 # virgl renderer probe
@@ -3706,12 +3618,9 @@ echo "Trace backends    $trace_backends"
 if have_backend "simple"; then
 echo "Trace output file $trace_file-<pid>"
 fi
-echo "spice support     $spice $(echo_version $spice $spice_protocol_version/$spice_server_version)"
 echo "rbd support       $rbd"
 echo "xfsctl support    $xfs"
 echo "smartcard support $smartcard"
-echo "OpenGL support    $opengl"
-echo "OpenGL dmabufs    $opengl_dmabuf"
 echo "libiscsi support  $libiscsi"
 echo "libnfs support    $libnfs"
 echo "build guest agent $guest_agent"
@@ -4023,22 +3932,10 @@ if test "$posix_memalign" = "yes" ; then
   echo "CONFIG_POSIX_MEMALIGN=y" >> $config_host_mak
 fi
 
-if test "$spice" = "yes" ; then
-  echo "CONFIG_SPICE=y" >> $config_host_mak
-fi
-
 if test "$smartcard" = "yes" ; then
   echo "CONFIG_SMARTCARD=y" >> $config_host_mak
   echo "SMARTCARD_CFLAGS=$libcacard_cflags" >> $config_host_mak
   echo "SMARTCARD_LIBS=$libcacard_libs" >> $config_host_mak
-fi
-
-if test "$opengl" = "yes" ; then
-  echo "CONFIG_OPENGL=y" >> $config_host_mak
-  echo "OPENGL_LIBS=$opengl_libs" >> $config_host_mak
-  if test "$opengl_dmabuf" = "yes" ; then
-    echo "CONFIG_OPENGL_DMABUF=y" >> $config_host_mak
-  fi
 fi
 
 if test "$malloc_trim" = "yes" ; then

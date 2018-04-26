@@ -22,7 +22,6 @@
 #include "qemu/config-file.h"
 #include "qemu/uuid.h"
 #include "chardev/char.h"
-#include "ui/qemu-spice.h"
 #include "sysemu/kvm.h"
 #include "sysemu/arch_init.h"
 #include "hw/qdev.h"
@@ -127,22 +126,6 @@ void qmp_cpu_add(int64_t id, Error **errp)
         error_setg(errp, "Not supported");
     }
 }
-
-#ifndef CONFIG_SPICE
-/*
- * qmp_unregister_commands_hack() ensures that QMP command query-spice
- * exists only #ifdef CONFIG_SPICE.  Necessary for an accurate
- * query-commands result.  However, the QAPI schema is blissfully
- * unaware of that, and the QAPI code generator happily generates a
- * dead qmp_marshal_query_spice() that calls qmp_query_spice().
- * Provide it one, or else linking fails.  FIXME Educate the QAPI
- * schema on CONFIG_SPICE.
- */
-SpiceInfo *qmp_query_spice(Error **errp)
-{
-    abort();
-};
-#endif
 
 void qmp_cont(Error **errp)
 {
@@ -252,71 +235,6 @@ QObject *qmp_qom_get(const char *path, const char *property, Error **errp)
     }
 
     return object_property_get_qobject(obj, property, errp);
-}
-
-void qmp_set_password(const char *protocol, const char *password,
-                      bool has_connected, const char *connected, Error **errp)
-{
-    int disconnect_if_connected = 0;
-    int fail_if_connected = 0;
-    int rc;
-
-    if (has_connected) {
-        if (strcmp(connected, "fail") == 0) {
-            fail_if_connected = 1;
-        } else if (strcmp(connected, "disconnect") == 0) {
-            disconnect_if_connected = 1;
-        } else if (strcmp(connected, "keep") == 0) {
-            /* nothing */
-        } else {
-            error_setg(errp, QERR_INVALID_PARAMETER, "connected");
-            return;
-        }
-    }
-
-    if (strcmp(protocol, "spice") == 0) {
-        if (!qemu_using_spice(errp)) {
-            return;
-        }
-        rc = qemu_spice_set_passwd(password, fail_if_connected,
-                                   disconnect_if_connected);
-        if (rc != 0) {
-            error_setg(errp, QERR_SET_PASSWD_FAILED);
-        }
-        return;
-    }
-
-    error_setg(errp, QERR_INVALID_PARAMETER, "protocol");
-}
-
-void qmp_expire_password(const char *protocol, const char *whenstr,
-                         Error **errp)
-{
-    time_t when;
-    int rc;
-
-    if (strcmp(whenstr, "now") == 0) {
-        when = 0;
-    } else if (strcmp(whenstr, "never") == 0) {
-        when = TIME_MAX;
-    } else if (whenstr[0] == '+') {
-        when = time(NULL) + strtoull(whenstr+1, NULL, 10);
-    } else {
-        when = strtoull(whenstr, NULL, 10);
-    }
-
-    if (strcmp(protocol, "spice") == 0) {
-        if (!qemu_using_spice(errp)) {
-            return;
-        }
-        rc = qemu_spice_set_pw_expire(when);
-        if (rc != 0) {
-            error_setg(errp, QERR_SET_PASSWD_FAILED);
-        }
-        return;
-    }
-
-    error_setg(errp, QERR_INVALID_PARAMETER, "protocol");
 }
 
 void qmp_change(const char *device, const char *target,
@@ -566,19 +484,7 @@ void qmp_add_client(const char *protocol, const char *fdname,
         return;
     }
 
-    if (strcmp(protocol, "spice") == 0) {
-        if (!qemu_using_spice(errp)) {
-            close(fd);
-            return;
-        }
-        skipauth = has_skipauth ? skipauth : false;
-        tls = has_tls ? tls : false;
-        if (qemu_spice_display_add_client(fd, skipauth, tls) < 0) {
-            error_setg(errp, "spice failed to add client");
-            close(fd);
-        }
-        return;
-    } else if ((s = qemu_chr_find(protocol)) != NULL) {
+    if ((s = qemu_chr_find(protocol)) != NULL) {
         if (qemu_chr_add_client(s, fd) < 0) {
             error_setg(errp, "failed to add client");
             close(fd);

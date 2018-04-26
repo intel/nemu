@@ -7,11 +7,6 @@
 #include "qemu/error-report.h"
 #include "qapi/qapi-types-ui.h"
 
-#ifdef CONFIG_OPENGL
-# include <epoxy/gl.h>
-# include "ui/shader.h"
-#endif
-
 /* keyboard/mouse support */
 
 #define MOUSE_EVENT_LBUTTON 0x01
@@ -135,11 +130,6 @@ struct DisplaySurface {
     pixman_format_code_t format;
     pixman_image_t *image;
     uint8_t flags;
-#ifdef CONFIG_OPENGL
-    GLenum glformat;
-    GLenum gltype;
-    GLuint texture;
-#endif
 };
 
 typedef struct QemuUIInfo {
@@ -418,24 +408,6 @@ void qemu_console_set_window_id(QemuConsole *con, int window_id);
 void console_select(unsigned int index);
 void qemu_console_resize(QemuConsole *con, int width, int height);
 DisplaySurface *qemu_console_surface(QemuConsole *con);
-
-/* console-gl.c */
-#ifdef CONFIG_OPENGL
-bool console_gl_check_format(DisplayChangeListener *dcl,
-                             pixman_format_code_t format);
-void surface_gl_create_texture(QemuGLShader *gls,
-                               DisplaySurface *surface);
-void surface_gl_update_texture(QemuGLShader *gls,
-                               DisplaySurface *surface,
-                               int x, int y, int w, int h);
-void surface_gl_render_texture(QemuGLShader *gls,
-                               DisplaySurface *surface);
-void surface_gl_destroy_texture(QemuGLShader *gls,
-                               DisplaySurface *surface);
-void surface_gl_setup_viewport(QemuGLShader *gls,
-                               DisplaySurface *surface,
-                               int ww, int wh);
-#endif
 
 typedef struct QemuDisplay QemuDisplay;
 

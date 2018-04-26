@@ -1203,15 +1203,7 @@ DEF("display", HAS_ARG, QEMU_OPTION_display,
     "-display none"
     "                select display type\n"
     "The default display is equivalent to\n"
-#if defined(CONFIG_GTK)
-            "\t\"-display gtk\"\n"
-#elif defined(CONFIG_COCOA)
-            "\t\"-display cocoa\"\n"
-#elif defined(CONFIG_VNC)
-            "\t\"-vnc localhost:0,to=99,id=default\"\n"
-#else
             "\t\"-display none\"\n"
-#endif
     , QEMU_ARCH_ALL)
 STEXI
 @item -display @var{type}
@@ -2464,10 +2456,6 @@ DEF("chardev", HAS_ARG, QEMU_OPTION_chardev,
 #endif
 #if defined(__linux__) || defined(__FreeBSD__) || defined(__DragonFly__)
     "-chardev parport,id=id,path=path[,mux=on|off][,logfile=PATH][,logappend=on|off]\n"
-#endif
-#if defined(CONFIG_SPICE)
-    "-chardev spicevmc,id=id,name=name[,debug=debug][,logfile=PATH][,logappend=on|off]\n"
-    "-chardev spiceport,id=id,name=name[,debug=debug][,logfile=PATH][,logappend=on|off]\n"
 #endif
     , QEMU_ARCH_ALL
 )
