@@ -1,3 +1,2 @@
 obj-$(CONFIG_VIRTIO) += virtio-net.o
 obj-y += vhost_net.o
-obj-$(call lnot,$(CONFIG_ROCKER)) += rocker/qmp-norocker.o

@@ -132,10 +132,6 @@ void migrate_set_parameter_completion(ReadLineState *rs, int nb_args,
                                       const char *str);
 void delvm_completion(ReadLineState *rs, int nb_args, const char *str);
 void loadvm_completion(ReadLineState *rs, int nb_args, const char *str);
-void hmp_rocker(Monitor *mon, const QDict *qdict);
-void hmp_rocker_ports(Monitor *mon, const QDict *qdict);
-void hmp_rocker_of_dpa_flows(Monitor *mon, const QDict *qdict);
-void hmp_rocker_of_dpa_groups(Monitor *mon, const QDict *qdict);
 void hmp_info_dump(Monitor *mon, const QDict *qdict);
 void hmp_info_ramblock(Monitor *mon, const QDict *qdict);
 void hmp_hotpluggable_cpus(Monitor *mon, const QDict *qdict);

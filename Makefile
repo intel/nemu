@@ -100,7 +100,6 @@ GENERATED_FILES += qapi/qapi-types-introspect.h qapi/qapi-types-introspect.c
 GENERATED_FILES += qapi/qapi-types-migration.h qapi/qapi-types-migration.c
 GENERATED_FILES += qapi/qapi-types-misc.h qapi/qapi-types-misc.c
 GENERATED_FILES += qapi/qapi-types-net.h qapi/qapi-types-net.c
-GENERATED_FILES += qapi/qapi-types-rocker.h qapi/qapi-types-rocker.c
 GENERATED_FILES += qapi/qapi-types-run-state.h qapi/qapi-types-run-state.c
 GENERATED_FILES += qapi/qapi-types-sockets.h qapi/qapi-types-sockets.c
 GENERATED_FILES += qapi/qapi-types-tpm.h qapi/qapi-types-tpm.c
@@ -118,7 +117,6 @@ GENERATED_FILES += qapi/qapi-visit-introspect.h qapi/qapi-visit-introspect.c
 GENERATED_FILES += qapi/qapi-visit-migration.h qapi/qapi-visit-migration.c
 GENERATED_FILES += qapi/qapi-visit-misc.h qapi/qapi-visit-misc.c
 GENERATED_FILES += qapi/qapi-visit-net.h qapi/qapi-visit-net.c
-GENERATED_FILES += qapi/qapi-visit-rocker.h qapi/qapi-visit-rocker.c
 GENERATED_FILES += qapi/qapi-visit-run-state.h qapi/qapi-visit-run-state.c
 GENERATED_FILES += qapi/qapi-visit-sockets.h qapi/qapi-visit-sockets.c
 GENERATED_FILES += qapi/qapi-visit-tpm.h qapi/qapi-visit-tpm.c
@@ -135,7 +133,6 @@ GENERATED_FILES += qapi/qapi-commands-introspect.h qapi/qapi-commands-introspect
 GENERATED_FILES += qapi/qapi-commands-migration.h qapi/qapi-commands-migration.c
 GENERATED_FILES += qapi/qapi-commands-misc.h qapi/qapi-commands-misc.c
 GENERATED_FILES += qapi/qapi-commands-net.h qapi/qapi-commands-net.c
-GENERATED_FILES += qapi/qapi-commands-rocker.h qapi/qapi-commands-rocker.c
 GENERATED_FILES += qapi/qapi-commands-run-state.h qapi/qapi-commands-run-state.c
 GENERATED_FILES += qapi/qapi-commands-sockets.h qapi/qapi-commands-sockets.c
 GENERATED_FILES += qapi/qapi-commands-tpm.h qapi/qapi-commands-tpm.c
@@ -152,7 +149,6 @@ GENERATED_FILES += qapi/qapi-events-introspect.h qapi/qapi-events-introspect.c
 GENERATED_FILES += qapi/qapi-events-migration.h qapi/qapi-events-migration.c
 GENERATED_FILES += qapi/qapi-events-misc.h qapi/qapi-events-misc.c
 GENERATED_FILES += qapi/qapi-events-net.h qapi/qapi-events-net.c
-GENERATED_FILES += qapi/qapi-events-rocker.h qapi/qapi-events-rocker.c
 GENERATED_FILES += qapi/qapi-events-run-state.h qapi/qapi-events-run-state.c
 GENERATED_FILES += qapi/qapi-events-sockets.h qapi/qapi-events-sockets.c
 GENERATED_FILES += qapi/qapi-events-tpm.h qapi/qapi-events-tpm.c
@@ -566,7 +562,6 @@ qapi-modules = $(SRC_PATH)/qapi/qapi-schema.json $(SRC_PATH)/qapi/common.json \
                $(SRC_PATH)/qapi/migration.json \
                $(SRC_PATH)/qapi/misc.json \
                $(SRC_PATH)/qapi/net.json \
-               $(SRC_PATH)/qapi/rocker.json \
                $(SRC_PATH)/qapi/run-state.json \
                $(SRC_PATH)/qapi/sockets.json \
                $(SRC_PATH)/qapi/tpm.json \
@@ -585,7 +580,6 @@ qapi/qapi-types-introspect.c qapi/qapi-types-introspect.h \
 qapi/qapi-types-migration.c qapi/qapi-types-migration.h \
 qapi/qapi-types-misc.c qapi/qapi-types-misc.h \
 qapi/qapi-types-net.c qapi/qapi-types-net.h \
-qapi/qapi-types-rocker.c qapi/qapi-types-rocker.h \
 qapi/qapi-types-run-state.c qapi/qapi-types-run-state.h \
 qapi/qapi-types-sockets.c qapi/qapi-types-sockets.h \
 qapi/qapi-types-tpm.c qapi/qapi-types-tpm.h \
@@ -603,7 +597,6 @@ qapi/qapi-visit-introspect.c qapi/qapi-visit-introspect.h \
 qapi/qapi-visit-migration.c qapi/qapi-visit-migration.h \
 qapi/qapi-visit-misc.c qapi/qapi-visit-misc.h \
 qapi/qapi-visit-net.c qapi/qapi-visit-net.h \
-qapi/qapi-visit-rocker.c qapi/qapi-visit-rocker.h \
 qapi/qapi-visit-run-state.c qapi/qapi-visit-run-state.h \
 qapi/qapi-visit-sockets.c qapi/qapi-visit-sockets.h \
 qapi/qapi-visit-tpm.c qapi/qapi-visit-tpm.h \
@@ -620,7 +613,6 @@ qapi/qapi-commands-introspect.c qapi/qapi-commands-introspect.h \
 qapi/qapi-commands-migration.c qapi/qapi-commands-migration.h \
 qapi/qapi-commands-misc.c qapi/qapi-commands-misc.h \
 qapi/qapi-commands-net.c qapi/qapi-commands-net.h \
-qapi/qapi-commands-rocker.c qapi/qapi-commands-rocker.h \
 qapi/qapi-commands-run-state.c qapi/qapi-commands-run-state.h \
 qapi/qapi-commands-sockets.c qapi/qapi-commands-sockets.h \
 qapi/qapi-commands-tpm.c qapi/qapi-commands-tpm.h \
@@ -637,7 +629,6 @@ qapi/qapi-events-introspect.c qapi/qapi-events-introspect.h \
 qapi/qapi-events-migration.c qapi/qapi-events-migration.h \
 qapi/qapi-events-misc.c qapi/qapi-events-misc.h \
 qapi/qapi-events-net.c qapi/qapi-events-net.h \
-qapi/qapi-events-rocker.c qapi/qapi-events-rocker.h \
 qapi/qapi-events-run-state.c qapi/qapi-events-run-state.h \
 qapi/qapi-events-sockets.c qapi/qapi-events-sockets.h \
 qapi/qapi-events-tpm.c qapi/qapi-events-tpm.h \

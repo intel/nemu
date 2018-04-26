@@ -83,7 +83,6 @@
 { 'include': 'block.json' }
 { 'include': 'char.json' }
 { 'include': 'net.json' }
-{ 'include': 'rocker.json' }
 { 'include': 'tpm.json' }
 { 'include': 'ui.json' }
 { 'include': 'migration.json' }

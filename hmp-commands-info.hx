@@ -626,62 +626,6 @@ Show iothread's identifiers.
 ETEXI
 
     {
-        .name       = "rocker",
-        .args_type  = "name:s",
-        .params     = "name",
-        .help       = "Show rocker switch",
-        .cmd        = hmp_rocker,
-    },
-
-STEXI
-@item info rocker @var{name}
-@findex info rocker
-Show rocker switch.
-ETEXI
-
-    {
-        .name       = "rocker-ports",
-        .args_type  = "name:s",
-        .params     = "name",
-        .help       = "Show rocker ports",
-        .cmd        = hmp_rocker_ports,
-    },
-
-STEXI
-@item info rocker-ports @var{name}-ports
-@findex info rocker-ports
-Show rocker ports.
-ETEXI
-
-    {
-        .name       = "rocker-of-dpa-flows",
-        .args_type  = "name:s,tbl_id:i?",
-        .params     = "name [tbl_id]",
-        .help       = "Show rocker OF-DPA flow tables",
-        .cmd        = hmp_rocker_of_dpa_flows,
-    },
-
-STEXI
-@item info rocker-of-dpa-flows @var{name} [@var{tbl_id}]
-@findex info rocker-of-dpa-flows
-Show rocker OF-DPA flow tables.
-ETEXI
-
-    {
-        .name       = "rocker-of-dpa-groups",
-        .args_type  = "name:s,type:i?",
-        .params     = "name [type]",
-        .help       = "Show rocker OF-DPA groups",
-        .cmd        = hmp_rocker_of_dpa_groups,
-    },
-
-STEXI
-@item info rocker-of-dpa-groups @var{name} [@var{type}]
-@findex info rocker-of-dpa-groups
-Show rocker OF-DPA groups.
-ETEXI
-
-    {
         .name       = "dump",
         .args_type  = "",
         .params     = "",
