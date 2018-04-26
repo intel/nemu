@@ -1431,22 +1431,6 @@ qemu_irq pc_allocate_cpu_irq(void)
     return qemu_allocate_irq(pic_irq_request, NULL, 0);
 }
 
-DeviceState *pc_vga_init(ISABus *isa_bus, PCIBus *pci_bus)
-{
-    DeviceState *dev = NULL;
-
-    rom_set_order_override(FW_CFG_ORDER_OVERRIDE_VGA);
-    if (pci_bus) {
-        PCIDevice *pcidev = pci_vga_init(pci_bus);
-        dev = pcidev ? &pcidev->qdev : NULL;
-    } else if (isa_bus) {
-        ISADevice *isadev = isa_vga_init(isa_bus);
-        dev = isadev ? DEVICE(isadev) : NULL;
-    }
-    rom_reset_order_override();
-    return dev;
-}
-
 static const MemoryRegionOps ioport80_io_ops = {
     .write = ioport80_write,
     .read = ioport80_read,

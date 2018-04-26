@@ -41,7 +41,6 @@
 #include "sysemu/accel.h"
 #include "hw/isa/isa.h"
 #include "hw/scsi/scsi.h"
-#include "hw/display/vga.h"
 #include "sysemu/watchdog.h"
 #include "hw/smbios/smbios.h"
 #include "hw/acpi/acpi.h"
@@ -110,7 +109,6 @@
 static const char *data_dir[16];
 static int data_dir_idx;
 const char *bios_name = NULL;
-enum vga_retrace_method vga_retrace_method = VGA_RETRACE_DUMB;
 int display_opengl;
 const char* keyboard_layout = NULL;
 ram_addr_t ram_size;
@@ -123,7 +121,6 @@ int autostart;
 static int rtc_utc = 1;
 static int rtc_date_offset = -1; /* -1 means no change */
 QEMUClockType rtc_clock;
-int vga_interface_type = VGA_NONE;
 static DisplayOptions dpy;
 int no_frame;
 Chardev *serial_hds[MAX_SERIAL_PORTS];
@@ -173,7 +170,6 @@ static int has_defaults = 1;
 static int default_serial = 1;
 static int default_virtcon = 1;
 static int default_monitor = 1;
-static int default_vga = 1;
 static int default_net = 1;
 
 static struct {
@@ -183,8 +179,6 @@ static struct {
     { .driver = "virtio-serial",        .flag = &default_serial    },
     { .driver = "virtio-serial-pci",    .flag = &default_virtcon   },
     { .driver = "virtio-serial",        .flag = &default_virtcon   },
-    { .driver = "VGA",                  .flag = &default_vga       },
-    { .driver = "virtio-vga",           .flag = &default_vga       },
 };
 
 static QemuOptsList qemu_rtc_opts = {
@@ -1725,77 +1719,6 @@ static const QEMUOption qemu_options[] = {
     { NULL },
 };
 
-typedef struct VGAInterfaceInfo {
-    const char *opt_name;    /* option name */
-    const char *name;        /* human-readable name */
-    /* Class names indicating that support is available.
-     * If no class is specified, the interface is always available */
-    const char *class_names[2];
-} VGAInterfaceInfo;
-
-static VGAInterfaceInfo vga_interfaces[VGA_TYPE_MAX] = {
-    [VGA_NONE] = {
-        .opt_name = "none",
-    },
-    [VGA_STD] = {
-        .opt_name = "std",
-        .name = "standard VGA",
-        .class_names = { "VGA", "virtio" },
-    },
-    [VGA_VIRTIO] = {
-        .opt_name = "virtio",
-        .name = "Virtio VGA",
-        .class_names = { "virtio-vga" },
-    },
-};
-
-static bool vga_interface_available(VGAInterfaceType t)
-{
-    VGAInterfaceInfo *ti = &vga_interfaces[t];
-
-    assert(t < VGA_TYPE_MAX);
-    return !ti->class_names[0] ||
-           object_class_by_name(ti->class_names[0]) ||
-           object_class_by_name(ti->class_names[1]);
-}
-
-static void select_vgahw(const char *p)
-{
-    const char *opts;
-    int t;
-
-    assert(vga_interface_type == VGA_NONE);
-    for (t = 0; t < VGA_TYPE_MAX; t++) {
-        VGAInterfaceInfo *ti = &vga_interfaces[t];
-        if (ti->opt_name && strstart(p, ti->opt_name, &opts)) {
-            if (!vga_interface_available(t)) {
-                error_report("%s not available", ti->name);
-                exit(1);
-            }
-            vga_interface_type = t;
-            break;
-        }
-    }
-    if (t == VGA_TYPE_MAX) {
-    invalid_vga:
-        error_report("unknown vga type: %s", p);
-        exit(1);
-    }
-    while (*opts) {
-        const char *nextopt;
-
-        if (strstart(opts, ",retrace=", &nextopt)) {
-            opts = nextopt;
-            if (strstart(opts, "dumb", &nextopt))
-                vga_retrace_method = VGA_RETRACE_DUMB;
-            else if (strstart(opts, "precise", &nextopt))
-                vga_retrace_method = VGA_RETRACE_PRECISE;
-            else goto invalid_vga;
-        } else goto invalid_vga;
-        opts = nextopt;
-    }
-}
-
 static void parse_display(const char *p)
 {
     const char *opts;
@@ -2634,7 +2557,6 @@ int main(int argc, char **argv, char **envp)
     const char *loadvm = NULL;
     MachineClass *machine_class;
     const char *cpu_model;
-    const char *vga_model = NULL;
     const char *qtest_chrdev = NULL;
     const char *qtest_log = NULL;
     const char *pid_file = NULL;
@@ -3003,10 +2925,6 @@ int main(int argc, char **argv, char **envp)
                 rtc_utc = 0;
                 warn_report("This option is deprecated, "
                             "use '-rtc base=localtime' instead.");
-                break;
-            case QEMU_OPTION_vga:
-                vga_model = optarg;
-                default_vga = 0;
                 break;
             case QEMU_OPTION_echr:
                 {
@@ -3686,9 +3604,6 @@ int main(int argc, char **argv, char **envp)
     qemu_opts_foreach(qemu_find_opts("global"),
                       default_driver_check, NULL, NULL);
 
-    if (!vga_model && !default_vga) {
-        vga_interface_type = VGA_DEVICE;
-    }
     if (!has_defaults || machine_class->no_serial) {
         default_serial = 0;
     }
@@ -3700,7 +3615,6 @@ int main(int argc, char **argv, char **envp)
     if (!has_defaults) {
         default_monitor = 0;
         default_net = 0;
-        default_vga = 0;
     }
 
     if (is_daemonized()) {
@@ -3959,20 +3873,6 @@ int main(int argc, char **argv, char **envp)
         exit(1);
     if (foreach_device_config(DEV_DEBUGCON, debugcon_parse) < 0)
         exit(1);
-
-    /* If no default VGA is requested, the default is "none".  */
-    if (default_vga) {
-        if (machine_class->default_display) {
-            vga_model = machine_class->default_display;
-        } else if (vga_interface_available(VGA_STD)) {
-            vga_model = "std";
-        } else if (vga_interface_available(VGA_VIRTIO)) {
-            vga_model = "virtio";
-        }
-    }
-    if (vga_model) {
-        select_vgahw(vga_model);
-    }
 
     if (watchdog) {
         i = select_watchdog(watchdog);

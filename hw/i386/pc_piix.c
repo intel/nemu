@@ -211,8 +211,6 @@ static void pc_init1(MachineState *machine,
 
     pc_register_ferr_irq(pcms->gsi[13]);
 
-    pc_vga_init(isa_bus, pcmc->pci_enabled ? pci_bus : NULL);
-
     /* init basic PC hardware */
     pc_basic_device_init(isa_bus, pcms->gsi, &rtc_state, true,
                          pcms->pit, 0x4);

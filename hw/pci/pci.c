@@ -1876,20 +1876,6 @@ PCIDevice *pci_nic_init_nofail(NICInfo *nd, PCIBus *rootbus,
     return pci_dev;
 }
 
-PCIDevice *pci_vga_init(PCIBus *bus)
-{
-    switch (vga_interface_type) {
-    case VGA_STD:
-        return pci_create_simple(bus, -1, "VGA");
-    case VGA_VIRTIO:
-        return pci_create_simple(bus, -1, "virtio-vga");
-    case VGA_NONE:
-    default: /* Other non-PCI types. Checking for unsupported types is already
-                done in vl.c. */
-        return NULL;
-    }
-}
-
 /* Whether a given bus number is in range of the secondary
  * bus of the given bridge device. */
 static bool pci_secondary_bus_in_range(PCIDevice *dev, int bus_num)

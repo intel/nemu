@@ -249,9 +249,6 @@ static void pc_q35_init(MachineState *machine)
 
     pc_cmos_init(pcms, idebus[0], idebus[1], rtc_state);
 
-    /* the rest devices to which pci devfn is automatically assigned */
-    pc_vga_init(isa_bus, host_bus);
-
     if (pcms->acpi_nvdimm_state.is_enabled) {
         nvdimm_init_acpi_state(&pcms->acpi_nvdimm_state, system_io,
                                pcms->fw_cfg, OBJECT(pcms));

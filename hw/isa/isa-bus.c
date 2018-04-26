@@ -180,15 +180,6 @@ ISADevice *isa_create_simple(ISABus *bus, const char *name)
     return dev;
 }
 
-ISADevice *isa_vga_init(ISABus *bus)
-{
-    switch (vga_interface_type) {
-    case VGA_NONE:
-    default:
-        return NULL;
-    }
-}
-
 static void isabus_dev_print(Monitor *mon, DeviceState *dev, int indent)
 {
     ISADevice *d = ISA_DEVICE(dev);

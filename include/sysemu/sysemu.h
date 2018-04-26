@@ -97,13 +97,6 @@ void qemu_announce_self(void);
 
 extern int autostart;
 
-typedef enum {
-    VGA_NONE, VGA_STD, VGA_DEVICE, VGA_VIRTIO,
-    VGA_TYPE_MAX,
-} VGAInterfaceType;
-
-extern int vga_interface_type;
-
 extern int graphic_width;
 extern int graphic_height;
 extern int graphic_depth;
