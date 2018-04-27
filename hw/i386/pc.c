@@ -535,11 +535,6 @@ static uint64_t port92_read(void *opaque, hwaddr addr,
     return ret;
 }
 
-static void port92_init(ISADevice *dev, qemu_irq a20_out)
-{
-    qdev_connect_gpio_out_named(DEVICE(dev), PORT92_A20_LINE, 0, a20_out);
-}
-
 static const VMStateDescription vmstate_port92_isa = {
     .name = "port92",
     .version_id = 1,
@@ -615,15 +610,6 @@ static void port92_register_types(void)
 }
 
 type_init(port92_register_types)
-
-static void handle_a20_line_change(void *opaque, int irq, int level)
-{
-    X86CPU *cpu = opaque;
-
-    /* XXX: send to all CPUs ? */
-    /* XXX: add logic to handle multiple A20 line sources */
-    x86_cpu_set_a20(cpu, level);
-}
 
 int e820_add_entry(uint64_t address, uint64_t length, uint32_t type)
 {
@@ -1451,33 +1437,6 @@ static const MemoryRegionOps ioportF0_io_ops = {
     },
 };
 
-static void pc_superio_init(ISABus *isa_bus, bool create_fdctrl)
-{
-    int i;
-    DriveInfo *fd[MAX_FD];
-    qemu_irq *a20_line;
-    ISADevice *i8042, *port92;
-
-    serial_hds_isa_init(isa_bus, 0, MAX_SERIAL_PORTS);
-    parallel_hds_isa_init(isa_bus, MAX_PARALLEL_PORTS);
-
-    for (i = 0; i < MAX_FD; i++) {
-        fd[i] = drive_get(IF_FLOPPY, 0, i);
-        create_fdctrl |= !!fd[i];
-    }
-    if (create_fdctrl) {
-        fdctrl_init_isa(isa_bus, fd);
-    }
-
-    i8042 = isa_create_simple(isa_bus, "i8042");
-    port92 = isa_create_simple(isa_bus, "port92");
-
-    a20_line = qemu_allocate_irqs(handle_a20_line_change, first_cpu, 2);
-    i8042_setup_a20_line(i8042, a20_line[0]);
-    port92_init(port92, a20_line[1]);
-    g_free(a20_line);
-}
-
 void pc_basic_device_init(ISABus *isa_bus, qemu_irq *gsi,
                           ISADevice **rtc_state,
                           bool create_fdctrl,
@@ -1547,8 +1506,6 @@ void pc_basic_device_init(ISABus *isa_bus, qemu_irq *gsi,
 
     i8257_dma_init(isa_bus, 0);
 
-    /* Super I/O */
-    pc_superio_init(isa_bus, create_fdctrl);
 }
 
 void ioapic_init_gsi(GSIState *gsi_state, const char *parent_name)

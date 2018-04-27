@@ -8,7 +8,6 @@ devices-dirs-$(CONFIG_SOFTMMU) += dma/
 devices-dirs-$(CONFIG_SOFTMMU) += gpio/
 devices-dirs-$(CONFIG_SOFTMMU) += i2c/
 devices-dirs-$(CONFIG_SOFTMMU) += ide/
-devices-dirs-$(CONFIG_SOFTMMU) += input/
 devices-dirs-$(CONFIG_SOFTMMU) += intc/
 devices-dirs-$(CONFIG_SOFTMMU) += isa/
 devices-dirs-$(CONFIG_SOFTMMU) += misc/
