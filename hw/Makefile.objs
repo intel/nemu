@@ -16,7 +16,6 @@ devices-dirs-$(CONFIG_SOFTMMU) += net/
 devices-dirs-$(CONFIG_SOFTMMU) += nvram/
 devices-dirs-$(CONFIG_SOFTMMU) += pci/
 devices-dirs-$(CONFIG_PCI) += pci-bridge/ pci-host/
-devices-dirs-$(CONFIG_SOFTMMU) += pcmcia/
 devices-dirs-$(CONFIG_SOFTMMU) += scsi/
 devices-dirs-$(CONFIG_SOFTMMU) += timer/
 devices-dirs-$(CONFIG_SOFTMMU) += vfio/
