@@ -30,7 +30,6 @@
 #include "hw/pci/pci.h"
 #include "qom/cpu.h"
 #include "target/i386/cpu.h"
-#include "hw/misc/pvpanic.h"
 #include "hw/timer/hpet.h"
 #include "hw/acpi/acpi-defs.h"
 #include "hw/acpi/acpi.h"
@@ -232,7 +231,6 @@ static void acpi_get_misc_info(AcpiMiscInfo *info)
 
     info->has_hpet = hpet_find();
     info->tpm_version = tpm_get_version(tpm_find());
-    info->pvpanic_port = pvpanic_port();
     info->applesmc_io_base = applesmc_port();
 }
 
