@@ -1,11 +1,11 @@
 #!/bin/sh
 set -x
 
-sudo sh -c 'echo "deb [arch=amd64] http://archive.ubuntu.com/ubuntu xenial main universe multiverse" > /etc/apt/sources.list'
-sudo sh -c 'echo "deb [arch=amd64] http://archive.ubuntu.com/ubuntu xenial-updates main universe multiverse" >> /etc/apt/sources.list'
-sudo sh -c 'echo "deb [arch=amd64] http://security.ubuntu.com/ubuntu xenial-security main universe multiverse" >> /etc/apt/sources.list'
+sudo sh -c 'echo "deb [arch=amd64] http://archive.ubuntu.com/ubuntu bionic main universe multiverse" > /etc/apt/sources.list'
+sudo sh -c 'echo "deb [arch=amd64] http://archive.ubuntu.com/ubuntu bionic-updates main universe multiverse" >> /etc/apt/sources.list'
+sudo sh -c 'echo "deb [arch=amd64] http://security.ubuntu.com/ubuntu bionic-security main universe multiverse" >> /etc/apt/sources.list'
 
-sudo sh -c 'echo "deb-src http://archive.ubuntu.com/ubuntu xenial main universe multiverse" >> /etc/apt/sources.list'
+sudo sh -c 'echo "deb-src http://archive.ubuntu.com/ubuntu bionic main universe multiverse" >> /etc/apt/sources.list'
 
 sudo sh -c 'echo "APT::Install-Recommends \"0\";" >  /etc/apt/apt.conf.d/10local'
 sudo sh -c 'echo "APT::Install-Suggests \"0\";" >>  /etc/apt/apt.conf.d/10local'
