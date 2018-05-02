@@ -75,7 +75,6 @@ typedef struct PIIX4PMState {
 
     qemu_irq irq;
     qemu_irq smi_irq;
-    int smm_enabled;
     Notifier machine_ready;
     Notifier powerdown_notifier;
 
@@ -354,10 +353,8 @@ static void piix4_reset(void *opaque)
     pci_conf[0x40] = 0x01; /* PM io base read only bit */
     pci_conf[0x80] = 0;
 
-    if (!s->smm_enabled) {
-        /* Mark SMM as already inited (until KVM supports SMM). */
-        pci_conf[0x5B] = 0x02;
-    }
+    /* Mark SMM as already inited (until KVM supports SMM). */
+    pci_conf[0x5B] = 0x02;
     pm_io_space_update(s);
     acpi_pcihp_reset(&s->acpi_pci_hotplug);
 }
@@ -501,11 +498,9 @@ static void piix4_pm_realize(PCIDevice *dev, Error **errp)
     /* APM */
     apm_init(dev, &s->apm, apm_ctrl_changed, s);
 
-    if (!s->smm_enabled) {
-        /* Mark SMM as already inited to prevent SMM from running.  KVM does not
-         * support SMM mode. */
-        pci_conf[0x5B] = 0x02;
-    }
+    /* Mark SMM as already inited to prevent SMM from running.  KVM does not
+     * support SMM mode. */
+    pci_conf[0x5B] = 0x02;
 
     /* XXX: which specification is used ? The i82731AB has different
        mappings */
@@ -567,8 +562,6 @@ I2CBus *piix4_pm_init(PCIBus *bus, int devfn, uint32_t smb_io_base,
     s = PIIX4_PM(dev);
     s->irq = sci_irq;
     s->smi_irq = smi_irq;
-    s->smm_enabled = smm_enabled;
-
     qdev_init_nofail(dev);
 
     return s->smb.smbus;

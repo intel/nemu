@@ -111,11 +111,6 @@ int kvm_has_pit_state2(void)
     return has_pit_state2;
 }
 
-bool kvm_has_smm(void)
-{
-    return kvm_check_extension(kvm_state, KVM_CAP_X86_SMM);
-}
-
 bool kvm_has_adjust_clock_stable(void)
 {
     int ret = kvm_check_extension(kvm_state, KVM_CAP_ADJUST_CLOCK);
@@ -1228,40 +1223,6 @@ static int kvm_get_supported_msrs(KVMState *s)
     return ret;
 }
 
-static Notifier smram_machine_done;
-static KVMMemoryListener smram_listener;
-static AddressSpace smram_address_space;
-static MemoryRegion smram_as_root;
-static MemoryRegion smram_as_mem;
-
-static void register_smram_listener(Notifier *n, void *unused)
-{
-    MemoryRegion *smram =
-        (MemoryRegion *) object_resolve_path("/machine/smram", NULL);
-
-    /* Outer container... */
-    memory_region_init(&smram_as_root, OBJECT(kvm_state), "mem-container-smram", ~0ull);
-    memory_region_set_enabled(&smram_as_root, true);
-
-    /* ... with two regions inside: normal system memory with low
-     * priority, and...
-     */
-    memory_region_init_alias(&smram_as_mem, OBJECT(kvm_state), "mem-smram",
-                             get_system_memory(), 0, ~0ull);
-    memory_region_add_subregion_overlap(&smram_as_root, 0, &smram_as_mem, 0);
-    memory_region_set_enabled(&smram_as_mem, true);
-
-    if (smram) {
-        /* ... SMRAM with higher priority */
-        memory_region_add_subregion_overlap(&smram_as_root, 0, smram, 10);
-        memory_region_set_enabled(smram, true);
-    }
-
-    address_space_init(&smram_address_space, &smram_as_root, "KVM-SMRAM");
-    kvm_memory_listener_register(kvm_state, &smram_listener,
-                                 &smram_address_space, 1);
-}
-
 int kvm_arch_init(MachineState *ms, KVMState *s)
 {
     uint64_t identity_base = 0xfffbc000;
@@ -1333,12 +1294,6 @@ int kvm_arch_init(MachineState *ms, KVMState *s)
         }
     }
 
-    if (kvm_check_extension(s, KVM_CAP_X86_SMM) &&
-        object_dynamic_cast(OBJECT(ms), TYPE_PC_MACHINE) &&
-        pc_machine_is_smm_enabled(PC_MACHINE(ms))) {
-        smram_machine_done.notify = register_smram_listener;
-        qemu_add_machine_init_done_notifier(&smram_machine_done);
-    }
     return 0;
 }
 

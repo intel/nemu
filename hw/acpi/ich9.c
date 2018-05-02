@@ -251,10 +251,8 @@ static void pm_reset(void *opaque)
     acpi_gpe_reset(&pm->acpi_regs);
 
     pm->smi_en = 0;
-    if (!pm->smm_enabled) {
-        /* Mark SMM as already inited to prevent SMM from running. */
-        pm->smi_en |= ICH9_PMIO_SMI_EN_APMC_EN;
-    }
+    /* Mark SMM as already inited to prevent SMM from running. */
+    pm->smi_en |= ICH9_PMIO_SMI_EN_APMC_EN;
     pm->smi_en_wmask = ~0;
 
     acpi_update_sci(&pm->acpi_regs, pm->irq);
@@ -290,7 +288,6 @@ void ich9_pm_init(PCIDevice *lpc_pci, ICH9LPCPMRegs *pm,
                           "acpi-smi", 8);
     memory_region_add_subregion(&pm->io, ICH9_PMIO_SMI_EN, &pm->io_smi);
 
-    pm->smm_enabled = smm_enabled;
 
     pm->enable_tco = true;
     acpi_pm_tco_init(&pm->tco_regs, &pm->io);

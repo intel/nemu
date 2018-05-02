@@ -44,7 +44,6 @@ struct PCMachineState {
 
     /* Configuration options: */
     uint64_t max_ram_below_4g;
-    OnOffAuto smm;
 
     AcpiNVDIMMState acpi_nvdimm_state;
 
@@ -73,7 +72,6 @@ struct PCMachineState {
 #define PC_MACHINE_ACPI_DEVICE_PROP "acpi-device"
 #define PC_MACHINE_MEMHP_REGION_SIZE "hotplug-memory-region-size"
 #define PC_MACHINE_MAX_RAM_BELOW_4G "max-ram-below-4g"
-#define PC_MACHINE_SMM              "smm"
 #define PC_MACHINE_NVDIMM           "nvdimm"
 #define PC_MACHINE_SMBUS            "smbus"
 #define PC_MACHINE_SATA             "sata"
@@ -177,7 +175,6 @@ void gsi_handler(void *opaque, int n, int level);
 /* pc.c */
 extern int fd_bootchk;
 
-bool pc_machine_is_smm_enabled(PCMachineState *pcms);
 void pc_register_ferr_irq(qemu_irq irq);
 void pc_acpi_smi_interrupt(void *opaque, int irq, int level);
 

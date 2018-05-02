@@ -25,7 +25,6 @@
 
 
 bool kvm_allows_irq0_override(void);
-bool kvm_has_smm(void);
 bool kvm_has_adjust_clock_stable(void);
 void kvm_synchronize_all_tsc(void);
 void kvm_arch_reset_vcpu(X86CPU *cs);
