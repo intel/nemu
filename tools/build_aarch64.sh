@@ -53,7 +53,6 @@ $SRCDIR/configure \
  --disable-snappy \
  --disable-seccomp \
  --disable-tpm \
- --disable-slirp \
  --disable-usb-redir \
  --disable-debug-tcg \
  --disable-qom-cast-debug \
