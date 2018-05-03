@@ -32,7 +32,6 @@
 #include "hw/hw.h"
 #include "hw/loader.h"
 #include "sysemu/arch_init.h"
-#include "hw/i2c/smbus.h"
 #include "hw/boards.h"
 #include "hw/timer/mc146818rtc.h"
 #include "sysemu/kvm.h"
@@ -237,14 +236,6 @@ static void pc_q35_init(MachineState *machine)
         ahci_ide_create_devs(ahci, hd);
     } else {
         idebus[0] = idebus[1] = NULL;
-    }
-
-    if (pcms->smbus) {
-        /* TODO: Populate SPD eeprom data.  */
-        smbus_eeprom_init(ich9_smb_init(host_bus,
-                                        PCI_DEVFN(ICH9_SMB_DEV, ICH9_SMB_FUNC),
-                                        0xb100),
-                          8, NULL, 0);
     }
 
     pc_cmos_init(pcms, idebus[0], idebus[1], rtc_state);

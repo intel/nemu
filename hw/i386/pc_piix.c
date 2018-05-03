@@ -39,7 +39,6 @@
 #include "sysemu/sysemu.h"
 #include "hw/sysbus.h"
 #include "sysemu/arch_init.h"
-#include "hw/i2c/smbus.h"
 #include "exec/memory.h"
 #include "exec/address-spaces.h"
 #include "hw/acpi/acpi.h"
@@ -71,7 +70,6 @@ static void pc_init1(MachineState *machine,
     PCII440FXState *i440fx_state;
     int piix3_devfn = -1;
     qemu_irq *i8259;
-    qemu_irq smi_irq;
     GSIState *gsi_state;
     DriveInfo *hd[MAX_IDE_BUS * MAX_IDE_DEVS];
     BusState *idebus[MAX_IDE_BUS];
@@ -241,15 +239,9 @@ static void pc_init1(MachineState *machine,
 
     if (pcmc->pci_enabled && acpi_enabled) {
         DeviceState *piix4_pm;
-        I2CBus *smbus;
 
-        smi_irq = qemu_allocate_irq(pc_acpi_smi_interrupt, first_cpu, 0);
-        /* TODO: Populate SPD eeprom data.  */
-        smbus = piix4_pm_init(pci_bus, piix3_devfn + 3, 0xb100,
-                              pcms->gsi[9], smi_irq,
-                              false,
-                              &piix4_pm);
-        smbus_eeprom_init(smbus, 8, NULL, 0);
+        piix4_pm = DEVICE(pci_create(pci_bus, piix3_devfn + 3, "PIIX4_PM"));
+        qdev_init_nofail(piix4_pm);
 
         object_property_add_link(OBJECT(machine), PC_MACHINE_ACPI_DEVICE_PROP,
                                  TYPE_HOTPLUG_HANDLER,

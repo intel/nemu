@@ -1,3 +1,0 @@
-common-obj-$(CONFIG_I2C) += core.o smbus.o smbus_eeprom.o
-common-obj-$(CONFIG_ACPI_X86) += smbus_ich9.o
-common-obj-$(CONFIG_APM) += pm_smbus.o

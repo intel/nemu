@@ -22,7 +22,6 @@
 #include "hw/hw.h"
 #include "hw/i386/pc.h"
 #include "hw/isa/apm.h"
-#include "hw/i2c/pm_smbus.h"
 #include "hw/pci/pci.h"
 #include "hw/acpi/acpi.h"
 #include "sysemu/sysemu.h"
@@ -69,9 +68,6 @@ typedef struct PIIX4PMState {
     ACPIREGS ar;
 
     APMState apm;
-
-    PMSMBus smb;
-    uint32_t smb_io_base;
 
     qemu_irq irq;
     qemu_irq smi_irq;
@@ -140,19 +136,6 @@ static void pm_io_space_update(PIIX4PMState *s)
     memory_region_transaction_commit();
 }
 
-static void smbus_io_space_update(PIIX4PMState *s)
-{
-    PCIDevice *d = PCI_DEVICE(s);
-
-    s->smb_io_base = le32_to_cpu(*(uint32_t *)(d->config + 0x90));
-    s->smb_io_base &= 0xffc0;
-
-    memory_region_transaction_begin();
-    memory_region_set_enabled(&s->smb.io, d->config[0xd2] & 1);
-    memory_region_set_address(&s->smb.io, s->smb_io_base);
-    memory_region_transaction_commit();
-}
-
 static void pm_write_config(PCIDevice *d,
                             uint32_t address, uint32_t val, int len)
 {
@@ -160,10 +143,6 @@ static void pm_write_config(PCIDevice *d,
     if (range_covers_byte(address, len, 0x80) ||
         ranges_overlap(address, len, 0x40, 4)) {
         pm_io_space_update((PIIX4PMState *)d);
-    }
-    if (range_covers_byte(address, len, 0xd2) ||
-        ranges_overlap(address, len, 0x90, 4)) {
-        smbus_io_space_update((PIIX4PMState *)d);
     }
 }
 
@@ -504,13 +483,7 @@ static void piix4_pm_realize(PCIDevice *dev, Error **errp)
 
     /* XXX: which specification is used ? The i82731AB has different
        mappings */
-    pci_conf[0x90] = s->smb_io_base | 1;
-    pci_conf[0x91] = s->smb_io_base >> 8;
     pci_conf[0xd2] = 0x09;
-    pm_smbus_init(DEVICE(dev), &s->smb);
-    memory_region_set_enabled(&s->smb.io, pci_conf[0xd2] & 1);
-    memory_region_add_subregion(pci_address_space_io(dev),
-                                s->smb_io_base, &s->smb.io);
 
     memory_region_init(&s->io, OBJECT(s), "piix4-pm", 64);
     memory_region_set_enabled(&s->io, false);
@@ -544,27 +517,6 @@ Object *piix4_pm_find(void)
         return NULL;
     }
     return o;
-}
-
-I2CBus *piix4_pm_init(PCIBus *bus, int devfn, uint32_t smb_io_base,
-                      qemu_irq sci_irq, qemu_irq smi_irq,
-                      int smm_enabled, DeviceState **piix4_pm)
-{
-    DeviceState *dev;
-    PIIX4PMState *s;
-
-    dev = DEVICE(pci_create(bus, devfn, TYPE_PIIX4_PM));
-    qdev_prop_set_uint32(dev, "smb_io_base", smb_io_base);
-    if (piix4_pm) {
-        *piix4_pm = dev;
-    }
-
-    s = PIIX4_PM(dev);
-    s->irq = sci_irq;
-    s->smi_irq = smi_irq;
-    qdev_init_nofail(dev);
-
-    return s->smb.smbus;
 }
 
 static uint64_t gpe_readb(void *opaque, hwaddr addr, unsigned width)
@@ -659,7 +611,6 @@ static void piix4_send_gpe(AcpiDeviceIf *adev, AcpiEventStatusBits ev)
 }
 
 static Property piix4_pm_properties[] = {
-    DEFINE_PROP_UINT32("smb_io_base", PIIX4PMState, smb_io_base, 0),
     DEFINE_PROP_UINT8(ACPI_PM_PROP_S3_DISABLED, PIIX4PMState, disable_s3, 0),
     DEFINE_PROP_UINT8(ACPI_PM_PROP_S4_DISABLED, PIIX4PMState, disable_s4, 0),
     DEFINE_PROP_UINT8(ACPI_PM_PROP_S4_VAL, PIIX4PMState, s4_val, 2),
