@@ -5,7 +5,6 @@ mkdir -p $HOME/build-x86_64
 pushd $HOME/build-x86_64
 make distclean || true
 $SRCDIR/configure \
- --disable-curl \
  --disable-curses \
  --disable-debug-tcg \
  --disable-docs \
