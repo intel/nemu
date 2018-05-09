@@ -5,7 +5,6 @@ mkdir -p $HOME/build-x86_64
 pushd $HOME/build-x86_64
 make distclean || true
 $SRCDIR/configure \
- --disable-docs \
  --disable-fdt \
  --disable-gcrypt \
  --disable-glusterfs \
