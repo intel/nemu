@@ -414,11 +414,7 @@ coroutine_pool=""
 debug_stack_usage="no"
 crypto_afalg="no"
 seccomp=""
-gtk=""
-gtkabi=""
-gtk_gl="no"
 tls_priority="NORMAL"
-vte=""
 virglrenderer=""
 tpm="yes"
 libssh2=""
@@ -1218,21 +1214,11 @@ for opt do
   --enable-uuid|--disable-uuid)
       echo "$0: $opt is obsolete, UUID support is always built" >&2
   ;;
-  --disable-gtk) gtk="no"
-  ;;
-  --enable-gtk) gtk="yes"
-  ;;
   --tls-priority=*) tls_priority="$optarg"
   ;;
   --enable-rdma) rdma="yes"
   ;;
   --disable-rdma) rdma="no"
-  ;;
-  --with-gtkabi=*) gtkabi="$optarg"
-  ;;
-  --disable-vte) vte="no"
-  ;;
-  --enable-vte) vte="yes"
   ;;
   --disable-virglrenderer) virglrenderer="no"
   ;;
@@ -1476,9 +1462,6 @@ disabled with --disable-FEATURE, default is enabled if available:
   sparse          sparse checker
   sdl             SDL UI
   --with-sdlabi     select preferred SDL ABI 1.2 or 2.0
-  gtk             gtk UI
-  --with-gtkabi     select preferred GTK ABI 2.0 or 3.0
-  vte             vte support for the gtk UI
   vnc             VNC UI support
   vnc-sasl        SASL encryption for VNC server
   vnc-jpeg        JPEG lossy compression for VNC server
@@ -2399,45 +2382,6 @@ if $pkg_config --exists "x11"; then
 fi
 
 ##########################################
-# GTK probe
-
-if test "$gtk" != "no"; then
-    if test "$gtkabi" = ""; then
-        # The GTK ABI was not specified explicitly, so try whether 3.0 is available.
-        # Use 2.0 as a fallback if that is available.
-        if $pkg_config --exists "gtk+-3.0 >= 3.0.0"; then
-            gtkabi=3.0
-        elif $pkg_config --exists "gtk+-2.0 >= 2.18.0"; then
-            gtkabi=2.0
-        else
-            gtkabi=3.0
-        fi
-    fi
-    gtkpackage="gtk+-$gtkabi"
-    gtkx11package="gtk+-x11-$gtkabi"
-    if test "$gtkabi" = "3.0" ; then
-      gtkversion="3.0.0"
-    else
-      gtkversion="2.18.0"
-    fi
-    if $pkg_config --exists "$gtkpackage >= $gtkversion"; then
-        gtk_cflags=$($pkg_config --cflags $gtkpackage)
-        gtk_libs=$($pkg_config --libs $gtkpackage)
-        gtk_version=$($pkg_config --modversion $gtkpackage)
-        if $pkg_config --exists "$gtkx11package >= $gtkversion"; then
-            need_x11=yes
-            gtk_cflags="$gtk_cflags $x11_cflags"
-            gtk_libs="$gtk_libs $x11_libs"
-        fi
-        gtk="yes"
-    elif test "$gtk" = "yes"; then
-        feature_not_found "gtk" "Install gtk3-devel"
-    else
-        gtk="no"
-    fi
-fi
-
-##########################################
 # libtasn1 - only for the TLS creds/session test suite
 
 tasn1=yes
@@ -2457,37 +2401,6 @@ fi
 have_ifaddrs_h=yes
 if ! check_include "ifaddrs.h" ; then
   have_ifaddrs_h=no
-fi
-
-##########################################
-# VTE probe
-
-if test "$vte" != "no"; then
-    if test "$gtkabi" = "3.0"; then
-      vteminversion="0.32.0"
-      if $pkg_config --exists "vte-2.91"; then
-        vtepackage="vte-2.91"
-      else
-        vtepackage="vte-2.90"
-      fi
-    else
-      vtepackage="vte"
-      vteminversion="0.24.0"
-    fi
-    if $pkg_config --exists "$vtepackage >= $vteminversion"; then
-        vte_cflags=$($pkg_config --cflags $vtepackage)
-        vte_libs=$($pkg_config --libs $vtepackage)
-        vteversion=$($pkg_config --modversion $vtepackage)
-        vte="yes"
-    elif test "$vte" = "yes"; then
-        if test "$gtkabi" = "3.0"; then
-            feature_not_found "vte" "Install libvte-2.90/2.91 devel"
-        else
-            feature_not_found "vte" "Install libvte devel"
-        fi
-    else
-        vte="no"
-    fi
 fi
 
 ##########################################
@@ -3342,9 +3255,6 @@ if test "$opengl" != "no" ; then
     opengl_cflags="$($pkg_config --cflags $opengl_pkgs)"
     opengl_libs="$($pkg_config --libs $opengl_pkgs)"
     opengl=yes
-    if test "$gtk" = "yes" && $pkg_config --exists "$gtkpackage >= 3.16"; then
-        gtk_gl="yes"
-    fi
     QEMU_CFLAGS="$QEMU_CFLAGS $opengl_cflags"
   else
     if test "$opengl" = "yes" ; then
@@ -5216,9 +5126,6 @@ echo "strip binaries    $strip_opt"
 echo "profiler          $profiler"
 echo "static build      $static"
 echo "SDL support       $sdl $(echo_version $sdl $sdlversion)"
-echo "GTK support       $gtk $(echo_version $gtk $gtk_version)"
-echo "GTK GL support    $gtk_gl"
-echo "VTE support       $vte $(echo_version $vte $vteversion)"
 echo "TLS priority      $tls_priority"
 echo "libtasn1          $tasn1"
 echo "virgl support     $virglrenderer"
@@ -5312,12 +5219,6 @@ echo "capstone          $capstone"
 
 if test "$sdl_too_old" = "yes"; then
 echo "-> Your SDL version is too old - please upgrade to have SDL support"
-fi
-
-if test "$gtkabi" = "2.0"; then
-    echo
-    echo "WARNING: Use of GTK 2.0 is deprecated and will be removed in"
-    echo "WARNING: future releases. Please switch to using GTK 3.0"
 fi
 
 if test "$sdlabi" = "1.2"; then
@@ -5607,15 +5508,6 @@ fi
 if test "$glib_subprocess" = "yes" ; then
   echo "CONFIG_HAS_GLIB_SUBPROCESS_TESTS=y" >> $config_host_mak
 fi
-if test "$gtk" = "yes" ; then
-  echo "CONFIG_GTK=m" >> $config_host_mak
-  echo "CONFIG_GTKABI=$gtkabi" >> $config_host_mak
-  echo "GTK_CFLAGS=$gtk_cflags" >> $config_host_mak
-  echo "GTK_LIBS=$gtk_libs" >> $config_host_mak
-  if test "$gtk_gl" = "yes" ; then
-    echo "CONFIG_GTK_GL=y" >> $config_host_mak
-  fi
-fi
 echo "CONFIG_TLS_PRIORITY=\"$tls_priority\"" >> $config_host_mak
 if test "$tasn1" = "yes" ; then
   echo "CONFIG_TASN1=y" >> $config_host_mak
@@ -5633,11 +5525,6 @@ fi
 # if this macro is set.
 if test "$have_fsxattr" = "yes" ; then
     echo "HAVE_FSXATTR=y" >> $config_host_mak
-fi
-if test "$vte" = "yes" ; then
-  echo "CONFIG_VTE=y" >> $config_host_mak
-  echo "VTE_CFLAGS=$vte_cflags" >> $config_host_mak
-  echo "VTE_LIBS=$vte_libs" >> $config_host_mak
 fi
 if test "$virglrenderer" = "yes" ; then
   echo "CONFIG_VIRGL=y" >> $config_host_mak

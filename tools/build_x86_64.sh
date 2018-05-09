@@ -6,7 +6,6 @@ pushd $HOME/build-x86_64
 make distclean || true
 $SRCDIR/configure \
  --disable-fdt \
- --disable-gtk \
  --disable-guest-agent \
  --disable-guest-agent-msi \
  --disable-hax \
@@ -40,7 +39,6 @@ $SRCDIR/configure \
  --disable-vnc-jpeg \
  --disable-vnc-png \
  --disable-vnc-sasl \
- --disable-vte \
  --disable-vxhs \
  --disable-xen \
  --enable-attr \
