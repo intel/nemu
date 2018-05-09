@@ -350,12 +350,10 @@ hvf="no"
 whpx="no"
 rdma=""
 gprof="no"
-debug_tcg="no"
 debug="no"
 sanitizers="no"
 fortify_source=""
 strip_opt="yes"
-tcg_interpreter="no"
 bigendian="no"
 mingw32="no"
 gcov="no"
@@ -989,13 +987,8 @@ for opt do
   ;;
   --block-drv-ro-whitelist=*) block_drv_ro_whitelist=$(echo "$optarg" | sed -e 's/,/ /g')
   ;;
-  --enable-debug-tcg) debug_tcg="yes"
-  ;;
-  --disable-debug-tcg) debug_tcg="no"
-  ;;
   --enable-debug)
       # Enable debugging options that aren't excessively noisy
-      debug_tcg="yes"
       debug="yes"
       strip_opt="no"
       fortify_source="no"
@@ -1059,10 +1052,6 @@ for opt do
   --disable-whpx) whpx="no"
   ;;
   --enable-whpx) whpx="yes"
-  ;;
-  --disable-tcg-interpreter) tcg_interpreter="no"
-  ;;
-  --enable-tcg-interpreter) tcg_interpreter="yes"
   ;;
   --disable-cap-ng)  cap_ng="no"
   ;;
@@ -1487,7 +1476,6 @@ Advanced options (experts only):
   --with-trace-file=NAME   Full PATH,NAME of file to store traces
                            Default:trace-<pid>
   --disable-slirp          disable SLIRP userspace network connectivity
-  --enable-tcg-interpreter enable TCG with bytecode interpreter (TCI)
   --enable-malloc-trim     enable libc malloc_trim() for memory optimization
   --oss-lib                path to OSS library
   --cpu=CPU                Build for host CPU [$cpu]
@@ -1518,7 +1506,6 @@ disabled with --disable-FEATURE, default is enabled if available:
   guest-agent-msi build guest agent Windows MSI installation package
   pie             Position Independent Executables
   modules         modules support
-  debug-tcg       TCG debugging (default is disabled)
   debug-info      debugging information
   sparse          sparse checker
 
@@ -1618,11 +1605,7 @@ fi
 # Now we have handled --enable-tcg-interpreter and know we're not just
 # printing the help message, bail out if the host CPU isn't supported.
 if test "$ARCH" = "unknown"; then
-    if test "$tcg_interpreter" = "yes" ; then
-        echo "Unsupported CPU = $cpu, will use TCG with TCI (experimental)"
-    else
-        error_exit "Unsupported CPU = $cpu, try --enable-tcg-interpreter"
-    fi
+    error_exit "Unsupported CPU = $cpu"
 fi
 
 # Consult white-list to determine whether to enable werror
@@ -5554,10 +5537,6 @@ echo "HAX support       $hax"
 echo "HVF support       $hvf"
 echo "WHPX support      $whpx"
 echo "TCG support       $tcg"
-if test "$tcg" = "yes" ; then
-    echo "TCG debug enabled $debug_tcg"
-    echo "TCG interpreter   $tcg_interpreter"
-fi
 echo "malloc trim support $malloc_trim"
 echo "RDMA support      $rdma"
 echo "fdt support       $fdt"
@@ -5690,9 +5669,6 @@ echo "GIT_UPDATE=$git_update" >> $config_host_mak
 
 echo "ARCH=$ARCH" >> $config_host_mak
 
-if test "$debug_tcg" = "yes" ; then
-  echo "CONFIG_DEBUG_TCG=y" >> $config_host_mak
-fi
 if test "$strip_opt" = "yes" ; then
   echo "STRIP=${strip}" >> $config_host_mak
 fi
@@ -6035,9 +6011,6 @@ if test "$signalfd" = "yes" ; then
 fi
 if test "$tcg" = "yes"; then
   echo "CONFIG_TCG=y" >> $config_host_mak
-  if test "$tcg_interpreter" = "yes" ; then
-    echo "CONFIG_TCG_INTERPRETER=y" >> $config_host_mak
-  fi
 fi
 if test "$fdatasync" = "yes" ; then
   echo "CONFIG_FDATASYNC=y" >> $config_host_mak
@@ -6330,9 +6303,7 @@ if test "$vxhs" = "yes" ; then
   echo "VXHS_LIBS=$vxhs_libs" >> $config_host_mak
 fi
 
-if test "$tcg_interpreter" = "yes"; then
-  QEMU_INCLUDES="-iquote \$(SRC_PATH)/tcg/tci $QEMU_INCLUDES"
-elif test "$ARCH" = "sparc64" ; then
+if test "$ARCH" = "sparc64" ; then
   QEMU_INCLUDES="-iquote \$(SRC_PATH)/tcg/sparc $QEMU_INCLUDES"
 elif test "$ARCH" = "s390x" ; then
   QEMU_INCLUDES="-iquote \$(SRC_PATH)/tcg/s390 $QEMU_INCLUDES"
@@ -6771,9 +6742,6 @@ for i in $ARCH $TARGET_BASE_ARCH ; do
   ;;
   esac
 done
-if test "$tcg_interpreter" = "yes" ; then
-  disas_config "TCI"
-fi
 
 case "$ARCH" in
 alpha)

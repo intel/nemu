@@ -5,7 +5,6 @@ mkdir -p $HOME/build-x86_64
 pushd $HOME/build-x86_64
 make distclean || true
 $SRCDIR/configure \
- --disable-debug-tcg \
  --disable-docs \
  --disable-fdt \
  --disable-gcrypt \
@@ -35,7 +34,6 @@ $SRCDIR/configure \
  --disable-snappy \
  --disable-spice \
  --disable-tcg \
- --disable-tcg-interpreter \
  --disable-tcmalloc \
  --disable-tools \
  --disable-tpm \

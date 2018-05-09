@@ -6,7 +6,6 @@ pushd $HOME/build-aarch64
 make distclean || true
 $SRCDIR/configure \
  --cross-prefix=aarch64-linux-gnu- \
- --disable-debug-tcg \
  --disable-docs \
  --disable-glusterfs \
  --disable-gtk \
@@ -31,7 +30,6 @@ $SRCDIR/configure \
  --disable-smartcard \
  --disable-snappy \
  --disable-spice \
- --disable-tcg-interpreter \
  --disable-tcmalloc \
  --disable-tools \
  --disable-tpm \
