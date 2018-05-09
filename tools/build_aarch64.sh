@@ -1,8 +1,9 @@
 #!/bin/bash
+set -e
 
 mkdir -p $HOME/build-aarch64
 pushd $HOME/build-aarch64
-make distclean
+make distclean || true
 $SRCDIR/configure \
  --cross-prefix=aarch64-linux-gnu- \
  --disable-bluez \

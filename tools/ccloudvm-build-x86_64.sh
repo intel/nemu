@@ -1,4 +1,5 @@
 #!/bin/bash
+
 # need bionic for vhost-vsock
 ccloudvm create --disk 10 --cpus 2 --mem 2048 --mount nemu,none,$(realpath $PWD/..) --name nemu-x86-64 bionic
 ccloudvm start nemu-x86-64

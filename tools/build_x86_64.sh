@@ -1,8 +1,9 @@
 #!/bin/bash
+set -e
 
 mkdir -p $HOME/build-x86_64
 pushd $HOME/build-x86_64
-make distclean
+make distclean || true
 $SRCDIR/configure \
  --disable-bluez \
  --disable-brlapi \

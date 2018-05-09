@@ -1,4 +1,5 @@
 #!/bin/sh
+set -e
 set -x
 
 sudo sh -c 'echo "deb [arch=amd64] http://archive.ubuntu.com/ubuntu bionic main universe multiverse" > /etc/apt/sources.list'
