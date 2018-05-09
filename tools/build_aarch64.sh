@@ -6,7 +6,6 @@ pushd $HOME/build-aarch64
 make distclean || true
 $SRCDIR/configure \
  --cross-prefix=aarch64-linux-gnu- \
- --disable-bzip2 \
  --disable-capstone \
  --disable-cocoa \
  --disable-curl \

@@ -407,7 +407,6 @@ zlib="yes"
 capstone=""
 lzo=""
 snappy=""
-bzip2=""
 guest_agent=""
 guest_agent_with_vss="no"
 guest_agent_ntddscsi="no"
@@ -1229,10 +1228,6 @@ for opt do
   ;;
   --enable-snappy) snappy="yes"
   ;;
-  --disable-bzip2) bzip2="no"
-  ;;
-  --enable-bzip2) bzip2="yes"
-  ;;
   --enable-guest-agent) guest_agent="yes"
   ;;
   --disable-guest-agent) guest_agent="no"
@@ -1597,8 +1592,6 @@ disabled with --disable-FEATURE, default is enabled if available:
   usb-redir       usb network redirection support
   lzo             support of lzo compression library
   snappy          support of snappy compression library
-  bzip2           support of bzip2 compression library
-                  (for reading bzip2-compressed dmg images)
   seccomp         seccomp support
   coroutine-pool  coroutine freelist (better performance)
   glusterfs       GlusterFS backend
@@ -2101,24 +2094,6 @@ EOF
             feature_not_found "libsnappy" "Install libsnappy devel"
         fi
         snappy="no"
-    fi
-fi
-
-##########################################
-# bzip2 check
-
-if test "$bzip2" != "no" ; then
-    cat > $TMPC << EOF
-#include <bzlib.h>
-int main(void) { BZ2_bzlibVersion(); return 0; }
-EOF
-    if compile_prog "" "-lbz2" ; then
-        bzip2="yes"
-    else
-        if test "$bzip2" = "yes"; then
-            feature_not_found "libbzip2" "Install libbzip2 devel"
-        fi
-        bzip2="no"
     fi
 fi
 
@@ -5811,7 +5786,6 @@ echo "QOM debugging     $qom_cast_debug"
 echo "Live block migration $live_block_migration"
 echo "lzo support       $lzo"
 echo "snappy support    $snappy"
-echo "bzip2 support     $bzip2"
 echo "NUMA host support $numa"
 echo "libxml2           $libxml2"
 echo "tcmalloc support  $tcmalloc"
@@ -6314,11 +6288,6 @@ fi
 
 if test "$snappy" = "yes" ; then
   echo "CONFIG_SNAPPY=y" >> $config_host_mak
-fi
-
-if test "$bzip2" = "yes" ; then
-  echo "CONFIG_BZIP2=y" >> $config_host_mak
-  echo "BZIP2_LIBS=-lbz2" >> $config_host_mak
 fi
 
 if test "$libiscsi" = "yes" ; then
