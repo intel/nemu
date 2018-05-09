@@ -414,11 +414,6 @@ coroutine_pool=""
 debug_stack_usage="no"
 crypto_afalg="no"
 seccomp=""
-glusterfs=""
-glusterfs_xlator_opt="no"
-glusterfs_discard="no"
-glusterfs_fallocate="no"
-glusterfs_zerofill="no"
 gtk=""
 gtkabi=""
 gtk_gl="no"
@@ -1214,10 +1209,6 @@ for opt do
   ;;
   --disable-seccomp) seccomp="no"
   ;;
-  --disable-glusterfs) glusterfs="no"
-  ;;
-  --enable-glusterfs) glusterfs="yes"
-  ;;
   --disable-virtio-blk-data-plane|--enable-virtio-blk-data-plane)
       echo "$0: $opt is obsolete, virtio-blk data-plane is always on" >&2
   ;;
@@ -1522,7 +1513,6 @@ disabled with --disable-FEATURE, default is enabled if available:
   snappy          support of snappy compression library
   seccomp         seccomp support
   coroutine-pool  coroutine freelist (better performance)
-  glusterfs       GlusterFS backend
   tpm             TPM support
   libssh2         ssh block device support
   numa            libnuma support
@@ -3392,32 +3382,6 @@ if test "$libxml2" != "no" ; then
         fi
         libxml2="no"
     fi
-fi
-
-##########################################
-# glusterfs probe
-if test "$glusterfs" != "no" ; then
-  if $pkg_config --atleast-version=3 glusterfs-api; then
-    glusterfs="yes"
-    glusterfs_cflags=$($pkg_config --cflags glusterfs-api)
-    glusterfs_libs=$($pkg_config --libs glusterfs-api)
-    if $pkg_config --atleast-version=4 glusterfs-api; then
-      glusterfs_xlator_opt="yes"
-    fi
-    if $pkg_config --atleast-version=5 glusterfs-api; then
-      glusterfs_discard="yes"
-    fi
-    if $pkg_config --atleast-version=6 glusterfs-api; then
-      glusterfs_fallocate="yes"
-      glusterfs_zerofill="yes"
-    fi
-  else
-    if test "$glusterfs" = "yes" ; then
-      feature_not_found "GlusterFS backend support" \
-          "Install glusterfs-api devel >= 3"
-    fi
-    glusterfs="no"
-  fi
 fi
 
 # Check for inotify functions when we are building linux-user
@@ -5327,7 +5291,6 @@ echo "coroutine backend $coroutine"
 echo "coroutine pool    $coroutine_pool"
 echo "debug stack usage $debug_stack_usage"
 echo "crypto afalg      $crypto_afalg"
-echo "GlusterFS support $glusterfs"
 echo "gcov              $gcov_tool"
 echo "gcov enabled      $gcov"
 echo "TPM support       $tpm"
@@ -5893,28 +5856,6 @@ fi
 
 if test "$getauxval" = "yes" ; then
   echo "CONFIG_GETAUXVAL=y" >> $config_host_mak
-fi
-
-if test "$glusterfs" = "yes" ; then
-  echo "CONFIG_GLUSTERFS=m" >> $config_host_mak
-  echo "GLUSTERFS_CFLAGS=$glusterfs_cflags" >> $config_host_mak
-  echo "GLUSTERFS_LIBS=$glusterfs_libs" >> $config_host_mak
-fi
-
-if test "$glusterfs_xlator_opt" = "yes" ; then
-  echo "CONFIG_GLUSTERFS_XLATOR_OPT=y" >> $config_host_mak
-fi
-
-if test "$glusterfs_discard" = "yes" ; then
-  echo "CONFIG_GLUSTERFS_DISCARD=y" >> $config_host_mak
-fi
-
-if test "$glusterfs_fallocate" = "yes" ; then
-  echo "CONFIG_GLUSTERFS_FALLOCATE=y" >> $config_host_mak
-fi
-
-if test "$glusterfs_zerofill" = "yes" ; then
-  echo "CONFIG_GLUSTERFS_ZEROFILL=y" >> $config_host_mak
 fi
 
 if test "$libssh2" = "yes" ; then
