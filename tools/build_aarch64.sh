@@ -6,7 +6,6 @@ pushd $HOME/build-aarch64
 make distclean || true
 $SRCDIR/configure \
  --cross-prefix=aarch64-linux-gnu- \
- --disable-bluez \
  --disable-brlapi \
  --disable-bzip2 \
  --disable-capstone \
