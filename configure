@@ -384,7 +384,6 @@ bsd="no"
 linux="no"
 solaris="no"
 profiler="no"
-cocoa="no"
 softmmu="yes"
 linux_user="no"
 bsd_user="no"
@@ -769,7 +768,6 @@ Darwin)
     QEMU_CFLAGS="-arch x86_64 $QEMU_CFLAGS"
     LDFLAGS="-arch x86_64 $LDFLAGS"
   fi
-  cocoa="yes"
   audio_drv_list="coreaudio"
   audio_possible_drivers="coreaudio sdl"
   LDFLAGS="-framework CoreFoundation -framework IOKit $LDFLAGS"
@@ -1093,12 +1091,6 @@ for opt do
   --enable-libnfs) libnfs="yes"
   ;;
   --enable-profiler) profiler="yes"
-  ;;
-  --disable-cocoa) cocoa="no"
-  ;;
-  --enable-cocoa)
-      cocoa="yes" ;
-      audio_drv_list="coreaudio $(echo $audio_drv_list | sed s,coreaudio,,g)"
   ;;
   --disable-system) softmmu="no"
   ;;
@@ -1553,7 +1545,6 @@ disabled with --disable-FEATURE, default is enabled if available:
   vnc-sasl        SASL encryption for VNC server
   vnc-jpeg        JPEG lossy compression for VNC server
   vnc-png         PNG compression for VNC server
-  cocoa           Cocoa UI (Mac OS X only)
   virtfs          VirtFS
   mpath           Multipath persistent reservation passthrough
   xen             xen backend driver support
@@ -1931,21 +1922,6 @@ if compile_object ; then
     fi
 else
     echo big/little test failed
-fi
-
-##########################################
-# cocoa implies not SDL or GTK
-# (the cocoa UI code currently assumes it is always the active UI
-# and doesn't interact well with other UI frontend code)
-if test "$cocoa" = "yes"; then
-    if test "$sdl" = "yes"; then
-        error_exit "Cocoa and SDL UIs cannot both be enabled at once"
-    fi
-    if test "$gtk" = "yes"; then
-        error_exit "Cocoa and GTK UIs cannot both be enabled at once"
-    fi
-    gtk=no
-    sdl=no
 fi
 
 # Some versions of Mac OS X incorrectly define SIZE_MAX
@@ -5621,9 +5597,6 @@ echo "sparse enabled    $sparse"
 echo "strip binaries    $strip_opt"
 echo "profiler          $profiler"
 echo "static build      $static"
-if test "$darwin" = "yes" ; then
-    echo "Cocoa support     $cocoa"
-fi
 echo "SDL support       $sdl $(echo_version $sdl $sdlversion)"
 echo "GTK support       $gtk $(echo_version $gtk $gtk_version)"
 echo "GTK GL support    $gtk_gl"
@@ -5954,9 +5927,6 @@ if test "$sdl" = "yes" ; then
   echo "CONFIG_SDLABI=$sdlabi" >> $config_host_mak
   echo "SDL_CFLAGS=$sdl_cflags" >> $config_host_mak
   echo "SDL_LIBS=$sdl_libs" >> $config_host_mak
-fi
-if test "$cocoa" = "yes" ; then
-  echo "CONFIG_COCOA=y" >> $config_host_mak
 fi
 if test "$curses" = "yes" ; then
   echo "CONFIG_CURSES=m" >> $config_host_mak
