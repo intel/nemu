@@ -314,7 +314,6 @@ unset target_list
 # Distributions want to ensure that several features are compiled in, and it
 # is impossible without a --enable-foo that exits if a feature is not found.
 
-curl=""
 curses=""
 docs=""
 fdt=""
@@ -1125,10 +1124,6 @@ for opt do
   ;;
   --enable-curses) curses="yes"
   ;;
-  --disable-curl) curl="no"
-  ;;
-  --enable-curl) curl="yes"
-  ;;
   --disable-fdt) fdt="no"
   ;;
   --enable-fdt) fdt="yes"
@@ -1549,7 +1544,6 @@ disabled with --disable-FEATURE, default is enabled if available:
   mpath           Multipath persistent reservation passthrough
   xen             xen backend driver support
   xen-pci-passthrough
-  curl            curl connectivity
   membarrier      membarrier system call (for Linux 4.14+ or Windows)
   fdt             fdt device tree
   kvm             KVM acceleration support
@@ -3224,30 +3218,6 @@ EOF
     curses=no
   fi
 fi
-
-##########################################
-# curl probe
-if test "$curl" != "no" ; then
-  if $pkg_config libcurl --exists; then
-    curlconfig="$pkg_config libcurl"
-  else
-    curlconfig=curl-config
-  fi
-  cat > $TMPC << EOF
-#include <curl/curl.h>
-int main(void) { curl_easy_init(); curl_multi_setopt(0, 0, 0); return 0; }
-EOF
-  curl_cflags=$($curlconfig --cflags 2>/dev/null)
-  curl_libs=$($curlconfig --libs 2>/dev/null)
-  if compile_prog "$curl_cflags" "$curl_libs" ; then
-    curl=yes
-  else
-    if test "$curl" = "yes" ; then
-      feature_not_found "curl" "Install libcurl devel"
-    fi
-    curl=no
-  fi
-fi # test "$curl"
 
 ##########################################
 # glib support probe
@@ -5611,7 +5581,6 @@ echo "nettle kdf        $nettle_kdf"
 echo "libtasn1          $tasn1"
 echo "curses support    $curses"
 echo "virgl support     $virglrenderer"
-echo "curl support      $curl"
 echo "mingw32 support   $mingw32"
 echo "Audio drivers     $audio_drv_list"
 echo "Block whitelist (rw) $block_drv_rw_whitelist"
@@ -6010,11 +5979,6 @@ if test "$byteswap_h" = "yes" ; then
 fi
 if test "$bswap_h" = "yes" ; then
   echo "CONFIG_MACHINE_BSWAP_H=y" >> $config_host_mak
-fi
-if test "$curl" = "yes" ; then
-  echo "CONFIG_CURL=m" >> $config_host_mak
-  echo "CURL_CFLAGS=$curl_cflags" >> $config_host_mak
-  echo "CURL_LIBS=$curl_libs" >> $config_host_mak
 fi
 if test "$glib_subprocess" = "yes" ; then
   echo "CONFIG_HAS_GLIB_SUBPROCESS_TESTS=y" >> $config_host_mak
