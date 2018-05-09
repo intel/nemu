@@ -404,7 +404,6 @@ opengl_dmabuf="no"
 cpuid_h="no"
 avx2_opt="no"
 zlib="yes"
-capstone=""
 lzo=""
 snappy=""
 guest_agent=""
@@ -1345,14 +1344,6 @@ for opt do
           error_exit "vhost-user isn't available on win32"
       fi
   ;;
-  --disable-capstone) capstone="no"
-  ;;
-  --enable-capstone) capstone="yes"
-  ;;
-  --enable-capstone=git) capstone="git"
-  ;;
-  --enable-capstone=system) capstone="system"
-  ;;
   --with-git=*) git="$optarg"
   ;;
   --enable-git-update) git_update=yes
@@ -1611,7 +1602,6 @@ disabled with --disable-FEATURE, default is enabled if available:
   vxhs            Veritas HyperScale vDisk backend support
   crypto-afalg    Linux AF_ALG crypto backend driver
   vhost-user      vhost-user support
-  capstone        capstone disassembler support
 
 NOTE: The object files are built at the place where configure is launched
 EOF
@@ -4510,58 +4500,6 @@ EOF
 fi
 
 ##########################################
-# capstone
-
-case "$capstone" in
-  "" | yes)
-    if $pkg_config capstone; then
-      capstone=system
-    elif test -e "${source_path}/.git" -a $git_update = 'yes' ; then
-      capstone=git
-    elif test -e "${source_path}/capstone/Makefile" ; then
-      capstone=internal
-    elif test -z "$capstone" ; then
-      capstone=no
-    else
-      feature_not_found "capstone" "Install capstone devel or git submodule"
-    fi
-    ;;
-
-  system)
-    if ! $pkg_config capstone; then
-      feature_not_found "capstone" "Install capstone devel"
-    fi
-    ;;
-esac
-
-case "$capstone" in
-  git | internal)
-    if test "$capstone" = git; then
-      git_submodules="${git_submodules} capstone"
-    fi
-    mkdir -p capstone
-    QEMU_CFLAGS="$QEMU_CFLAGS -I\$(SRC_PATH)/capstone/include"
-    if test "$mingw32" = "yes"; then
-      LIBCAPSTONE=capstone.lib
-    else
-      LIBCAPSTONE=libcapstone.a
-    fi
-    LIBS="-L\$(BUILD_DIR)/capstone -lcapstone $LIBS"
-    ;;
-
-  system)
-    QEMU_CFLAGS="$QEMU_CFLAGS $($pkg_config --cflags capstone)"
-    LIBS="$($pkg_config --libs capstone) $LIBS"
-    ;;
-
-  no)
-    ;;
-  *)
-    error_exit "Unknown state for capstone: $capstone"
-    ;;
-esac
-
-##########################################
 # check if we have fdatasync
 
 fdatasync=no
@@ -6506,9 +6444,6 @@ fi
 if test "$ivshmem" = "yes" ; then
   echo "CONFIG_IVSHMEM=y" >> $config_host_mak
 fi
-if test "$capstone" != "no" ; then
-  echo "CONFIG_CAPSTONE=y" >> $config_host_mak
-fi
 
 # Hold two types of flag:
 #   CONFIG_THREAD_SETNAME_BYTHREAD  - we've got a way of setting the name on
@@ -7014,9 +6949,6 @@ done # for target in $targets
 
 if [ "$dtc_internal" = "yes" ]; then
   echo "config-host.h: subdir-dtc" >> $config_host_mak
-fi
-if [ "$capstone" = "git" -o "$capstone" = "internal" ]; then
-  echo "config-host.h: subdir-capstone" >> $config_host_mak
 fi
 if test -n "$LIBCAPSTONE"; then
   echo "LIBCAPSTONE=$LIBCAPSTONE" >> $config_host_mak
