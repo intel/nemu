@@ -37,9 +37,6 @@
 [submodule "ui/keycodemapdb"]
 	path = ui/keycodemapdb
 	url = http://git.qemu.org/git/keycodemapdb.git
-[submodule "capstone"]
-	path = capstone
-	url = http://git.qemu.org/git/capstone.git
 [submodule "roms/seabios-hppa"]
 	path = roms/seabios-hppa
 	url = git://github.com/hdeller/seabios-hppa.git
