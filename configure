@@ -314,7 +314,6 @@ unset target_list
 # Distributions want to ensure that several features are compiled in, and it
 # is impossible without a --enable-foo that exits if a feature is not found.
 
-brlapi=""
 curl=""
 curses=""
 docs=""
@@ -1051,10 +1050,6 @@ for opt do
   ;;
   --enable-xen-pv-domain-build) xen_pv_domain_build="yes"
   ;;
-  --disable-brlapi) brlapi="no"
-  ;;
-  --enable-brlapi) brlapi="yes"
-  ;;
   --disable-kvm) kvm="no"
   ;;
   --enable-kvm) kvm="yes"
@@ -1577,7 +1572,6 @@ disabled with --disable-FEATURE, default is enabled if available:
   mpath           Multipath persistent reservation passthrough
   xen             xen backend driver support
   xen-pci-passthrough
-  brlapi          BrlAPI (Braile)
   curl            curl connectivity
   membarrier      membarrier system call (for Linux 4.14+ or Windows)
   fdt             fdt device tree
@@ -3237,26 +3231,6 @@ for drv in $audio_drv_list; do
     ;;
     esac
 done
-
-##########################################
-# BrlAPI probe
-
-if test "$brlapi" != "no" ; then
-  brlapi_libs="-lbrlapi"
-  cat > $TMPC << EOF
-#include <brlapi.h>
-#include <stddef.h>
-int main( void ) { return brlapi__openConnection (NULL, NULL, NULL); }
-EOF
-  if compile_prog "" "$brlapi_libs" ; then
-    brlapi=yes
-  else
-    if test "$brlapi" = "yes" ; then
-      feature_not_found "brlapi" "Install brlapi devel"
-    fi
-    brlapi=no
-  fi
-fi
 
 ##########################################
 # curses probe
@@ -5772,7 +5746,6 @@ if test "$xen" = "yes" ; then
   echo "xen ctrl version  $xen_ctrl_version"
   echo "pv dom build      $xen_pv_domain_build"
 fi
-echo "brlapi support    $brlapi"
 echo "Documentation     $docs"
 echo "PIE               $pie"
 echo "vde support       $vde"
@@ -6160,10 +6133,6 @@ if test "$curl" = "yes" ; then
   echo "CONFIG_CURL=m" >> $config_host_mak
   echo "CURL_CFLAGS=$curl_cflags" >> $config_host_mak
   echo "CURL_LIBS=$curl_libs" >> $config_host_mak
-fi
-if test "$brlapi" = "yes" ; then
-  echo "CONFIG_BRLAPI=y" >> $config_host_mak
-  echo "BRLAPI_LIBS=$brlapi_libs" >> $config_host_mak
 fi
 if test "$glib_subprocess" = "yes" ; then
   echo "CONFIG_HAS_GLIB_SUBPROCESS_TESTS=y" >> $config_host_mak
