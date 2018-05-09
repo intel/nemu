@@ -21,7 +21,6 @@ $SRCDIR/configure \
  --disable-lzo \
  --disable-modules \
  --disable-netmap \
- --disable-nettle \
  --disable-opengl \
  --disable-qom-cast-debug \
  --disable-sdl \

@@ -423,13 +423,6 @@ gtk=""
 gtkabi=""
 gtk_gl="no"
 tls_priority="NORMAL"
-gnutls=""
-gnutls_rnd=""
-nettle=""
-nettle_kdf="no"
-gcrypt=""
-gcrypt_hmac="no"
-gcrypt_kdf="no"
 vte=""
 virglrenderer=""
 tpm="yes"
@@ -1240,18 +1233,6 @@ for opt do
   ;;
   --tls-priority=*) tls_priority="$optarg"
   ;;
-  --disable-gnutls) gnutls="no"
-  ;;
-  --enable-gnutls) gnutls="yes"
-  ;;
-  --disable-nettle) nettle="no"
-  ;;
-  --enable-nettle) nettle="yes"
-  ;;
-  --disable-gcrypt) gcrypt="no"
-  ;;
-  --enable-gcrypt) gcrypt="yes"
-  ;;
   --enable-rdma) rdma="yes"
   ;;
   --disable-rdma) rdma="no"
@@ -1502,10 +1483,6 @@ disabled with --disable-FEATURE, default is enabled if available:
   modules         modules support
   debug-info      debugging information
   sparse          sparse checker
-
-  gnutls          GNUTLS cryptography support
-  nettle          nettle cryptography support
-  gcrypt          libgcrypt cryptography support
   sdl             SDL UI
   --with-sdlabi     select preferred SDL ABI 1.2 or 2.0
   gtk             gtk UI
@@ -2468,206 +2445,6 @@ if test "$gtk" != "no"; then
     else
         gtk="no"
     fi
-fi
-
-
-##########################################
-# GNUTLS probe
-
-gnutls_works() {
-    # Unfortunately some distros have bad pkg-config information for gnutls
-    # such that it claims to exist but you get a compiler error if you try
-    # to use the options returned by --libs. Specifically, Ubuntu for --static
-    # builds doesn't work:
-    # https://bugs.launchpad.net/ubuntu/+source/gnutls26/+bug/1478035
-    #
-    # So sanity check the cflags/libs before assuming gnutls can be used.
-    if ! $pkg_config --exists "gnutls"; then
-        return 1
-    fi
-
-    write_c_skeleton
-    compile_prog "$($pkg_config --cflags gnutls)" "$($pkg_config --libs gnutls)"
-}
-
-gnutls_gcrypt=no
-gnutls_nettle=no
-if test "$gnutls" != "no"; then
-    if gnutls_works; then
-        gnutls_cflags=$($pkg_config --cflags gnutls)
-        gnutls_libs=$($pkg_config --libs gnutls)
-        libs_softmmu="$gnutls_libs $libs_softmmu"
-        libs_tools="$gnutls_libs $libs_tools"
-	QEMU_CFLAGS="$QEMU_CFLAGS $gnutls_cflags"
-        gnutls="yes"
-
-	# gnutls_rnd requires >= 2.11.0
-	if $pkg_config --exists "gnutls >= 2.11.0"; then
-	    gnutls_rnd="yes"
-	else
-	    gnutls_rnd="no"
-	fi
-
-	if $pkg_config --exists 'gnutls >= 3.0'; then
-	    gnutls_gcrypt=no
-	    gnutls_nettle=yes
-	elif $pkg_config --exists 'gnutls >= 2.12'; then
-	    case $($pkg_config --libs --static gnutls) in
-		*gcrypt*)
-		    gnutls_gcrypt=yes
-		    gnutls_nettle=no
-		    ;;
-		*nettle*)
-		    gnutls_gcrypt=no
-		    gnutls_nettle=yes
-		    ;;
-		*)
-		    gnutls_gcrypt=yes
-		    gnutls_nettle=no
-		    ;;
-	    esac
-	else
-	    gnutls_gcrypt=yes
-	    gnutls_nettle=no
-	fi
-    elif test "$gnutls" = "yes"; then
-	feature_not_found "gnutls" "Install gnutls devel"
-    else
-        gnutls="no"
-        gnutls_rnd="no"
-    fi
-else
-    gnutls_rnd="no"
-fi
-
-
-# If user didn't give a --disable/enable-gcrypt flag,
-# then mark as disabled if user requested nettle
-# explicitly, or if gnutls links to nettle
-if test -z "$gcrypt"
-then
-    if test "$nettle" = "yes" || test "$gnutls_nettle" = "yes"
-    then
-        gcrypt="no"
-    fi
-fi
-
-# If user didn't give a --disable/enable-nettle flag,
-# then mark as disabled if user requested gcrypt
-# explicitly, or if gnutls links to gcrypt
-if test -z "$nettle"
-then
-    if test "$gcrypt" = "yes" || test "$gnutls_gcrypt" = "yes"
-    then
-        nettle="no"
-    fi
-fi
-
-has_libgcrypt_config() {
-    if ! has "libgcrypt-config"
-    then
-	return 1
-    fi
-
-    if test -n "$cross_prefix"
-    then
-	host=$(libgcrypt-config --host)
-	if test "$host-" != $cross_prefix
-	then
-	    return 1
-	fi
-    fi
-
-    return 0
-}
-
-if test "$gcrypt" != "no"; then
-    if has_libgcrypt_config; then
-        gcrypt_cflags=$(libgcrypt-config --cflags)
-        gcrypt_libs=$(libgcrypt-config --libs)
-        # Debian has remove -lgpg-error from libgcrypt-config
-        # as it "spreads unnecessary dependencies" which in
-        # turn breaks static builds...
-        if test "$static" = "yes"
-        then
-            gcrypt_libs="$gcrypt_libs -lgpg-error"
-        fi
-        libs_softmmu="$gcrypt_libs $libs_softmmu"
-        libs_tools="$gcrypt_libs $libs_tools"
-        QEMU_CFLAGS="$QEMU_CFLAGS $gcrypt_cflags"
-        gcrypt="yes"
-        if test -z "$nettle"; then
-           nettle="no"
-        fi
-
-        cat > $TMPC << EOF
-#include <gcrypt.h>
-int main(void) {
-  gcry_kdf_derive(NULL, 0, GCRY_KDF_PBKDF2,
-                  GCRY_MD_SHA256,
-                  NULL, 0, 0, 0, NULL);
- return 0;
-}
-EOF
-        if compile_prog "$gcrypt_cflags" "$gcrypt_libs" ; then
-            gcrypt_kdf=yes
-        fi
-
-        cat > $TMPC << EOF
-#include <gcrypt.h>
-int main(void) {
-  gcry_mac_hd_t handle;
-  gcry_mac_open(&handle, GCRY_MAC_HMAC_MD5,
-                GCRY_MAC_FLAG_SECURE, NULL);
-  return 0;
-}
-EOF
-        if compile_prog "$gcrypt_cflags" "$gcrypt_libs" ; then
-            gcrypt_hmac=yes
-        fi
-    else
-        if test "$gcrypt" = "yes"; then
-            feature_not_found "gcrypt" "Install gcrypt devel"
-        else
-            gcrypt="no"
-        fi
-    fi
-fi
-
-
-if test "$nettle" != "no"; then
-    if $pkg_config --exists "nettle"; then
-        nettle_cflags=$($pkg_config --cflags nettle)
-        nettle_libs=$($pkg_config --libs nettle)
-        nettle_version=$($pkg_config --modversion nettle)
-        libs_softmmu="$nettle_libs $libs_softmmu"
-        libs_tools="$nettle_libs $libs_tools"
-        QEMU_CFLAGS="$QEMU_CFLAGS $nettle_cflags"
-        nettle="yes"
-
-        cat > $TMPC << EOF
-#include <stddef.h>
-#include <nettle/pbkdf2.h>
-int main(void) {
-     pbkdf2_hmac_sha256(8, NULL, 1000, 8, NULL, 8, NULL);
-     return 0;
-}
-EOF
-        if compile_prog "$nettle_cflags" "$nettle_libs" ; then
-            nettle_kdf=yes
-        fi
-    else
-        if test "$nettle" = "yes"; then
-            feature_not_found "nettle" "Install nettle devel"
-        else
-            nettle="no"
-        fi
-    fi
-fi
-
-if test "$gcrypt" = "yes" && test "$nettle" = "yes"
-then
-    error_exit "Only one of gcrypt & nettle can be enabled"
 fi
 
 ##########################################
@@ -5479,12 +5256,6 @@ echo "GTK support       $gtk $(echo_version $gtk $gtk_version)"
 echo "GTK GL support    $gtk_gl"
 echo "VTE support       $vte $(echo_version $vte $vteversion)"
 echo "TLS priority      $tls_priority"
-echo "GNUTLS support    $gnutls"
-echo "GNUTLS rnd        $gnutls_rnd"
-echo "libgcrypt         $gcrypt"
-echo "libgcrypt kdf     $gcrypt_kdf"
-echo "nettle            $nettle $(echo_version $nettle $nettle_version)"
-echo "nettle kdf        $nettle_kdf"
 echo "libtasn1          $tasn1"
 echo "virgl support     $virglrenderer"
 echo "mingw32 support   $mingw32"
@@ -5883,28 +5654,6 @@ if test "$gtk" = "yes" ; then
   fi
 fi
 echo "CONFIG_TLS_PRIORITY=\"$tls_priority\"" >> $config_host_mak
-if test "$gnutls" = "yes" ; then
-  echo "CONFIG_GNUTLS=y" >> $config_host_mak
-fi
-if test "$gnutls_rnd" = "yes" ; then
-  echo "CONFIG_GNUTLS_RND=y" >> $config_host_mak
-fi
-if test "$gcrypt" = "yes" ; then
-  echo "CONFIG_GCRYPT=y" >> $config_host_mak
-  if test "$gcrypt_hmac" = "yes" ; then
-    echo "CONFIG_GCRYPT_HMAC=y" >> $config_host_mak
-  fi
-  if test "$gcrypt_kdf" = "yes" ; then
-    echo "CONFIG_GCRYPT_KDF=y" >> $config_host_mak
-  fi
-fi
-if test "$nettle" = "yes" ; then
-  echo "CONFIG_NETTLE=y" >> $config_host_mak
-  echo "CONFIG_NETTLE_VERSION_MAJOR=${nettle_version%%.*}" >> $config_host_mak
-  if test "$nettle_kdf" = "yes" ; then
-    echo "CONFIG_NETTLE_KDF=y" >> $config_host_mak
-  fi
-fi
 if test "$tasn1" = "yes" ; then
   echo "CONFIG_TASN1=y" >> $config_host_mak
 fi
