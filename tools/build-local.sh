@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 export PATH=$PATH:$(go env GOPATH)/bin
 go get github.com/intel/ccloudvm/...

@@ -1,5 +1,7 @@
 #!/bin/sh
 set -x
+set -e
+
 sudo dpkg --add-architecture arm64
 
 sudo sh -c 'echo "deb [arch=amd64] http://archive.ubuntu.com/ubuntu bionic main universe multiverse" > /etc/apt/sources.list'
