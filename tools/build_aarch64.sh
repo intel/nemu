@@ -6,7 +6,6 @@ pushd $HOME/build-aarch64
 make distclean || true
 $SRCDIR/configure \
  --cross-prefix=aarch64-linux-gnu- \
- --disable-gtk \
  --disable-guest-agent \
  --disable-guest-agent-msi \
  --disable-hax \
@@ -38,7 +37,6 @@ $SRCDIR/configure \
  --disable-vnc-jpeg \
  --disable-vnc-png \
  --disable-vnc-sasl \
- --disable-vte \
  --disable-vxhs \
  --disable-xen \
  --enable-attr \
