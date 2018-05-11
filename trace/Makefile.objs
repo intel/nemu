@@ -52,8 +52,6 @@ $(obj)/generated-tcg-tracers.h-timestamp: $(SRC_PATH)/trace-events $(BUILD_DIR)/
 ######################################################################
 # Backend code
 
-util-obj-$(CONFIG_TRACE_SIMPLE) += simple.o
-util-obj-$(CONFIG_TRACE_FTRACE) += ftrace.o
 util-obj-y += control.o
 target-obj-y += control-target.o
 util-obj-y += qmp.o

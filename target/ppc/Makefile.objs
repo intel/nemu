@@ -16,5 +16,4 @@ obj-y += timebase_helper.o
 obj-y += misc_helper.o
 obj-y += mem_helper.o
 obj-y += ../../libdecnumber/
-obj-$(CONFIG_USER_ONLY) += user_only_helper.o
 obj-y += gdbstub.o
