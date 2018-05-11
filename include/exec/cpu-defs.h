@@ -28,9 +28,7 @@
 #ifdef CONFIG_TCG
 #include "tcg-target.h"
 #endif
-#ifndef CONFIG_USER_ONLY
 #include "exec/hwaddr.h"
-#endif
 #include "exec/memattrs.h"
 
 #ifndef TARGET_LONG_BITS

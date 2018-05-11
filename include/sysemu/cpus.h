@@ -31,12 +31,10 @@ void cpu_synchronize_all_pre_loadvm(void);
 
 void qtest_clock_warp(int64_t dest);
 
-#ifndef CONFIG_USER_ONLY
 /* vl.c */
 /* *-user doesn't have configurable SMP topology */
 extern int smp_cores;
 extern int smp_threads;
-#endif
 
 void list_cpus(FILE *f, fprintf_function cpu_fprintf, const char *optarg);
 

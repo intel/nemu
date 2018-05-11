@@ -53,9 +53,7 @@
 #include "qapi/string-output-visitor.h"
 
 /* Net bridge is currently not supported for W32. */
-#if !defined(_WIN32)
 # define CONFIG_NET_BRIDGE
-#endif
 
 static VMChangeStateEntry *net_change_state_entry;
 static QTAILQ_HEAD(, NetClientState) net_clients;
@@ -1081,9 +1079,7 @@ static void show_netdevs(void)
 #ifdef CONFIG_NETMAP
         "netmap",
 #endif
-#ifdef CONFIG_POSIX
         "vhost-user",
-#endif
     };
 
     printf("Available netdev backend types:\n");

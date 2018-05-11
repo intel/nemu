@@ -36,7 +36,7 @@ unsigned long qemu_getauxval(unsigned long key)
 {
     return getauxval(key);
 }
-#elif defined(__linux__)
+#else
 #include "elf.h"
 
 /* Our elf.h doesn't contain Elf32_auxv_t and Elf64_auxv_t, which is ok because
@@ -96,13 +96,6 @@ unsigned long qemu_getauxval(unsigned long type)
         }
     }
 
-    return 0;
-}
-
-#else
-
-unsigned long qemu_getauxval(unsigned long type)
-{
     return 0;
 }
 

@@ -136,9 +136,6 @@ static int x86_cpu_gdb_load_seg(X86CPU *cpu, int sreg, uint8_t *mem_buf)
     uint16_t selector = ldl_p(mem_buf);
 
     if (selector != env->segs[sreg].selector) {
-#if defined(CONFIG_USER_ONLY)
-        cpu_x86_load_seg(env, sreg, selector);
-#else
         unsigned int limit, flags;
         target_ulong base;
 
@@ -155,7 +152,6 @@ static int x86_cpu_gdb_load_seg(X86CPU *cpu, int sreg, uint8_t *mem_buf)
             }
         }
         cpu_x86_load_seg_cache(env, sreg, selector, base, limit, flags);
-#endif
     }
     return 4;
 }

@@ -162,7 +162,6 @@ int qemu_fdatasync(int fd)
 #endif
 }
 
-#ifndef _WIN32
 /* Sets a specific flag */
 int fcntl_setfl(int fd, int flag)
 {
@@ -177,7 +176,6 @@ int fcntl_setfl(int fd, int flag)
 
     return 0;
 }
-#endif
 
 static int64_t suffix_mul(char suffix, int64_t unit)
 {

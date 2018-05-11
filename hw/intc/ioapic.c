@@ -118,7 +118,6 @@ static void ioapic_service(IOAPICCommonState *s)
                     continue;
                 }
 
-#ifdef CONFIG_KVM
                 if (kvm_irqchip_is_split()) {
                     if (info.trig_mode == IOAPIC_TRIGGER_EDGE) {
                         kvm_set_irq(kvm_state, i, 1);
@@ -128,7 +127,6 @@ static void ioapic_service(IOAPICCommonState *s)
                     }
                     continue;
                 }
-#endif
 
                 /* No matter whether IR is enabled, we translate
                  * the IOAPIC message into a MSI one, and its
@@ -180,7 +178,6 @@ static void ioapic_set_irq(void *opaque, int vector, int level)
 
 static void ioapic_update_kvm_routes(IOAPICCommonState *s)
 {
-#ifdef CONFIG_KVM
     int i;
 
     if (kvm_irqchip_is_split()) {
@@ -194,10 +191,8 @@ static void ioapic_update_kvm_routes(IOAPICCommonState *s)
         }
         kvm_irqchip_commit_routes(kvm_state);
     }
-#endif
 }
 
-#ifdef CONFIG_KVM
 static void ioapic_iec_notifier(void *private, bool global,
                                 uint32_t index, uint32_t mask)
 {
@@ -205,7 +200,6 @@ static void ioapic_iec_notifier(void *private, bool global,
     /* For simplicity, we just update all the routes */
     ioapic_update_kvm_routes(s);
 }
-#endif
 
 void ioapic_eoi_broadcast(int vector)
 {
@@ -381,7 +375,6 @@ static const MemoryRegionOps ioapic_io_ops = {
 
 static void ioapic_machine_done_notify(Notifier *notifier, void *data)
 {
-#ifdef CONFIG_KVM
     IOAPICCommonState *s = container_of(notifier, IOAPICCommonState,
                                         machine_done);
 
@@ -394,7 +387,6 @@ static void ioapic_machine_done_notify(Notifier *notifier, void *data)
             x86_iommu_iec_register_notifier(iommu, ioapic_iec_notifier, s);
         }
     }
-#endif
 }
 
 #define IOAPIC_VER_DEF 0x20

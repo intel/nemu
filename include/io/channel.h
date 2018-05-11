@@ -85,9 +85,6 @@ struct QIOChannel {
     AioContext *ctx;
     Coroutine *read_coroutine;
     Coroutine *write_coroutine;
-#ifdef _WIN32
-    HANDLE event; /* For use with GSource on Win32 */
-#endif
 };
 
 /**

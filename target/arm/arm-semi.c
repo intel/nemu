@@ -22,16 +22,10 @@
 
 #include "cpu.h"
 #include "exec/semihost.h"
-#ifdef CONFIG_USER_ONLY
-#include "qemu.h"
-
-#define ARM_ANGEL_HEAP_SIZE (128 * 1024 * 1024)
-#else
 #include "qemu-common.h"
 #include "exec/gdbstub.h"
 #include "hw/arm/arm.h"
 #include "qemu/cutils.h"
-#endif
 
 #define TARGET_SYS_OPEN        0x01
 #define TARGET_SYS_CLOSE       0x02
@@ -101,43 +95,25 @@ static int open_modeflags[12] = {
     O_RDWR | O_CREAT | O_APPEND | O_BINARY
 };
 
-#ifdef CONFIG_USER_ONLY
-static inline uint32_t set_swi_errno(TaskState *ts, uint32_t code)
-{
-    if (code == (uint32_t)-1)
-        ts->swi_errno = errno;
-    return code;
-}
-#else
 static inline uint32_t set_swi_errno(CPUARMState *env, uint32_t code)
 {
     return code;
 }
 
 #include "exec/softmmu-semi.h"
-#endif
 
 static target_ulong arm_semi_syscall_len;
 
-#if !defined(CONFIG_USER_ONLY)
 static target_ulong syscall_err;
-#endif
 
 static void arm_semi_cb(CPUState *cs, target_ulong ret, target_ulong err)
 {
     ARMCPU *cpu = ARM_CPU(cs);
     CPUARMState *env = &cpu->env;
-#ifdef CONFIG_USER_ONLY
-    TaskState *ts = cs->opaque;
-#endif
     target_ulong reg0 = is_a64(env) ? env->xregs[0] : env->regs[0];
 
     if (ret == (target_ulong)-1) {
-#ifdef CONFIG_USER_ONLY
-        ts->swi_errno = err;
-#else
 	syscall_err = err;
-#endif
         reg0 = ret;
     } else {
         /* Fixup syscalls that use nonstardard return conventions.  */
@@ -194,11 +170,7 @@ static void arm_semi_flen_cb(CPUState *cs, target_ulong ret, target_ulong err)
     } else {
         env->regs[0] = size;
     }
-#ifdef CONFIG_USER_ONLY
-    ((TaskState *)cs->opaque)->swi_errno = err;
-#else
     syscall_err = err;
-#endif
 }
 
 static target_ulong arm_gdb_syscall(ARMCPU *cpu, gdb_syscall_complete_cb cb,
@@ -250,11 +222,7 @@ target_ulong do_arm_semihosting(CPUARMState *env)
     int nr;
     uint32_t ret;
     uint32_t len;
-#ifdef CONFIG_USER_ONLY
-    TaskState *ts = cs->opaque;
-#else
     CPUARMState *ts = env;
-#endif
 
     if (is_a64(env)) {
         /* Note that the syscall number is in W0, not X0 */
@@ -467,11 +435,7 @@ target_ulong do_arm_semihosting(CPUARMState *env)
             return ret;
         }
     case TARGET_SYS_ERRNO:
-#ifdef CONFIG_USER_ONLY
-        return ts->swi_errno;
-#else
         return syscall_err;
-#endif
     case TARGET_SYS_GET_CMDLINE:
         {
             /* Build a command-line from the original argv.
@@ -492,29 +456,16 @@ target_ulong do_arm_semihosting(CPUARMState *env)
             size_t input_size;
             size_t output_size;
             int status = 0;
-#if !defined(CONFIG_USER_ONLY)
             const char *cmdline;
-#endif
             GET_ARG(0);
             GET_ARG(1);
             input_size = arg1;
             /* Compute the size of the output string.  */
-#if !defined(CONFIG_USER_ONLY)
             cmdline = semihosting_get_cmdline();
             if (cmdline == NULL) {
                 cmdline = ""; /* Default to an empty line. */
             }
             output_size = strlen(cmdline) + 1; /* Count terminating 0. */
-#else
-            unsigned int i;
-
-            output_size = ts->info->arg_end - ts->info->arg_start;
-            if (!output_size) {
-                /* We special-case the "empty command line" case (argc==0).
-                   Just provide the terminating 0. */
-                output_size = 1;
-            }
-#endif
 
             if (output_size > input_size) {
                  /* Not enough space to store command-line arguments.  */
@@ -534,29 +485,7 @@ target_ulong do_arm_semihosting(CPUARMState *env)
             }
 
             /* Copy the command-line arguments.  */
-#if !defined(CONFIG_USER_ONLY)
             pstrcpy(output_buffer, output_size, cmdline);
-#else
-            if (output_size == 1) {
-                /* Empty command-line.  */
-                output_buffer[0] = '\0';
-                goto out;
-            }
-
-            if (copy_from_user(output_buffer, ts->info->arg_start,
-                               output_size)) {
-                status = -1;
-                goto out;
-            }
-
-            /* Separate arguments by white spaces.  */
-            for (i = 0; i < output_size - 1; i++) {
-                if (output_buffer[i] == 0) {
-                    output_buffer[i] = ' ';
-                }
-            }
-        out:
-#endif
             /* Unlock the buffer on the ARM side.  */
             unlock_user(output_buffer, arg0, output_size);
 
@@ -570,37 +499,12 @@ target_ulong do_arm_semihosting(CPUARMState *env)
 
             GET_ARG(0);
 
-#ifdef CONFIG_USER_ONLY
-            /* Some C libraries assume the heap immediately follows .bss, so
-               allocate it using sbrk.  */
-            if (!ts->heap_limit) {
-                abi_ulong ret;
-
-                ts->heap_base = do_brk(0);
-                limit = ts->heap_base + ARM_ANGEL_HEAP_SIZE;
-                /* Try a big heap, and reduce the size if that fails.  */
-                for (;;) {
-                    ret = do_brk(limit);
-                    if (ret >= limit) {
-                        break;
-                    }
-                    limit = (ts->heap_base >> 1) + (limit >> 1);
-                }
-                ts->heap_limit = limit;
-            }
-
-            retvals[0] = ts->heap_base;
-            retvals[1] = ts->heap_limit;
-            retvals[2] = ts->stack_base;
-            retvals[3] = 0; /* Stack limit.  */
-#else
             limit = ram_size;
             /* TODO: Make this use the limit of the loaded application.  */
             retvals[0] = limit / 2;
             retvals[1] = limit;
             retvals[2] = limit; /* Stack base */
             retvals[3] = 0; /* Stack limit.  */
-#endif
 
             for (i = 0; i < ARRAY_SIZE(retvals); i++) {
                 bool fail;

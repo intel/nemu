@@ -881,9 +881,6 @@ void bdrv_remove_aio_context_notifier(BlockDriverState *bs,
  */
 void bdrv_wakeup(BlockDriverState *bs);
 
-#ifdef _WIN32
-int is_windows_drive(const char *filename);
-#endif
 
 /**
  * stream_start:

@@ -29,8 +29,5 @@ void tb_invalidate_phys_page_range(tb_page_addr_t start, tb_page_addr_t end,
 void tb_invalidate_phys_range(tb_page_addr_t start, tb_page_addr_t end);
 void tb_check_watchpoint(CPUState *cpu);
 
-#ifdef CONFIG_USER_ONLY
-int page_unprotect(target_ulong address, uintptr_t pc);
-#endif
 
 #endif /* TRANSLATE_ALL_H */

@@ -22,12 +22,10 @@
 #include "exec/exec-all.h"
 #include "sysemu/kvm.h"
 #include "kvm_i386.h"
-#ifndef CONFIG_USER_ONLY
 #include "sysemu/sysemu.h"
 #include "sysemu/hw_accel.h"
 #include "monitor/monitor.h"
 #include "hw/i386/apic_internal.h"
-#endif
 
 void cpu_sync_bndcs_hflags(CPUX86State *env)
 {
@@ -211,7 +209,6 @@ done:
     cpu_fprintf(f, "\n");
 }
 
-#ifndef CONFIG_USER_ONLY
 
 /* ARRAY_SIZE check is not required because
  * DeliveryMode(dm) has a size of 3 bit.
@@ -398,12 +395,6 @@ void x86_cpu_dump_local_apic_state(CPUState *cs, FILE *f,
     }
     cpu_fprintf(f, " PPR 0x%02x\n", apic_get_ppr(s));
 }
-#else
-void x86_cpu_dump_local_apic_state(CPUState *cs, FILE *f,
-                                   fprintf_function cpu_fprintf, int flags)
-{
-}
-#endif /* !CONFIG_USER_ONLY */
 
 #define DUMP_CODE_BYTES_TOTAL    50
 #define DUMP_CODE_BYTES_BACKWARD 20
@@ -722,7 +713,6 @@ void cpu_x86_update_cr4(CPUX86State *env, uint32_t new_cr4)
     cpu_sync_bndcs_hflags(env);
 }
 
-#if !defined(CONFIG_USER_ONLY)
 hwaddr x86_cpu_get_phys_page_debug(CPUState *cs, vaddr addr)
 {
     X86CPU *cpu = X86_CPU(cs);
@@ -996,7 +986,6 @@ void cpu_report_tpr_access(CPUX86State *env, TPRAccess access)
         apic_handle_tpr_access_report(cpu->apic_state, env->eip, access);
     }
 }
-#endif /* !CONFIG_USER_ONLY */
 
 int cpu_x86_get_descr_debug(CPUX86State *env, unsigned int selector,
                             target_ulong *base, unsigned int *limit,
@@ -1029,7 +1018,6 @@ int cpu_x86_get_descr_debug(CPUX86State *env, unsigned int selector,
     return 1;
 }
 
-#if !defined(CONFIG_USER_ONLY)
 void do_cpu_init(X86CPU *cpu)
 {
     CPUState *cs = CPU(cpu);
@@ -1056,14 +1044,6 @@ void do_cpu_sipi(X86CPU *cpu)
 {
     apic_sipi(cpu->apic_state);
 }
-#else
-void do_cpu_init(X86CPU *cpu)
-{
-}
-void do_cpu_sipi(X86CPU *cpu)
-{
-}
-#endif
 
 /* Frob eflags into and out of the CPU temporary format.  */
 
@@ -1086,7 +1066,6 @@ void x86_cpu_exec_exit(CPUState *cs)
     env->eflags = cpu_compute_eflags(env);
 }
 
-#ifndef CONFIG_USER_ONLY
 uint8_t x86_ldub_phys(CPUState *cs, hwaddr addr)
 {
     X86CPU *cpu = X86_CPU(cs);
@@ -1176,4 +1155,3 @@ void x86_stq_phys(CPUState *cs, hwaddr addr, uint64_t val)
 
     address_space_stq(as, addr, val, attrs, NULL);
 }
-#endif

@@ -22,15 +22,11 @@
 #include "qemu/cutils.h"
 #include "cpu.h"
 #include "trace-root.h"
-#ifdef CONFIG_USER_ONLY
-#include "qemu.h"
-#else
 #include "monitor/monitor.h"
 #include "chardev/char.h"
 #include "chardev/char-fe.h"
 #include "sysemu/sysemu.h"
 #include "exec/gdbstub.h"
-#endif
 
 #define MAX_PACKET_LENGTH 4096
 
@@ -40,11 +36,7 @@
 #include "exec/semihost.h"
 #include "exec/exec-all.h"
 
-#ifdef CONFIG_USER_ONLY
-#define GDB_ATTACHED "0"
-#else
 #define GDB_ATTACHED "1"
-#endif
 
 static inline int target_memory_rw_debug(CPUState *cpu, target_ulong addr,
                                          uint8_t *buf, int len, bool is_write)
@@ -64,12 +56,7 @@ static inline int target_memory_rw_debug(CPUState *cpu, target_ulong addr,
  */
 static inline int cpu_gdb_index(CPUState *cpu)
 {
-#if defined(CONFIG_USER_ONLY)
-    TaskState *ts = (TaskState *) cpu->opaque;
-    return ts->ts_tid;
-#else
     return cpu->cpu_index + 1;
-#endif
 }
 
 enum {
@@ -84,173 +71,6 @@ enum {
     GDB_SIGNAL_UNKNOWN = 143
 };
 
-#ifdef CONFIG_USER_ONLY
-
-/* Map target signal numbers to GDB protocol signal numbers and vice
- * versa.  For user emulation's currently supported systems, we can
- * assume most signals are defined.
- */
-
-static int gdb_signal_table[] = {
-    0,
-    TARGET_SIGHUP,
-    TARGET_SIGINT,
-    TARGET_SIGQUIT,
-    TARGET_SIGILL,
-    TARGET_SIGTRAP,
-    TARGET_SIGABRT,
-    -1, /* SIGEMT */
-    TARGET_SIGFPE,
-    TARGET_SIGKILL,
-    TARGET_SIGBUS,
-    TARGET_SIGSEGV,
-    TARGET_SIGSYS,
-    TARGET_SIGPIPE,
-    TARGET_SIGALRM,
-    TARGET_SIGTERM,
-    TARGET_SIGURG,
-    TARGET_SIGSTOP,
-    TARGET_SIGTSTP,
-    TARGET_SIGCONT,
-    TARGET_SIGCHLD,
-    TARGET_SIGTTIN,
-    TARGET_SIGTTOU,
-    TARGET_SIGIO,
-    TARGET_SIGXCPU,
-    TARGET_SIGXFSZ,
-    TARGET_SIGVTALRM,
-    TARGET_SIGPROF,
-    TARGET_SIGWINCH,
-    -1, /* SIGLOST */
-    TARGET_SIGUSR1,
-    TARGET_SIGUSR2,
-#ifdef TARGET_SIGPWR
-    TARGET_SIGPWR,
-#else
-    -1,
-#endif
-    -1, /* SIGPOLL */
-    -1,
-    -1,
-    -1,
-    -1,
-    -1,
-    -1,
-    -1,
-    -1,
-    -1,
-    -1,
-    -1,
-#ifdef __SIGRTMIN
-    __SIGRTMIN + 1,
-    __SIGRTMIN + 2,
-    __SIGRTMIN + 3,
-    __SIGRTMIN + 4,
-    __SIGRTMIN + 5,
-    __SIGRTMIN + 6,
-    __SIGRTMIN + 7,
-    __SIGRTMIN + 8,
-    __SIGRTMIN + 9,
-    __SIGRTMIN + 10,
-    __SIGRTMIN + 11,
-    __SIGRTMIN + 12,
-    __SIGRTMIN + 13,
-    __SIGRTMIN + 14,
-    __SIGRTMIN + 15,
-    __SIGRTMIN + 16,
-    __SIGRTMIN + 17,
-    __SIGRTMIN + 18,
-    __SIGRTMIN + 19,
-    __SIGRTMIN + 20,
-    __SIGRTMIN + 21,
-    __SIGRTMIN + 22,
-    __SIGRTMIN + 23,
-    __SIGRTMIN + 24,
-    __SIGRTMIN + 25,
-    __SIGRTMIN + 26,
-    __SIGRTMIN + 27,
-    __SIGRTMIN + 28,
-    __SIGRTMIN + 29,
-    __SIGRTMIN + 30,
-    __SIGRTMIN + 31,
-    -1, /* SIGCANCEL */
-    __SIGRTMIN,
-    __SIGRTMIN + 32,
-    __SIGRTMIN + 33,
-    __SIGRTMIN + 34,
-    __SIGRTMIN + 35,
-    __SIGRTMIN + 36,
-    __SIGRTMIN + 37,
-    __SIGRTMIN + 38,
-    __SIGRTMIN + 39,
-    __SIGRTMIN + 40,
-    __SIGRTMIN + 41,
-    __SIGRTMIN + 42,
-    __SIGRTMIN + 43,
-    __SIGRTMIN + 44,
-    __SIGRTMIN + 45,
-    __SIGRTMIN + 46,
-    __SIGRTMIN + 47,
-    __SIGRTMIN + 48,
-    __SIGRTMIN + 49,
-    __SIGRTMIN + 50,
-    __SIGRTMIN + 51,
-    __SIGRTMIN + 52,
-    __SIGRTMIN + 53,
-    __SIGRTMIN + 54,
-    __SIGRTMIN + 55,
-    __SIGRTMIN + 56,
-    __SIGRTMIN + 57,
-    __SIGRTMIN + 58,
-    __SIGRTMIN + 59,
-    __SIGRTMIN + 60,
-    __SIGRTMIN + 61,
-    __SIGRTMIN + 62,
-    __SIGRTMIN + 63,
-    __SIGRTMIN + 64,
-    __SIGRTMIN + 65,
-    __SIGRTMIN + 66,
-    __SIGRTMIN + 67,
-    __SIGRTMIN + 68,
-    __SIGRTMIN + 69,
-    __SIGRTMIN + 70,
-    __SIGRTMIN + 71,
-    __SIGRTMIN + 72,
-    __SIGRTMIN + 73,
-    __SIGRTMIN + 74,
-    __SIGRTMIN + 75,
-    __SIGRTMIN + 76,
-    __SIGRTMIN + 77,
-    __SIGRTMIN + 78,
-    __SIGRTMIN + 79,
-    __SIGRTMIN + 80,
-    __SIGRTMIN + 81,
-    __SIGRTMIN + 82,
-    __SIGRTMIN + 83,
-    __SIGRTMIN + 84,
-    __SIGRTMIN + 85,
-    __SIGRTMIN + 86,
-    __SIGRTMIN + 87,
-    __SIGRTMIN + 88,
-    __SIGRTMIN + 89,
-    __SIGRTMIN + 90,
-    __SIGRTMIN + 91,
-    __SIGRTMIN + 92,
-    __SIGRTMIN + 93,
-    __SIGRTMIN + 94,
-    __SIGRTMIN + 95,
-    -1, /* SIGINFO */
-    -1, /* UNKNOWN */
-    -1, /* DEFAULT */
-    -1,
-    -1,
-    -1,
-    -1,
-    -1,
-    -1
-#endif
-};
-#else
 /* In system mode we only need SIGINT and SIGTRAP; other signals
    are not yet supported.  */
 
@@ -267,18 +87,7 @@ static int gdb_signal_table[] = {
     -1,
     TARGET_SIGTRAP
 };
-#endif
 
-#ifdef CONFIG_USER_ONLY
-static int target_signal_to_gdb (int sig)
-{
-    int i;
-    for (i = 0; i < ARRAY_SIZE (gdb_signal_table); i++)
-        if (gdb_signal_table[i] == sig)
-            return i;
-    return GDB_SIGNAL_UNKNOWN;
-}
-#endif
 
 static int gdb_signal_to_target (int sig)
 {
@@ -318,13 +127,8 @@ typedef struct GDBState {
     uint8_t last_packet[MAX_PACKET_LENGTH + 4];
     int last_packet_len;
     int signal;
-#ifdef CONFIG_USER_ONLY
-    int fd;
-    int running_state;
-#else
     CharBackend chr;
     Chardev *mon_chr;
-#endif
     char syscall_buf[256];
     gdb_syscall_complete_cb current_syscall_cb;
 } GDBState;
@@ -338,33 +142,6 @@ static GDBState *gdbserver_state;
 
 bool gdb_has_xml;
 
-#ifdef CONFIG_USER_ONLY
-/* XXX: This is not thread safe.  Do we care?  */
-static int gdbserver_fd = -1;
-
-static int get_char(GDBState *s)
-{
-    uint8_t ch;
-    int ret;
-
-    for(;;) {
-        ret = qemu_recv(s->fd, &ch, 1, 0);
-        if (ret < 0) {
-            if (errno == ECONNRESET)
-                s->fd = -1;
-            if (errno != EINTR)
-                return -1;
-        } else if (ret == 0) {
-            close(s->fd);
-            s->fd = -1;
-            return -1;
-        } else {
-            break;
-        }
-    }
-    return ch;
-}
-#endif
 
 static enum {
     GDB_SYS_UNKNOWN,
@@ -397,15 +174,10 @@ int use_gdb_syscalls(void)
 static inline void gdb_continue(GDBState *s)
 {
 
-#ifdef CONFIG_USER_ONLY
-    s->running_state = 1;
-    trace_gdbstub_op_continue();
-#else
     if (!runstate_needs_reset()) {
         trace_gdbstub_op_continue();
         vm_start();
     }
-#endif
 }
 
 /*
@@ -416,19 +188,6 @@ static int gdb_continue_partial(GDBState *s, char *newstates)
 {
     CPUState *cpu;
     int res = 0;
-#ifdef CONFIG_USER_ONLY
-    /*
-     * This is not exactly accurate, but it's an improvement compared to the
-     * previous situation, where only one CPU would be single-stepped.
-     */
-    CPU_FOREACH(cpu) {
-        if (newstates[cpu->cpu_index] == 's') {
-            trace_gdbstub_op_stepping(cpu->cpu_index);
-            cpu_single_step(cpu, sstep_flags);
-        }
-    }
-    s->running_state = 1;
-#else
     int flag = 0;
 
     if (!runstate_needs_reset()) {
@@ -461,30 +220,14 @@ static int gdb_continue_partial(GDBState *s, char *newstates)
     if (flag) {
         qemu_clock_enable(QEMU_CLOCK_VIRTUAL, true);
     }
-#endif
     return res;
 }
 
 static void put_buffer(GDBState *s, const uint8_t *buf, int len)
 {
-#ifdef CONFIG_USER_ONLY
-    int ret;
-
-    while (len > 0) {
-        ret = send(s->fd, buf, len, 0);
-        if (ret < 0) {
-            if (errno != EINTR)
-                return;
-        } else {
-            buf += ret;
-            len -= ret;
-        }
-    }
-#else
     /* XXX this blocks entire thread. Rewrite to use
      * qemu_chr_fe_write and background I/O callbacks */
     qemu_chr_fe_write_all(&s->chr, buf, len);
-#endif
 }
 
 static inline int fromhex(int v)
@@ -590,15 +333,7 @@ static int put_packet_binary(GDBState *s, const char *buf, int len, bool dump)
         s->last_packet_len = p - s->last_packet;
         put_buffer(s, (uint8_t *)s->last_packet, s->last_packet_len);
 
-#ifdef CONFIG_USER_ONLY
-        i = get_char(s);
-        if (i < 0)
-            return -1;
-        if (i == '+')
-            break;
-#else
         break;
-#endif
     }
     return 0;
 }
@@ -760,7 +495,6 @@ void gdb_register_coprocessor(CPUState *cpu,
     }
 }
 
-#ifndef CONFIG_USER_ONLY
 /* Translate GDB watchpoint type to a flags value for cpu_watchpoint_* */
 static inline int xlat_gdb_type(CPUState *cpu, int gdbtype)
 {
@@ -778,7 +512,6 @@ static inline int xlat_gdb_type(CPUState *cpu, int gdbtype)
     }
     return cputype;
 }
-#endif
 
 static int gdb_breakpoint_insert(target_ulong addr, target_ulong len, int type)
 {
@@ -799,7 +532,6 @@ static int gdb_breakpoint_insert(target_ulong addr, target_ulong len, int type)
             }
         }
         return err;
-#ifndef CONFIG_USER_ONLY
     case GDB_WATCHPOINT_WRITE:
     case GDB_WATCHPOINT_READ:
     case GDB_WATCHPOINT_ACCESS:
@@ -811,7 +543,6 @@ static int gdb_breakpoint_insert(target_ulong addr, target_ulong len, int type)
             }
         }
         return err;
-#endif
     default:
         return -ENOSYS;
     }
@@ -836,7 +567,6 @@ static int gdb_breakpoint_remove(target_ulong addr, target_ulong len, int type)
             }
         }
         return err;
-#ifndef CONFIG_USER_ONLY
     case GDB_WATCHPOINT_WRITE:
     case GDB_WATCHPOINT_READ:
     case GDB_WATCHPOINT_ACCESS:
@@ -847,7 +577,6 @@ static int gdb_breakpoint_remove(target_ulong addr, target_ulong len, int type)
                 break;
         }
         return err;
-#endif
     default:
         return -ENOSYS;
     }
@@ -864,9 +593,7 @@ static void gdb_breakpoint_remove_all(void)
 
     CPU_FOREACH(cpu) {
         cpu_breakpoint_remove_all(cpu, BP_GDB);
-#ifndef CONFIG_USER_ONLY
         cpu_watchpoint_remove_all(cpu, BP_GDB);
-#endif
     }
 }
 
@@ -911,13 +638,6 @@ static int gdb_handle_vcont(GDBState *s, const char *p)
     char *newstates;
     unsigned long tmp;
     CPUState *cpu;
-#ifdef CONFIG_USER_ONLY
-    int max_cpus = 1; /* global variable max_cpus exists only in system mode */
-
-    CPU_FOREACH(cpu) {
-        max_cpus = max_cpus <= cpu->cpu_index ? cpu->cpu_index + 1 : max_cpus;
-    }
-#endif
     /* uninitialised CPUs stay 0 */
     newstates = g_new0(char, max_cpus);
 
@@ -1302,20 +1022,6 @@ static int gdb_handle_packet(GDBState *s, const char *line_buf)
             }
             break;
         }
-#ifdef CONFIG_USER_ONLY
-        else if (strcmp(p, "Offsets") == 0) {
-            TaskState *ts = s->c_cpu->opaque;
-
-            snprintf(buf, sizeof(buf),
-                     "Text=" TARGET_ABI_FMT_lx ";Data=" TARGET_ABI_FMT_lx
-                     ";Bss=" TARGET_ABI_FMT_lx,
-                     ts->info->code_offset,
-                     ts->info->data_offset,
-                     ts->info->data_offset);
-            put_packet(s, buf);
-            break;
-        }
-#else /* !CONFIG_USER_ONLY */
         else if (strncmp(p, "Rcmd,", 5) == 0) {
             int len = strlen(p + 5);
 
@@ -1330,7 +1036,6 @@ static int gdb_handle_packet(GDBState *s, const char *line_buf)
             put_packet(s, "OK");
             break;
         }
-#endif /* !CONFIG_USER_ONLY */
         if (is_query_packet(p, "Supported", ':')) {
             snprintf(buf, sizeof(buf), "PacketSize=%x", MAX_PACKET_LENGTH);
             cc = CPU_GET_CLASS(first_cpu);
@@ -1406,7 +1111,6 @@ void gdb_set_stop_cpu(CPUState *cpu)
     gdbserver_state->g_cpu = cpu;
 }
 
-#ifndef CONFIG_USER_ONLY
 static void gdb_vm_state_change(void *opaque, int running, RunState state)
 {
     GDBState *s = gdbserver_state;
@@ -1491,7 +1195,6 @@ send_packet:
     /* disable single step if it was enabled */
     cpu_single_step(cpu, 0);
 }
-#endif
 
 /* Send a gdb syscall request.
    This accepts limited printf-style format specifiers, specifically:
@@ -1510,9 +1213,7 @@ void gdb_do_syscallv(gdb_syscall_complete_cb cb, const char *fmt, va_list va)
     if (!s)
         return;
     s->current_syscall_cb = cb;
-#ifndef CONFIG_USER_ONLY
     vm_stop(RUN_STATE_DEBUG);
-#endif
     p = s->syscall_buf;
     p_end = &s->syscall_buf[sizeof(s->syscall_buf)];
     *(p++) = 'F';
@@ -1546,10 +1247,6 @@ void gdb_do_syscallv(gdb_syscall_complete_cb cb, const char *fmt, va_list va)
         }
     }
     *p = 0;
-#ifdef CONFIG_USER_ONLY
-    put_packet(s, s->syscall_buf);
-    gdb_handlesig(s->c_cpu, 0);
-#else
     /* In this case wait to send the syscall packet until notification that
        the CPU has stopped.  This must be done because if the packet is sent
        now the reply from the syscall request could be received while the CPU
@@ -1557,7 +1254,6 @@ void gdb_do_syscallv(gdb_syscall_complete_cb cb, const char *fmt, va_list va)
        and state transition 'T' packets to be sent while the syscall is still
        being processed.  */
     qemu_cpu_kick(s->c_cpu);
-#endif
 }
 
 void gdb_do_syscall(gdb_syscall_complete_cb cb, const char *fmt, ...)
@@ -1573,7 +1269,6 @@ static void gdb_read_byte(GDBState *s, int ch)
 {
     uint8_t reply;
 
-#ifndef CONFIG_USER_ONLY
     if (s->last_packet_len) {
         /* Waiting for a response to the last packet.  If we see the start
            of a new command then abandon the previous response.  */
@@ -1596,7 +1291,6 @@ static void gdb_read_byte(GDBState *s, int ch)
            it when receiving a char */
         vm_stop(RUN_STATE_PAUSED);
     } else
-#endif
     {
         switch(s->state) {
         case RS_IDLE:
@@ -1720,181 +1414,15 @@ void gdb_exit(CPUArchState *env, int code)
   if (!s) {
       return;
   }
-#ifdef CONFIG_USER_ONLY
-  if (gdbserver_fd < 0 || s->fd < 0) {
-      return;
-  }
-#endif
 
   trace_gdbstub_op_exiting((uint8_t)code);
 
   snprintf(buf, sizeof(buf), "W%02x", (uint8_t)code);
   put_packet(s, buf);
 
-#ifndef CONFIG_USER_ONLY
   qemu_chr_fe_deinit(&s->chr, true);
-#endif
 }
 
-#ifdef CONFIG_USER_ONLY
-int
-gdb_handlesig(CPUState *cpu, int sig)
-{
-    GDBState *s;
-    char buf[256];
-    int n;
-
-    s = gdbserver_state;
-    if (gdbserver_fd < 0 || s->fd < 0) {
-        return sig;
-    }
-
-    /* disable single step if it was enabled */
-    cpu_single_step(cpu, 0);
-    tb_flush(cpu);
-
-    if (sig != 0) {
-        snprintf(buf, sizeof(buf), "S%02x", target_signal_to_gdb(sig));
-        put_packet(s, buf);
-    }
-    /* put_packet() might have detected that the peer terminated the
-       connection.  */
-    if (s->fd < 0) {
-        return sig;
-    }
-
-    sig = 0;
-    s->state = RS_IDLE;
-    s->running_state = 0;
-    while (s->running_state == 0) {
-        n = read(s->fd, buf, 256);
-        if (n > 0) {
-            int i;
-
-            for (i = 0; i < n; i++) {
-                gdb_read_byte(s, buf[i]);
-            }
-        } else {
-            /* XXX: Connection closed.  Should probably wait for another
-               connection before continuing.  */
-            if (n == 0) {
-                close(s->fd);
-            }
-            s->fd = -1;
-            return sig;
-        }
-    }
-    sig = s->signal;
-    s->signal = 0;
-    return sig;
-}
-
-/* Tell the remote gdb that the process has exited due to SIG.  */
-void gdb_signalled(CPUArchState *env, int sig)
-{
-    GDBState *s;
-    char buf[4];
-
-    s = gdbserver_state;
-    if (gdbserver_fd < 0 || s->fd < 0) {
-        return;
-    }
-
-    snprintf(buf, sizeof(buf), "X%02x", target_signal_to_gdb(sig));
-    put_packet(s, buf);
-}
-
-static void gdb_accept(void)
-{
-    GDBState *s;
-    struct sockaddr_in sockaddr;
-    socklen_t len;
-    int fd;
-
-    for(;;) {
-        len = sizeof(sockaddr);
-        fd = accept(gdbserver_fd, (struct sockaddr *)&sockaddr, &len);
-        if (fd < 0 && errno != EINTR) {
-            perror("accept");
-            return;
-        } else if (fd >= 0) {
-#ifndef _WIN32
-            fcntl(fd, F_SETFD, FD_CLOEXEC);
-#endif
-            break;
-        }
-    }
-
-    /* set short latency */
-    socket_set_nodelay(fd);
-
-    s = g_malloc0(sizeof(GDBState));
-    s->c_cpu = first_cpu;
-    s->g_cpu = first_cpu;
-    s->fd = fd;
-    gdb_has_xml = false;
-
-    gdbserver_state = s;
-}
-
-static int gdbserver_open(int port)
-{
-    struct sockaddr_in sockaddr;
-    int fd, ret;
-
-    fd = socket(PF_INET, SOCK_STREAM, 0);
-    if (fd < 0) {
-        perror("socket");
-        return -1;
-    }
-#ifndef _WIN32
-    fcntl(fd, F_SETFD, FD_CLOEXEC);
-#endif
-
-    socket_set_fast_reuse(fd);
-
-    sockaddr.sin_family = AF_INET;
-    sockaddr.sin_port = htons(port);
-    sockaddr.sin_addr.s_addr = 0;
-    ret = bind(fd, (struct sockaddr *)&sockaddr, sizeof(sockaddr));
-    if (ret < 0) {
-        perror("bind");
-        close(fd);
-        return -1;
-    }
-    ret = listen(fd, 1);
-    if (ret < 0) {
-        perror("listen");
-        close(fd);
-        return -1;
-    }
-    return fd;
-}
-
-int gdbserver_start(int port)
-{
-    gdbserver_fd = gdbserver_open(port);
-    if (gdbserver_fd < 0)
-        return -1;
-    /* accept connections */
-    gdb_accept();
-    return 0;
-}
-
-/* Disable gdb stub for child processes.  */
-void gdbserver_fork(CPUState *cpu)
-{
-    GDBState *s = gdbserver_state;
-
-    if (gdbserver_fd < 0 || s->fd < 0) {
-        return;
-    }
-    close(s->fd);
-    s->fd = -1;
-    cpu_breakpoint_remove_all(cpu, BP_GDB);
-    cpu_watchpoint_remove_all(cpu, BP_GDB);
-}
-#else
 static int gdb_chr_can_receive(void *opaque)
 {
   /* We can handle an arbitrarily large amount of data.
@@ -1952,14 +1480,12 @@ static int gdb_monitor_write(Chardev *chr, const uint8_t *buf, int len)
     return len;
 }
 
-#ifndef _WIN32
 static void gdb_sigterm_handler(int signal)
 {
     if (runstate_is_running()) {
         vm_stop(RUN_STATE_PAUSED);
     }
 }
-#endif
 
 static void gdb_monitor_open(Chardev *chr, ChardevBackend *backend,
                              bool *be_opened, Error **errp)
@@ -2008,7 +1534,6 @@ int gdbserver_start(const char *device)
                      "%s,nowait,nodelay,server", device);
             device = gdbstub_device_name;
         }
-#ifndef _WIN32
         else if (strcmp(device, "stdio") == 0) {
             struct sigaction act;
 
@@ -2016,7 +1541,6 @@ int gdbserver_start(const char *device)
             act.sa_handler = gdb_sigterm_handler;
             sigaction(SIGINT, &act, NULL);
         }
-#endif
         chr = qemu_chr_new_noreplay("gdb", device);
         if (!chr)
             return -1;
@@ -2066,4 +1590,3 @@ static void register_types(void)
 }
 
 type_init(register_types);
-#endif

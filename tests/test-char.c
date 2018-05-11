@@ -57,32 +57,6 @@ static void fe_event(void *opaque, int event)
 }
 
 #ifdef CONFIG_HAS_GLIB_SUBPROCESS_TESTS
-#ifdef _WIN32
-static void char_console_test_subprocess(void)
-{
-    QemuOpts *opts;
-    Chardev *chr;
-
-    opts = qemu_opts_create(qemu_find_opts("chardev"), "console-label",
-                            1, &error_abort);
-    qemu_opt_set(opts, "backend", "console", &error_abort);
-
-    chr = qemu_chr_new_from_opts(opts, NULL);
-    g_assert_nonnull(chr);
-
-    qemu_chr_write_all(chr, (const uint8_t *)"CONSOLE", 7);
-
-    qemu_opts_del(opts);
-    object_unparent(OBJECT(chr));
-}
-
-static void char_console_test(void)
-{
-    g_test_trap_subprocess("/char/console/subprocess", 0, 0);
-    g_test_trap_assert_passed();
-    g_test_trap_assert_stdout("CONSOLE");
-}
-#endif
 static void char_stdio_test_subprocess(void)
 {
     Chardev *chr;
@@ -398,7 +372,6 @@ static void char_socket_fdpass_test(void)
 }
 
 
-#ifndef _WIN32
 static void char_pipe_test(void)
 {
     gchar *tmp_path = g_dir_make_tmp("qemu-test-char.XXXXXX", NULL);
@@ -462,7 +435,6 @@ static void char_pipe_test(void)
     g_free(tmp_path);
     g_free(pipe);
 }
-#endif
 
 static int make_udp_socket(int *port)
 {
@@ -560,7 +532,6 @@ static void char_serial_test(void)
 }
 #endif
 
-#ifndef _WIN32
 static void char_file_fifo_test(void)
 {
     Chardev *chr;
@@ -617,7 +588,6 @@ static void char_file_fifo_test(void)
     g_rmdir(tmp_path);
     g_free(tmp_path);
 }
-#endif
 
 static void char_file_test_internal(Chardev *ext_chr, const char *filepath)
 {
@@ -800,20 +770,12 @@ int main(int argc, char **argv)
     g_test_add_func("/char/ringbuf", char_ringbuf_test);
     g_test_add_func("/char/mux", char_mux_test);
 #ifdef CONFIG_HAS_GLIB_SUBPROCESS_TESTS
-#ifdef _WIN32
-    g_test_add_func("/char/console/subprocess", char_console_test_subprocess);
-    g_test_add_func("/char/console", char_console_test);
-#endif
     g_test_add_func("/char/stdio/subprocess", char_stdio_test_subprocess);
     g_test_add_func("/char/stdio", char_stdio_test);
 #endif
-#ifndef _WIN32
     g_test_add_func("/char/pipe", char_pipe_test);
-#endif
     g_test_add_func("/char/file", char_file_test);
-#ifndef _WIN32
     g_test_add_func("/char/file-fifo", char_file_fifo_test);
-#endif
     g_test_add_func("/char/socket/basic", char_socket_basic_test);
     g_test_add_func("/char/socket/fdpass", char_socket_fdpass_test);
     g_test_add_func("/char/udp", char_udp_test);

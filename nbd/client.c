@@ -917,7 +917,6 @@ fail:
     return rc;
 }
 
-#ifdef __linux__
 int nbd_init(int fd, QIOChannelSocket *sioc, NBDExportInfo *info,
              Error **errp)
 {
@@ -1020,23 +1019,6 @@ int nbd_disconnect(int fd)
     return 0;
 }
 
-#else
-int nbd_init(int fd, QIOChannelSocket *ioc, NBDExportInfo *info,
-	     Error **errp)
-{
-    error_setg(errp, "nbd_init is only supported on Linux");
-    return -ENOTSUP;
-}
-
-int nbd_client(int fd)
-{
-    return -ENOTSUP;
-}
-int nbd_disconnect(int fd)
-{
-    return -ENOTSUP;
-}
-#endif
 
 int nbd_send_request(QIOChannel *ioc, NBDRequest *request)
 {

@@ -20,9 +20,7 @@
 
 #include "qemu/osdep.h"
 #include <sys/ioctl.h>
-#ifdef CONFIG_KVM
 #include <linux/kvm.h>
-#endif
 #include <linux/vfio.h>
 
 #include "hw/vfio/vfio-common.h"
@@ -41,7 +39,6 @@ struct vfio_group_head vfio_group_list =
 struct vfio_as_head vfio_address_spaces =
     QLIST_HEAD_INITIALIZER(vfio_address_spaces);
 
-#ifdef CONFIG_KVM
 /*
  * We have a single VFIO pseudo device per KVM VM.  Once created it lives
  * for the life of the VM.  Closing the file descriptor only drops our
@@ -50,7 +47,6 @@ struct vfio_as_head vfio_address_spaces =
  * we'll re-use it should another vfio device be attached before then.
  */
 static int vfio_kvm_device_fd = -1;
-#endif
 
 /*
  * Common VFIO interrupt disable
@@ -456,7 +452,6 @@ static void vfio_listener_region_add(MemoryListener *listener,
         vfio_host_win_add(container, section->offset_within_address_space,
                           section->offset_within_address_space +
                           int128_get64(section->size) - 1, pgsize);
-#ifdef CONFIG_KVM
         if (kvm_enabled()) {
             VFIOGroup *group;
             IOMMUMemoryRegion *iommu_mr = IOMMU_MEMORY_REGION(section->mr);
@@ -482,7 +477,6 @@ static void vfio_listener_region_add(MemoryListener *listener,
                 }
             }
         }
-#endif
     }
 
     hostwin_found = false;
@@ -951,7 +945,6 @@ void vfio_reset_handler(void *opaque)
 
 static void vfio_kvm_device_add_group(VFIOGroup *group)
 {
-#ifdef CONFIG_KVM
     struct kvm_device_attr attr = {
         .group = KVM_DEV_VFIO_GROUP,
         .attr = KVM_DEV_VFIO_GROUP_ADD,
@@ -979,12 +972,10 @@ static void vfio_kvm_device_add_group(VFIOGroup *group)
         error_report("Failed to add group %d to KVM VFIO device: %m",
                      group->groupid);
     }
-#endif
 }
 
 static void vfio_kvm_device_del_group(VFIOGroup *group)
 {
-#ifdef CONFIG_KVM
     struct kvm_device_attr attr = {
         .group = KVM_DEV_VFIO_GROUP,
         .attr = KVM_DEV_VFIO_GROUP_DEL,
@@ -999,7 +990,6 @@ static void vfio_kvm_device_del_group(VFIOGroup *group)
         error_report("Failed to remove group %d from KVM VFIO device: %m",
                      group->groupid);
     }
-#endif
 }
 
 static VFIOAddressSpace *vfio_get_address_space(AddressSpace *as)

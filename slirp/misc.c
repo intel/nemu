@@ -60,16 +60,6 @@ int add_exec(struct ex_list **ex_ptr, int do_pty, char *exec,
 }
 
 
-#ifdef _WIN32
-
-int
-fork_exec(struct socket *so, const char *ex, int do_pty)
-{
-    /* not implemented */
-    return 0;
-}
-
-#else
 
 /*
  * XXX This is ugly
@@ -203,7 +193,6 @@ fork_exec(struct socket *so, const char *ex, int do_pty)
 		return 1;
 	}
 }
-#endif
 
 void slirp_connection_info(Slirp *slirp, Monitor *mon)
 {

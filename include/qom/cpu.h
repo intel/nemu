@@ -331,9 +331,6 @@ struct CPUState {
     int nr_threads;
 
     struct QemuThread *thread;
-#ifdef _WIN32
-    HANDLE hThread;
-#endif
     int thread_id;
     bool running, has_waiter;
     struct QemuCond *halt_cond;
@@ -560,7 +557,6 @@ void cpu_dump_state(CPUState *cpu, FILE *f, fprintf_function cpu_fprintf,
 void cpu_dump_statistics(CPUState *cpu, FILE *f, fprintf_function cpu_fprintf,
                          int flags);
 
-#ifndef CONFIG_USER_ONLY
 /**
  * cpu_get_phys_page_attrs_debug:
  * @cpu: The CPU to obtain the physical page address for.
@@ -620,7 +616,6 @@ static inline int cpu_asidx_from_attrs(CPUState *cpu, MemTxAttrs attrs)
     }
     return 0;
 }
-#endif
 
 /**
  * cpu_list_add:
@@ -830,7 +825,6 @@ bool cpu_throttle_active(void);
  */
 int cpu_throttle_get_percentage(void);
 
-#ifndef CONFIG_USER_ONLY
 
 typedef void (*CPUInterruptHandler)(CPUState *, int);
 
@@ -848,11 +842,6 @@ static inline void cpu_interrupt(CPUState *cpu, int mask)
     cpu_interrupt_handler(cpu, mask);
 }
 
-#else /* USER_ONLY */
-
-void cpu_interrupt(CPUState *cpu, int mask);
-
-#endif /* USER_ONLY */
 
 #ifdef NEED_CPU_H
 

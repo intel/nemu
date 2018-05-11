@@ -169,32 +169,6 @@ void error_append_hint(Error **errp, const char *fmt, ...)
     errno = saved_errno;
 }
 
-#ifdef _WIN32
-
-void error_setg_win32_internal(Error **errp,
-                               const char *src, int line, const char *func,
-                               int win32_err, const char *fmt, ...)
-{
-    va_list ap;
-    char *suffix = NULL;
-
-    if (errp == NULL) {
-        return;
-    }
-
-    if (win32_err != 0) {
-        suffix = g_win32_error_message(win32_err);
-    }
-
-    va_start(ap, fmt);
-    error_setv(errp, src, line, func, ERROR_CLASS_GENERIC_ERROR,
-               fmt, ap, suffix);
-    va_end(ap);
-
-    g_free(suffix);
-}
-
-#endif
 
 Error *error_copy(const Error *err)
 {

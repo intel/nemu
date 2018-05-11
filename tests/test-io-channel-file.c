@@ -91,7 +91,6 @@ static void test_io_channel_fd(void)
 }
 
 
-#ifndef _WIN32
 static void test_io_channel_pipe(bool async)
 {
     QIOChannel *src, *dst;
@@ -124,7 +123,6 @@ static void test_io_channel_pipe_sync(void)
 {
     test_io_channel_pipe(false);
 }
-#endif /* ! _WIN32 */
 
 
 int main(int argc, char **argv)
@@ -136,9 +134,7 @@ int main(int argc, char **argv)
     g_test_add_func("/io/channel/file", test_io_channel_file);
     g_test_add_func("/io/channel/file/rdwr", test_io_channel_file_rdwr);
     g_test_add_func("/io/channel/file/fd", test_io_channel_fd);
-#ifndef _WIN32
     g_test_add_func("/io/channel/pipe/sync", test_io_channel_pipe_sync);
     g_test_add_func("/io/channel/pipe/async", test_io_channel_pipe_async);
-#endif
     return g_test_run();
 }

@@ -74,7 +74,6 @@ static inline const char *qcow2_cache_get_name(BDRVQcow2State *s, Qcow2Cache *c)
 static void qcow2_cache_table_release(Qcow2Cache *c, int i, int num_tables)
 {
 /* Using MADV_DONTNEED to discard memory is a Linux-specific feature */
-#ifdef CONFIG_LINUX
     void *t = qcow2_cache_get_table_addr(c, i);
     int align = getpagesize();
     size_t mem_size = (size_t) c->table_size * num_tables;
@@ -83,7 +82,6 @@ static void qcow2_cache_table_release(Qcow2Cache *c, int i, int num_tables)
     if (mem_size > offset && length > 0) {
         madvise((uint8_t *) t + offset, length, MADV_DONTNEED);
     }
-#endif
 }
 
 static inline bool can_clean_entry(Qcow2Cache *c, int i)

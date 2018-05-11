@@ -47,11 +47,6 @@ void gdb_do_syscallv(gdb_syscall_complete_cb cb, const char *fmt, va_list va);
 int use_gdb_syscalls(void);
 void gdb_set_stop_cpu(CPUState *cpu);
 void gdb_exit(CPUArchState *, int);
-#ifdef CONFIG_USER_ONLY
-int gdb_handlesig(CPUState *, int);
-void gdb_signalled(CPUArchState *, int);
-void gdbserver_fork(CPUState *);
-#endif
 /* Get or set a register.  Returns the size of the register.  */
 typedef int (*gdb_reg_cb)(CPUArchState *env, uint8_t *buf, int reg);
 void gdb_register_coprocessor(CPUState *cpu,
@@ -97,11 +92,7 @@ static inline int gdb_get_reg64(uint8_t *mem_buf, uint64_t val)
 
 #endif
 
-#ifdef CONFIG_USER_ONLY
-int gdbserver_start(int);
-#else
 int gdbserver_start(const char *port);
-#endif
 
 void gdbserver_cleanup(void);
 

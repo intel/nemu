@@ -27,14 +27,8 @@ void whpx_cpu_synchronize_post_reset(CPUState *cpu);
 void whpx_cpu_synchronize_post_init(CPUState *cpu);
 void whpx_cpu_synchronize_pre_loadvm(CPUState *cpu);
 
-#ifdef CONFIG_WHPX
-
-int whpx_enabled(void);
-
-#else /* CONFIG_WHPX */
 
 #define whpx_enabled() (0)
 
-#endif /* CONFIG_WHPX */
 
 #endif /* QEMU_WHPX_H */

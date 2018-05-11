@@ -14,17 +14,11 @@
 #ifndef ARM_KVM_CONSTS_H
 #define ARM_KVM_CONSTS_H
 
-#ifdef CONFIG_KVM
 #include <linux/kvm.h>
 #include <linux/psci.h>
 
 #define MISMATCH_CHECK(X, Y) QEMU_BUILD_BUG_ON(X != Y)
 
-#else
-
-#define MISMATCH_CHECK(X, Y) QEMU_BUILD_BUG_ON(0)
-
-#endif
 
 #define CP_REG_SIZE_SHIFT 52
 #define CP_REG_SIZE_MASK       0x00f0000000000000ULL

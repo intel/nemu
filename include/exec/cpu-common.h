@@ -3,9 +3,7 @@
 
 /* CPU interfaces that are target independent.  */
 
-#ifndef CONFIG_USER_ONLY
 #include "exec/hwaddr.h"
-#endif
 
 #include "qemu/bswap.h"
 #include "qemu/queue.h"
@@ -30,7 +28,6 @@ void cpu_list_unlock(void);
 
 void tcg_flush_softmmu_tlb(CPUState *cs);
 
-#if !defined(CONFIG_USER_ONLY)
 
 enum device_endian {
     DEVICE_NATIVE_ENDIAN,
@@ -121,6 +118,5 @@ typedef int (RAMBlockIterFunc)(const char *block_name, void *host_addr,
 int qemu_ram_foreach_block(RAMBlockIterFunc func, void *opaque);
 int ram_block_discard_range(RAMBlock *rb, uint64_t start, size_t length);
 
-#endif
 
 #endif /* CPU_COMMON_H */

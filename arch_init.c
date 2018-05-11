@@ -34,15 +34,9 @@
 #include "hw/acpi/acpi.h"
 #include "qemu/help_option.h"
 
-#ifdef TARGET_SPARC
-int graphic_width = 1024;
-int graphic_height = 768;
-int graphic_depth = 8;
-#else
 int graphic_width = 800;
 int graphic_height = 600;
 int graphic_depth = 32;
-#endif
 
 
 #if defined(TARGET_ALPHA)
@@ -69,16 +63,10 @@ int graphic_depth = 32;
 #define QEMU_ARCH QEMU_ARCH_NIOS2
 #elif defined(TARGET_OPENRISC)
 #define QEMU_ARCH QEMU_ARCH_OPENRISC
-#elif defined(TARGET_PPC)
-#define QEMU_ARCH QEMU_ARCH_PPC
 #elif defined(TARGET_RISCV)
 #define QEMU_ARCH QEMU_ARCH_RISCV
-#elif defined(TARGET_S390X)
-#define QEMU_ARCH QEMU_ARCH_S390X
 #elif defined(TARGET_SH4)
 #define QEMU_ARCH QEMU_ARCH_SH4
-#elif defined(TARGET_SPARC)
-#define QEMU_ARCH QEMU_ARCH_SPARC
 #elif defined(TARGET_XTENSA)
 #define QEMU_ARCH QEMU_ARCH_XTENSA
 #elif defined(TARGET_UNICORE32)
@@ -91,20 +79,12 @@ const uint32_t arch_type = QEMU_ARCH;
 
 int kvm_available(void)
 {
-#ifdef CONFIG_KVM
     return 1;
-#else
-    return 0;
-#endif
 }
 
 int xen_available(void)
 {
-#ifdef CONFIG_XEN
-    return 1;
-#else
     return 0;
-#endif
 }
 
 

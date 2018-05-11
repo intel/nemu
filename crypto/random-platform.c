@@ -23,16 +23,10 @@
 #include "crypto/random.h"
 #include "qapi/error.h"
 
-#ifdef _WIN32
-#include <wincrypt.h>
-static HCRYPTPROV hCryptProv;
-#else
 static int fd; /* a file handle to either /dev/urandom or /dev/random */
-#endif
 
 int qcrypto_random_init(Error **errp)
 {
-#ifndef _WIN32
     /* TBD perhaps also add support for BSD getentropy / Linux
      * getrandom syscalls directly */
     fd = open("/dev/urandom", O_RDONLY);
@@ -44,14 +38,6 @@ int qcrypto_random_init(Error **errp)
         error_setg(errp, "No /dev/urandom or /dev/random found");
         return -1;
     }
-#else
-    if (!CryptAcquireContext(&hCryptProv, NULL, NULL, PROV_RSA_FULL,
-                             CRYPT_SILENT | CRYPT_VERIFYCONTEXT)) {
-        error_setg_win32(errp, GetLastError(),
-                         "Unable to create cryptographic provider");
-        return -1;
-    }
-#endif
 
     return 0;
 }
@@ -60,7 +46,6 @@ int qcrypto_random_bytes(uint8_t *buf G_GNUC_UNUSED,
                          size_t buflen G_GNUC_UNUSED,
                          Error **errp)
 {
-#ifndef _WIN32
     int ret = -1;
     int got;
 
@@ -82,13 +67,4 @@ int qcrypto_random_bytes(uint8_t *buf G_GNUC_UNUSED,
     ret = 0;
  cleanup:
     return ret;
-#else
-    if (!CryptGenRandom(hCryptProv, buflen, buf)) {
-        error_setg_win32(errp, GetLastError(),
-                         "Unable to read random bytes");
-        return -1;
-    }
-
-    return 0;
-#endif
 }

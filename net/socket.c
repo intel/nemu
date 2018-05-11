@@ -216,11 +216,7 @@ static int net_socket_mcast_create(struct sockaddr_in *mcastaddr,
     struct ip_mreq imr;
     int fd;
     int val, ret;
-#ifdef __OpenBSD__
-    unsigned char loop;
-#else
     int loop;
-#endif
 
     if (!IN_MULTICAST(ntohl(mcastaddr->sin_addr.s_addr))) {
         error_setg(errp, "specified mcastaddr %s (0x%08x) "

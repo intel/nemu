@@ -20,11 +20,9 @@
 #include "hw/irq.h"
 
 #ifdef NEED_CPU_H
-# ifdef CONFIG_KVM
 #  include <linux/kvm.h>
 #  include <linux/kvm_para.h>
 #  define CONFIG_KVM_IS_POSSIBLE
-# endif
 #else
 # define CONFIG_KVM_IS_POSSIBLE
 #endif
@@ -467,10 +465,8 @@ uint32_t kvm_arch_get_supported_cpuid(KVMState *env, uint32_t function,
 
 void kvm_set_sigmask_len(KVMState *s, unsigned int sigmask_len);
 
-#if !defined(CONFIG_USER_ONLY)
 int kvm_physical_memory_addr_from_host(KVMState *s, void *ram_addr,
                                        hwaddr *phys_addr);
-#endif
 
 #endif /* NEED_CPU_H */
 

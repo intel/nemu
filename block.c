@@ -50,14 +50,9 @@
 #ifdef CONFIG_BSD
 #include <sys/ioctl.h>
 #include <sys/queue.h>
-#ifndef __DragonFly__
 #include <sys/disk.h>
 #endif
-#endif
 
-#ifdef _WIN32
-#include <windows.h>
-#endif
 
 #define NOT_DONE 0x7fffffff /* used while emulated sync operation in progress */
 
@@ -80,25 +75,6 @@ static BlockDriverState *bdrv_open_inherit(const char *filename,
 /* If non-zero, use only whitelisted block drivers */
 static int use_bdrv_whitelist;
 
-#ifdef _WIN32
-static int is_windows_drive_prefix(const char *filename)
-{
-    return (((filename[0] >= 'a' && filename[0] <= 'z') ||
-             (filename[0] >= 'A' && filename[0] <= 'Z')) &&
-            filename[1] == ':');
-}
-
-int is_windows_drive(const char *filename)
-{
-    if (is_windows_drive_prefix(filename) &&
-        filename[2] == '\0')
-        return 1;
-    if (strstart(filename, "\\\\.\\", NULL) ||
-        strstart(filename, "//./", NULL))
-        return 1;
-    return 0;
-}
-#endif
 
 size_t bdrv_opt_mem_align(BlockDriverState *bs)
 {
@@ -125,30 +101,14 @@ int path_has_protocol(const char *path)
 {
     const char *p;
 
-#ifdef _WIN32
-    if (is_windows_drive(path) ||
-        is_windows_drive_prefix(path)) {
-        return 0;
-    }
-    p = path + strcspn(path, ":/\\");
-#else
     p = path + strcspn(path, ":/");
-#endif
 
     return *p == ':';
 }
 
 int path_is_absolute(const char *path)
 {
-#ifdef _WIN32
-    /* specific case for names like: "\\.\d:" */
-    if (is_windows_drive(path) || is_windows_drive_prefix(path)) {
-        return 1;
-    }
-    return (*path == '/' || *path == '\\');
-#else
     return (*path == '/');
-#endif
 }
 
 /* if filename is absolute, just copy it to dest. Otherwise, build a
@@ -177,14 +137,6 @@ void path_combine(char *dest, int dest_size,
         p = protocol_stripped ?: base_path;
 
         p1 = strrchr(base_path, '/');
-#ifdef _WIN32
-        {
-            const char *p2;
-            p2 = strrchr(base_path, '\\');
-            if (!p1 || p2 > p1)
-                p1 = p2;
-        }
-#endif
         if (p1)
             p1++;
         else
@@ -531,15 +483,6 @@ int bdrv_probe_geometry(BlockDriverState *bs, HDGeometry *geo)
  */
 int get_tmp_filename(char *filename, int size)
 {
-#ifdef _WIN32
-    char temp_dir[MAX_PATH];
-    /* GetTempFileName requires that its output buffer (4th param)
-       have length MAX_PATH or greater.  */
-    assert(size >= MAX_PATH);
-    return (GetTempPath(MAX_PATH, temp_dir)
-            && GetTempFileName(temp_dir, "qem", 0, filename)
-            ? 0 : -GetLastError());
-#else
     int fd;
     const char *tmpdir;
     tmpdir = getenv("TMPDIR");
@@ -558,7 +501,6 @@ int get_tmp_filename(char *filename, int size)
         return -errno;
     }
     return 0;
-#endif
 }
 
 /*

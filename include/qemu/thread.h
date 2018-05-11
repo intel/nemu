@@ -10,11 +10,7 @@ typedef struct QemuEvent QemuEvent;
 typedef struct QemuLockCnt QemuLockCnt;
 typedef struct QemuThread QemuThread;
 
-#ifdef _WIN32
-#include "qemu/thread-win32.h"
-#else
 #include "qemu/thread-posix.h"
-#endif
 
 #define QEMU_THREAD_JOINABLE 0
 #define QEMU_THREAD_DETACHED 1
@@ -130,9 +126,6 @@ static inline void qemu_spin_unlock(QemuSpin *spin)
 }
 
 struct QemuLockCnt {
-#ifndef CONFIG_LINUX
-    QemuMutex mutex;
-#endif
     unsigned count;
 };
 

@@ -37,9 +37,7 @@
 #include "qemu/log.h"
 #include "qemu/cutils.h"
 
-#ifdef CONFIG_LINUX
 #include <sys/prctl.h>
-#endif
 
 static struct passwd *user_pwd;
 static const char *chroot_dir;
@@ -155,11 +153,9 @@ void os_parse_cmd_args(int index, const char *optarg)
     case QEMU_OPTION_daemonize:
         daemonize = 1;
         break;
-#if defined(CONFIG_LINUX)
     case QEMU_OPTION_enablefips:
         fips_set_state(true);
         break;
-#endif
     }
 }
 

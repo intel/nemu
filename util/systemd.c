@@ -15,7 +15,6 @@
 #include "qemu/cutils.h"
 #include "qemu/error-report.h"
 
-#ifndef _WIN32
 unsigned int check_socket_activation(void)
 {
     const char *s;
@@ -69,9 +68,3 @@ unsigned int check_socket_activation(void)
     return (unsigned int) nr_fds;
 }
 
-#else /* !_WIN32 */
-unsigned int check_socket_activation(void)
-{
-    return 0;
-}
-#endif

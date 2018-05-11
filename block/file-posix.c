@@ -39,24 +39,7 @@
 #include "scsi/pr-manager.h"
 #include "scsi/constants.h"
 
-#if defined(__APPLE__) && (__MACH__)
-#include <paths.h>
-#include <sys/param.h>
-#include <IOKit/IOKitLib.h>
-#include <IOKit/IOBSD.h>
-#include <IOKit/storage/IOMediaBSDClient.h>
-#include <IOKit/storage/IOMedia.h>
-#include <IOKit/storage/IOCDMedia.h>
-//#include <IOKit/storage/IOCDTypes.h>
-#include <IOKit/storage/IODVDMedia.h>
-#include <CoreFoundation/CoreFoundation.h>
-#endif
 
-#ifdef __sun__
-#define _POSIX_PTHREAD_SEMANTICS 1
-#include <sys/dkio.h>
-#endif
-#ifdef __linux__
 #include <sys/ioctl.h>
 #include <sys/param.h>
 #include <linux/cdrom.h>
@@ -64,12 +47,8 @@
 #include <linux/fs.h>
 #include <linux/hdreg.h>
 #include <scsi/sg.h>
-#ifdef __s390__
-#include <asm/dasd.h>
-#endif
 #ifndef FS_NOCOW_FL
 #define FS_NOCOW_FL                     0x00800000 /* Do not cow file */
-#endif
 #endif
 #if defined(CONFIG_FALLOCATE_PUNCH_HOLE) || defined(CONFIG_FALLOCATE_ZERO_RANGE)
 #include <linux/falloc.h>
@@ -79,23 +58,8 @@
 #include <sys/cdio.h>
 #endif
 
-#ifdef __OpenBSD__
-#include <sys/ioctl.h>
-#include <sys/disklabel.h>
-#include <sys/dkio.h>
-#endif
 
-#ifdef __NetBSD__
-#include <sys/ioctl.h>
-#include <sys/disklabel.h>
-#include <sys/dkio.h>
-#include <sys/disk.h>
-#endif
 
-#ifdef __DragonFly__
-#include <sys/ioctl.h>
-#include <sys/diskslice.h>
-#endif
 
 #ifdef CONFIG_XFS
 #include <xfs/xfs.h>
@@ -191,43 +155,10 @@ typedef struct RawPosixAIOData {
 static int cdrom_reopen(BlockDriverState *bs);
 #endif
 
-#if defined(__NetBSD__)
-static int raw_normalize_devicepath(const char **filename)
-{
-    static char namebuf[PATH_MAX];
-    const char *dp, *fname;
-    struct stat sb;
-
-    fname = *filename;
-    dp = strrchr(fname, '/');
-    if (lstat(fname, &sb) < 0) {
-        fprintf(stderr, "%s: stat failed: %s\n",
-            fname, strerror(errno));
-        return -errno;
-    }
-
-    if (!S_ISBLK(sb.st_mode)) {
-        return 0;
-    }
-
-    if (dp == NULL) {
-        snprintf(namebuf, PATH_MAX, "r%s", fname);
-    } else {
-        snprintf(namebuf, PATH_MAX, "%.*s/r%s",
-            (int)(dp - fname), fname, dp + 1);
-    }
-    fprintf(stderr, "%s is a block device", fname);
-    *filename = namebuf;
-    fprintf(stderr, ", using %s\n", *filename);
-
-    return 0;
-}
-#else
 static int raw_normalize_devicepath(const char **filename)
 {
     return 0;
 }
-#endif
 
 /*
  * Get logical block size via ioctl. On success store it in @sector_size_p.
@@ -291,7 +222,6 @@ static bool raw_is_io_aligned(int fd, void *buf, size_t len)
         return true;
     }
 
-#ifdef __linux__
     /* The Linux kernel returns EINVAL for misaligned O_DIRECT reads.  Ignore
      * other errors (e.g. real I/O error), which could happen on a failed
      * drive, since we only care about probing alignment.
@@ -299,7 +229,6 @@ static bool raw_is_io_aligned(int fd, void *buf, size_t len)
     if (errno != EINVAL) {
         return true;
     }
-#endif
 
     return false;
 }
@@ -569,7 +498,6 @@ static int raw_open_common(BlockDriverState *bs, QDict *options,
             s->discard_zeroes = true;
         }
 #endif
-#ifdef __linux__
         /* On Linux 3.10, BLKDISCARD leaves stale data in the page cache.  Do
          * not rely on the contents of discarded blocks unless using O_DIRECT.
          * Same for BLKZEROOUT.
@@ -578,7 +506,6 @@ static int raw_open_common(BlockDriverState *bs, QDict *options,
             s->discard_zeroes = false;
             s->has_write_zeroes = false;
         }
-#endif
     }
 #ifdef __FreeBSD__
     if (S_ISCHR(st.st_mode)) {
@@ -904,7 +831,6 @@ static int hdev_get_max_transfer_length(BlockDriverState *bs, int fd)
 
 static int hdev_get_max_segments(const struct stat *st)
 {
-#ifdef CONFIG_LINUX
     char buf[32];
     const char *end;
     char *sysfspath;
@@ -942,9 +868,6 @@ out:
     }
     g_free(sysfspath);
     return ret;
-#else
-    return -ENOTSUP;
-#endif
 }
 
 static void raw_refresh_limits(BlockDriverState *bs, Error **errp)
@@ -1009,7 +932,6 @@ static int hdev_probe_blocksizes(BlockDriverState *bs, BlockSizes *bsz)
  * On failure return -errno.
  * (Allows block driver to assign default geometry values that guest sees)
  */
-#ifdef __linux__
 static int hdev_probe_geometry(BlockDriverState *bs, HDGeometry *geo)
 {
     BDRVRawState *s = bs->opaque;
@@ -1037,12 +959,6 @@ static int hdev_probe_geometry(BlockDriverState *bs, HDGeometry *geo)
 
     return 0;
 }
-#else /* __linux__ */
-static int hdev_probe_geometry(BlockDriverState *bs, HDGeometry *geo)
-{
-    return -ENOTSUP;
-}
-#endif
 
 static ssize_t handle_aiocb_ioctl(RawPosixAIOData *aiocb)
 {
@@ -1807,82 +1723,7 @@ static int raw_truncate(BlockDriverState *bs, int64_t offset,
     return 0;
 }
 
-#ifdef __OpenBSD__
-static int64_t raw_getlength(BlockDriverState *bs)
-{
-    BDRVRawState *s = bs->opaque;
-    int fd = s->fd;
-    struct stat st;
-
-    if (fstat(fd, &st))
-        return -errno;
-    if (S_ISCHR(st.st_mode) || S_ISBLK(st.st_mode)) {
-        struct disklabel dl;
-
-        if (ioctl(fd, DIOCGDINFO, &dl))
-            return -errno;
-        return (uint64_t)dl.d_secsize *
-            dl.d_partitions[DISKPART(st.st_rdev)].p_size;
-    } else
-        return st.st_size;
-}
-#elif defined(__NetBSD__)
-static int64_t raw_getlength(BlockDriverState *bs)
-{
-    BDRVRawState *s = bs->opaque;
-    int fd = s->fd;
-    struct stat st;
-
-    if (fstat(fd, &st))
-        return -errno;
-    if (S_ISCHR(st.st_mode) || S_ISBLK(st.st_mode)) {
-        struct dkwedge_info dkw;
-
-        if (ioctl(fd, DIOCGWEDGEINFO, &dkw) != -1) {
-            return dkw.dkw_size * 512;
-        } else {
-            struct disklabel dl;
-
-            if (ioctl(fd, DIOCGDINFO, &dl))
-                return -errno;
-            return (uint64_t)dl.d_secsize *
-                dl.d_partitions[DISKPART(st.st_rdev)].p_size;
-        }
-    } else
-        return st.st_size;
-}
-#elif defined(__sun__)
-static int64_t raw_getlength(BlockDriverState *bs)
-{
-    BDRVRawState *s = bs->opaque;
-    struct dk_minfo minfo;
-    int ret;
-    int64_t size;
-
-    ret = fd_open(bs);
-    if (ret < 0) {
-        return ret;
-    }
-
-    /*
-     * Use the DKIOCGMEDIAINFO ioctl to read the size.
-     */
-    ret = ioctl(s->fd, DKIOCGMEDIAINFO, &minfo);
-    if (ret != -1) {
-        return minfo.dki_lbsize * minfo.dki_capacity;
-    }
-
-    /*
-     * There are reports that lseek on some devices fails, but
-     * irc discussion said that contingency on contingency was overkill.
-     */
-    size = lseek(s->fd, 0, SEEK_END);
-    if (size < 0) {
-        return -errno;
-    }
-    return size;
-}
-#elif defined(CONFIG_BSD)
+#if   defined(CONFIG_BSD)
 static int64_t raw_getlength(BlockDriverState *bs)
 {
     BDRVRawState *s = bs->opaque;
@@ -1914,27 +1755,10 @@ again:
         }
         if (size == 0)
 #endif
-#if defined(__APPLE__) && defined(__MACH__)
-        {
-            uint64_t sectors = 0;
-            uint32_t sector_size = 0;
-
-            if (ioctl(fd, DKIOCGETBLOCKCOUNT, &sectors) == 0
-               && ioctl(fd, DKIOCGETBLOCKSIZE, &sector_size) == 0) {
-                size = sectors * sector_size;
-            } else {
-                size = lseek(fd, 0LL, SEEK_END);
-                if (size < 0) {
-                    return -errno;
-                }
-            }
-        }
-#else
         size = lseek(fd, 0LL, SEEK_END);
         if (size < 0) {
             return -errno;
         }
-#endif
 #if defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
         switch(s->type) {
         case FTYPE_CD:
@@ -2014,7 +1838,6 @@ static int raw_co_create(BlockdevCreateOptions *options, Error **errp)
     }
 
     if (file_opts->nocow) {
-#ifdef __linux__
         /* Set NOCOW flag to solve performance issue on fs like btrfs.
          * This is an optimisation. The FS_IOC_SETFLAGS ioctl return value
          * will be ignored since any failure of this operation should not
@@ -2025,7 +1848,6 @@ static int raw_co_create(BlockdevCreateOptions *options, Error **errp)
             attr |= FS_NOCOW_FL;
             ioctl(fd, FS_IOC_SETFLAGS, &attr);
         }
-#endif
     }
 
     result = raw_regular_truncate(fd, file_opts->size, file_opts->preallocation,
@@ -2352,119 +2174,6 @@ BlockDriver bdrv_file = {
 /***********************************************/
 /* host device */
 
-#if defined(__APPLE__) && defined(__MACH__)
-static kern_return_t GetBSDPath(io_iterator_t mediaIterator, char *bsdPath,
-                                CFIndex maxPathSize, int flags);
-static char *FindEjectableOpticalMedia(io_iterator_t *mediaIterator)
-{
-    kern_return_t kernResult = KERN_FAILURE;
-    mach_port_t     masterPort;
-    CFMutableDictionaryRef  classesToMatch;
-    const char *matching_array[] = {kIODVDMediaClass, kIOCDMediaClass};
-    char *mediaType = NULL;
-
-    kernResult = IOMasterPort( MACH_PORT_NULL, &masterPort );
-    if ( KERN_SUCCESS != kernResult ) {
-        printf( "IOMasterPort returned %d\n", kernResult );
-    }
-
-    int index;
-    for (index = 0; index < ARRAY_SIZE(matching_array); index++) {
-        classesToMatch = IOServiceMatching(matching_array[index]);
-        if (classesToMatch == NULL) {
-            error_report("IOServiceMatching returned NULL for %s",
-                         matching_array[index]);
-            continue;
-        }
-        CFDictionarySetValue(classesToMatch, CFSTR(kIOMediaEjectableKey),
-                             kCFBooleanTrue);
-        kernResult = IOServiceGetMatchingServices(masterPort, classesToMatch,
-                                                  mediaIterator);
-        if (kernResult != KERN_SUCCESS) {
-            error_report("Note: IOServiceGetMatchingServices returned %d",
-                         kernResult);
-            continue;
-        }
-
-        /* If a match was found, leave the loop */
-        if (*mediaIterator != 0) {
-            DPRINTF("Matching using %s\n", matching_array[index]);
-            mediaType = g_strdup(matching_array[index]);
-            break;
-        }
-    }
-    return mediaType;
-}
-
-kern_return_t GetBSDPath(io_iterator_t mediaIterator, char *bsdPath,
-                         CFIndex maxPathSize, int flags)
-{
-    io_object_t     nextMedia;
-    kern_return_t   kernResult = KERN_FAILURE;
-    *bsdPath = '\0';
-    nextMedia = IOIteratorNext( mediaIterator );
-    if ( nextMedia )
-    {
-        CFTypeRef   bsdPathAsCFString;
-    bsdPathAsCFString = IORegistryEntryCreateCFProperty( nextMedia, CFSTR( kIOBSDNameKey ), kCFAllocatorDefault, 0 );
-        if ( bsdPathAsCFString ) {
-            size_t devPathLength;
-            strcpy( bsdPath, _PATH_DEV );
-            if (flags & BDRV_O_NOCACHE) {
-                strcat(bsdPath, "r");
-            }
-            devPathLength = strlen( bsdPath );
-            if ( CFStringGetCString( bsdPathAsCFString, bsdPath + devPathLength, maxPathSize - devPathLength, kCFStringEncodingASCII ) ) {
-                kernResult = KERN_SUCCESS;
-            }
-            CFRelease( bsdPathAsCFString );
-        }
-        IOObjectRelease( nextMedia );
-    }
-
-    return kernResult;
-}
-
-/* Sets up a real cdrom for use in QEMU */
-static bool setup_cdrom(char *bsd_path, Error **errp)
-{
-    int index, num_of_test_partitions = 2, fd;
-    char test_partition[MAXPATHLEN];
-    bool partition_found = false;
-
-    /* look for a working partition */
-    for (index = 0; index < num_of_test_partitions; index++) {
-        snprintf(test_partition, sizeof(test_partition), "%ss%d", bsd_path,
-                 index);
-        fd = qemu_open(test_partition, O_RDONLY | O_BINARY | O_LARGEFILE);
-        if (fd >= 0) {
-            partition_found = true;
-            qemu_close(fd);
-            break;
-        }
-    }
-
-    /* if a working partition on the device was not found */
-    if (partition_found == false) {
-        error_setg(errp, "Failed to find a working partition on disc");
-    } else {
-        DPRINTF("Using %s as optical disc\n", test_partition);
-        pstrcpy(bsd_path, MAXPATHLEN, test_partition);
-    }
-    return partition_found;
-}
-
-/* Prints directions on mounting and unmounting a device */
-static void print_unmounting_directions(const char *file_name)
-{
-    error_report("If device %s is mounted on the desktop, unmount"
-                 " it first before using it in QEMU", file_name);
-    error_report("Command to unmount device: diskutil unmountDisk %s",
-                 file_name);
-    error_report("Command to mount device: diskutil mountDisk %s", file_name);
-}
-
-#endif /* defined(__APPLE__) && defined(__MACH__) */
 
 static int hdev_probe_device(const char *filename)
 {
@@ -2524,7 +2233,6 @@ static void hdev_parse_filename(const char *filename, QDict *options,
 static bool hdev_is_sg(BlockDriverState *bs)
 {
 
-#if defined(__linux__)
 
     BDRVRawState *s = bs->opaque;
     struct stat st;
@@ -2548,7 +2256,6 @@ static bool hdev_is_sg(BlockDriverState *bs)
         return true;
     }
 
-#endif
 
     return false;
 }
@@ -2560,80 +2267,12 @@ static int hdev_open(BlockDriverState *bs, QDict *options, int flags,
     Error *local_err = NULL;
     int ret;
 
-#if defined(__APPLE__) && defined(__MACH__)
-    /*
-     * Caution: while qdict_get_str() is fine, getting non-string types
-     * would require more care.  When @options come from -blockdev or
-     * blockdev_add, its members are typed according to the QAPI
-     * schema, but when they come from -drive, they're all QString.
-     */
-    const char *filename = qdict_get_str(options, "filename");
-    char bsd_path[MAXPATHLEN] = "";
-    bool error_occurred = false;
-
-    /* If using a real cdrom */
-    if (strcmp(filename, "/dev/cdrom") == 0) {
-        char *mediaType = NULL;
-        kern_return_t ret_val;
-        io_iterator_t mediaIterator = 0;
-
-        mediaType = FindEjectableOpticalMedia(&mediaIterator);
-        if (mediaType == NULL) {
-            error_setg(errp, "Please make sure your CD/DVD is in the optical"
-                       " drive");
-            error_occurred = true;
-            goto hdev_open_Mac_error;
-        }
-
-        ret_val = GetBSDPath(mediaIterator, bsd_path, sizeof(bsd_path), flags);
-        if (ret_val != KERN_SUCCESS) {
-            error_setg(errp, "Could not get BSD path for optical drive");
-            error_occurred = true;
-            goto hdev_open_Mac_error;
-        }
-
-        /* If a real optical drive was not found */
-        if (bsd_path[0] == '\0') {
-            error_setg(errp, "Failed to obtain bsd path for optical drive");
-            error_occurred = true;
-            goto hdev_open_Mac_error;
-        }
-
-        /* If using a cdrom disc and finding a partition on the disc failed */
-        if (strncmp(mediaType, kIOCDMediaClass, 9) == 0 &&
-            setup_cdrom(bsd_path, errp) == false) {
-            print_unmounting_directions(bsd_path);
-            error_occurred = true;
-            goto hdev_open_Mac_error;
-        }
-
-        qdict_put_str(options, "filename", bsd_path);
-
-hdev_open_Mac_error:
-        g_free(mediaType);
-        if (mediaIterator) {
-            IOObjectRelease(mediaIterator);
-        }
-        if (error_occurred) {
-            return -ENOENT;
-        }
-    }
-#endif /* defined(__APPLE__) && defined(__MACH__) */
 
     s->type = FTYPE_FILE;
 
     ret = raw_open_common(bs, options, flags, 0, &local_err);
     if (ret < 0) {
         error_propagate(errp, local_err);
-#if defined(__APPLE__) && defined(__MACH__)
-        if (*bsd_path) {
-            filename = bsd_path;
-        }
-        /* if a physical device experienced an error while being opened */
-        if (strncmp(filename, "/dev/", 5) == 0) {
-            print_unmounting_directions(filename);
-        }
-#endif /* defined(__APPLE__) && defined(__MACH__) */
         return ret;
     }
 
@@ -2652,7 +2291,6 @@ hdev_open_Mac_error:
     return ret;
 }
 
-#if defined(__linux__)
 
 static BlockAIOCB *hdev_aio_ioctl(BlockDriverState *bs,
         unsigned long int req, void *buf,
@@ -2684,7 +2322,6 @@ static BlockAIOCB *hdev_aio_ioctl(BlockDriverState *bs,
     pool = aio_get_thread_pool(bdrv_get_aio_context(bs));
     return thread_pool_submit_aio(pool, aio_worker, acb, cb, opaque);
 }
-#endif /* linux */
 
 static int fd_open(BlockDriverState *bs)
 {
@@ -2827,20 +2464,15 @@ static BlockDriver bdrv_host_device = {
     .bdrv_probe_geometry = hdev_probe_geometry,
 
     /* generic scsi device */
-#ifdef __linux__
     .bdrv_aio_ioctl     = hdev_aio_ioctl,
-#endif
 };
 
-#if defined(__linux__) || defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
 static void cdrom_parse_filename(const char *filename, QDict *options,
                                  Error **errp)
 {
     bdrv_parse_filename_strip_prefix(filename, "host_cdrom:", options);
 }
-#endif
 
-#ifdef __linux__
 static int cdrom_open(BlockDriverState *bs, QDict *options, int flags,
                       Error **errp)
 {
@@ -2950,7 +2582,6 @@ static BlockDriver bdrv_host_cdrom = {
     /* generic scsi device */
     .bdrv_aio_ioctl     = hdev_aio_ioctl,
 };
-#endif /* __linux__ */
 
 #if defined (__FreeBSD__) || defined(__FreeBSD_kernel__)
 static int cdrom_open(BlockDriverState *bs, QDict *options, int flags,
@@ -3087,9 +2718,7 @@ static void bdrv_file_init(void)
      */
     bdrv_register(&bdrv_file);
     bdrv_register(&bdrv_host_device);
-#ifdef __linux__
     bdrv_register(&bdrv_host_cdrom);
-#endif
 #if defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
     bdrv_register(&bdrv_host_cdrom);
 #endif

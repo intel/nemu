@@ -85,10 +85,6 @@
 #include "sysemu/iothread.h"
 #include "qemu/cutils.h"
 
-#if defined(TARGET_S390X)
-#include "hw/s390x/storage-keys.h"
-#include "hw/s390x/storage-attributes.h"
-#endif
 
 /*
  * Supported types:
@@ -1151,19 +1147,15 @@ static void qmp_unregister_commands_hack(void)
     qmp_unregister_command(&qmp_commands, "query-sev-launch-measure");
     qmp_unregister_command(&qmp_commands, "query-sev-capabilities");
 #endif
-#ifndef TARGET_S390X
     qmp_unregister_command(&qmp_commands, "dump-skeys");
-#endif
 #ifndef TARGET_ARM
     qmp_unregister_command(&qmp_commands, "query-gic-capabilities");
 #endif
 #if !defined(TARGET_S390X) && !defined(TARGET_I386)
     qmp_unregister_command(&qmp_commands, "query-cpu-model-expansion");
 #endif
-#if !defined(TARGET_S390X)
     qmp_unregister_command(&qmp_commands, "query-cpu-model-baseline");
     qmp_unregister_command(&qmp_commands, "query-cpu-model-comparison");
-#endif
 #if !defined(TARGET_PPC) && !defined(TARGET_ARM) && !defined(TARGET_I386) \
     && !defined(TARGET_S390X)
     qmp_unregister_command(&qmp_commands, "query-cpu-definitions");
@@ -1748,7 +1740,6 @@ static void hmp_gpa2hva(Monitor *mon, const QDict *qdict)
     memory_region_unref(mr);
 }
 
-#ifdef CONFIG_LINUX
 static uint64_t vtop(void *ptr, Error **errp)
 {
     uint64_t pinfo;
@@ -1807,7 +1798,6 @@ static void hmp_gpa2hpa(Monitor *mon, const QDict *qdict)
 
     memory_region_unref(mr);
 }
-#endif
 
 static void do_print(Monitor *mon, const QDict *qdict)
 {
@@ -2481,7 +2471,6 @@ AddfdInfo *monitor_fdset_add_fd(int fd, bool has_fdset_id, int64_t fdset_id,
 
 int monitor_fdset_get_fd(int64_t fdset_id, int flags)
 {
-#ifndef _WIN32
     MonFdset *mon_fdset;
     MonFdsetFd *mon_fdset_fd;
     int mon_fd_flags;
@@ -2503,7 +2492,6 @@ int monitor_fdset_get_fd(int64_t fdset_id, int flags)
         errno = EACCES;
         return -1;
     }
-#endif
 
     errno = ENOENT;
     return -1;
@@ -4711,12 +4699,10 @@ SevCapability *qmp_query_sev_capabilities(Error **errp)
 }
 #endif
 
-#ifndef TARGET_S390X
 void qmp_dump_skeys(const char *filename, Error **errp)
 {
     error_setg(errp, QERR_FEATURE_DISABLED, "dump-skeys");
 }
-#endif
 
 #ifndef TARGET_ARM
 GICCapabilityList *qmp_query_gic_capabilities(Error **errp)

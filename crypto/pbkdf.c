@@ -21,31 +21,13 @@
 #include "qemu/osdep.h"
 #include "qapi/error.h"
 #include "crypto/pbkdf.h"
-#ifndef _WIN32
 #include <sys/resource.h>
-#endif
 
 
 static int qcrypto_pbkdf2_get_thread_cpu(unsigned long long *val_ms,
                                          Error **errp)
 {
-#ifdef _WIN32
-    FILETIME creation_time, exit_time, kernel_time, user_time;
-    ULARGE_INTEGER thread_time;
-
-    if (!GetThreadTimes(GetCurrentThread(), &creation_time, &exit_time,
-                        &kernel_time, &user_time)) {
-        error_setg(errp, "Unable to get thread CPU usage");
-        return -1;
-    }
-
-    thread_time.LowPart = user_time.dwLowDateTime;
-    thread_time.HighPart = user_time.dwHighDateTime;
-
-    /* QuadPart is units of 100ns and we want ms as unit */
-    *val_ms = thread_time.QuadPart / 10000ll;
-    return 0;
-#elif defined(RUSAGE_THREAD)
+#if   defined(RUSAGE_THREAD)
     struct rusage ru;
     if (getrusage(RUSAGE_THREAD, &ru) < 0) {
         error_setg_errno(errp, errno, "Unable to get thread CPU usage");

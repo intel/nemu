@@ -455,7 +455,6 @@ static void allocate_system_memory_nonnuma(MemoryRegion *mr, Object *owner,
                                            uint64_t ram_size)
 {
     if (mem_path) {
-#ifdef __linux__
         Error *err = NULL;
         memory_region_init_ram_from_file(mr, owner, name, ram_size, 0, false,
                                          mem_path, &err);
@@ -471,10 +470,6 @@ static void allocate_system_memory_nonnuma(MemoryRegion *mr, Object *owner,
              */
             memory_region_init_ram_nomigrate(mr, owner, name, ram_size, &error_fatal);
         }
-#else
-        fprintf(stderr, "-mem-path not supported on this host\n");
-        exit(1);
-#endif
     } else {
         memory_region_init_ram_nomigrate(mr, owner, name, ram_size, &error_fatal);
     }

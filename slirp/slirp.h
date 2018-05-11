@@ -3,34 +3,18 @@
 
 #include "slirp_config.h"
 
-#ifdef _WIN32
-
-typedef char *caddr_t;
-
-# include <windows.h>
-# include <winsock2.h>
-# include <ws2tcpip.h>
-# include <sys/timeb.h>
-# include <iphlpapi.h>
-
-#else
 # if !defined(__HAIKU__)
 #  define O_BINARY 0
 # endif
-#endif
 
 #ifdef HAVE_SYS_BITYPES_H
 # include <sys/bitypes.h>
 #endif
 
-#ifndef _WIN32
 #include <sys/uio.h>
-#endif
 
-#ifndef _WIN32
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#endif
 
 #ifndef NO_UNIX_SOCKETS
 #include <sys/un.h>
@@ -38,9 +22,7 @@ typedef char *caddr_t;
 #ifdef HAVE_SYS_SIGNAL_H
 # include <sys/signal.h>
 #endif
-#ifndef _WIN32
 #include <sys/socket.h>
-#endif
 
 #if defined(HAVE_SYS_IOCTL_H)
 # include <sys/ioctl.h>
@@ -232,9 +214,7 @@ void if_start(Slirp *);
 /* ncsi.c */
 void ncsi_input(Slirp *slirp, const uint8_t *pkt, int pkt_len);
 
-#ifndef _WIN32
 #include <netdb.h>
-#endif
 
 #define SO_OPTIONS DO_KEEPALIVE
 #define TCP_MAXIDLE (TCPTV_KEEPCNT * TCPTV_KEEPINTVL)

@@ -1729,14 +1729,9 @@ void AUD_help (void)
     printf (
         "Options are settable through environment variables.\n"
         "Example:\n"
-#ifdef _WIN32
-        "  set QEMU_AUDIO_DRV=wav\n"
-        "  set QEMU_WAV_PATH=c:\\tune.wav\n"
-#else
         "  export QEMU_AUDIO_DRV=wav\n"
         "  export QEMU_WAV_PATH=$HOME/tune.wav\n"
         "(for csh replace export with setenv in the above)\n"
-#endif
         "  qemu ...\n\n"
         );
 }

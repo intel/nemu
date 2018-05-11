@@ -19,7 +19,6 @@
 #include "sysemu/block-backend.h"
 #include "sysemu/blockdev.h"
 
-#ifdef __linux__
 
 //#define DEBUG_SCSI
 
@@ -636,4 +635,3 @@ static void scsi_generic_register_types(void)
 
 type_init(scsi_generic_register_types)
 
-#endif /* __linux__ */

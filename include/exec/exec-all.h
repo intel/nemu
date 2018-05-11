@@ -30,13 +30,8 @@
 /* Page tracking code uses ram addresses in system mode, and virtual
    addresses in userspace mode.  Define tb_page_addr_t to be an appropriate
    type.  */
-#if defined(CONFIG_USER_ONLY)
-typedef abi_ulong tb_page_addr_t;
-#define TB_PAGE_ADDR_FMT TARGET_ABI_FMT_lx
-#else
 typedef ram_addr_t tb_page_addr_t;
 #define TB_PAGE_ADDR_FMT RAM_ADDR_FMT
-#endif
 
 #include "qemu/log.h"
 
@@ -72,7 +67,6 @@ void QEMU_NORETURN cpu_loop_exit(CPUState *cpu);
 void QEMU_NORETURN cpu_loop_exit_restore(CPUState *cpu, uintptr_t pc);
 void QEMU_NORETURN cpu_loop_exit_atomic(CPUState *cpu, uintptr_t pc);
 
-#if !defined(CONFIG_USER_ONLY)
 void cpu_reloading_memory_map(void);
 /**
  * cpu_address_space_init:
@@ -95,7 +89,6 @@ void cpu_reloading_memory_map(void);
  */
 void cpu_address_space_init(CPUState *cpu, int asidx,
                             const char *prefix, MemoryRegion *mr);
-#endif
 
 #if !defined(CONFIG_USER_ONLY) && defined(CONFIG_TCG)
 /* cputlb.c */
@@ -434,7 +427,6 @@ void tb_lock(void);
 void tb_unlock(void);
 void tb_lock_reset(void);
 
-#if !defined(CONFIG_USER_ONLY)
 
 struct MemoryRegion *iotlb_to_region(CPUState *cpu,
                                      hwaddr index, MemTxAttrs attrs);
@@ -442,18 +434,7 @@ struct MemoryRegion *iotlb_to_region(CPUState *cpu,
 void tlb_fill(CPUState *cpu, target_ulong addr, int size,
               MMUAccessType access_type, int mmu_idx, uintptr_t retaddr);
 
-#endif
 
-#if defined(CONFIG_USER_ONLY)
-void mmap_lock(void);
-void mmap_unlock(void);
-bool have_mmap_lock(void);
-
-static inline tb_page_addr_t get_page_addr_code(CPUArchState *env1, target_ulong addr)
-{
-    return addr;
-}
-#else
 static inline void mmap_lock(void) {}
 static inline void mmap_unlock(void) {}
 
@@ -477,7 +458,6 @@ hwaddr memory_region_section_get_iotlb(CPUState *cpu,
                                        target_ulong *address);
 bool memory_region_is_unassigned(MemoryRegion *mr);
 
-#endif
 
 /* vl.c */
 extern int singlestep;

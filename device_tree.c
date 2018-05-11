@@ -13,9 +13,7 @@
 
 #include "qemu/osdep.h"
 
-#ifdef CONFIG_LINUX
 #include <dirent.h>
-#endif
 
 #include "qapi/error.h"
 #include "qemu/error-report.h"
@@ -118,7 +116,6 @@ fail:
     return NULL;
 }
 
-#ifdef CONFIG_LINUX
 
 #define SYSFS_DT_BASEDIR "/proc/device-tree"
 
@@ -213,7 +210,6 @@ void *load_device_tree_from_sysfs(void)
     return host_fdt;
 }
 
-#endif /* CONFIG_LINUX */
 
 static int findnode_nofail(void *fdt, const char *node_path)
 {

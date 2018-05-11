@@ -22,17 +22,10 @@
 #include "sysemu/bt.h"
 #include "qemu/main-loop.h"
 
-#ifndef _WIN32
 # include <sys/ioctl.h>
 # include <sys/uio.h>
-# ifdef CONFIG_BLUEZ
-#  include <bluetooth/bluetooth.h>
-#  include <bluetooth/hci.h>
-#  include <bluetooth/hci_lib.h>
-# else
 #  include "hw/bt.h"
 #  define HCI_MAX_FRAME_SIZE	1028
-# endif
 
 struct bt_host_hci_s {
     struct HCIInfo hci;
@@ -146,19 +139,6 @@ struct HCIInfo *bt_host_hci(const char *id)
 {
     struct bt_host_hci_s *s;
     int fd = -1;
-# ifdef CONFIG_BLUEZ
-    int dev_id = hci_devid(id);
-    struct hci_filter flt;
-
-    if (dev_id < 0) {
-        fprintf(stderr, "qemu: `%s' not available\n", id);
-        return 0;
-    }
-
-    fd = hci_open_dev(dev_id);
-
-    /* XXX: can we ensure nobody else has the device opened?  */
-# endif
 
     if (fd < 0) {
         fprintf(stderr, "qemu: Can't open `%s': %s (%i)\n",
@@ -166,16 +146,6 @@ struct HCIInfo *bt_host_hci(const char *id)
         return NULL;
     }
 
-# ifdef CONFIG_BLUEZ
-    hci_filter_clear(&flt);
-    hci_filter_all_ptypes(&flt);
-    hci_filter_all_events(&flt);
-
-    if (qemu_setsockopt(fd, SOL_HCI, HCI_FILTER, &flt, sizeof(flt)) < 0) {
-        fprintf(stderr, "qemu: Can't set HCI filter on socket (%i)\n", errno);
-        return 0;
-    }
-# endif
 
     s = g_malloc0(sizeof(struct bt_host_hci_s));
     s->fd = fd;
@@ -188,11 +158,3 @@ struct HCIInfo *bt_host_hci(const char *id)
 
     return &s->hci;
 }
-#else
-struct HCIInfo *bt_host_hci(const char *id)
-{
-    fprintf(stderr, "qemu: bluetooth passthrough not supported (yet)\n");
-
-    return 0;
-}
-#endif

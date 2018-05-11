@@ -1247,9 +1247,6 @@ typedef struct CPUX86State {
     int64_t tsc_khz;
     int64_t user_tsc_khz; /* for sanity check only */
     void *kvm_xsave_buf;
-#if defined(CONFIG_HVF)
-    HVFX86EmulatorState *hvf_emul;
-#endif
 
     uint64_t mcg_cap;
     uint64_t mcg_ctl;
@@ -1377,9 +1374,7 @@ static inline X86CPU *x86_env_get_cpu(CPUX86State *env)
 
 #define ENV_OFFSET offsetof(X86CPU, env)
 
-#ifndef CONFIG_USER_ONLY
 extern struct VMStateDescription vmstate_x86_cpu;
-#endif
 
 /**
  * x86_cpu_do_interrupt:
@@ -1534,7 +1529,6 @@ int x86_cpu_handle_mmu_fault(CPUState *cpu, vaddr addr, int size,
                              int is_write, int mmu_idx);
 void x86_cpu_set_a20(X86CPU *cpu, int a20_state);
 
-#ifndef CONFIG_USER_ONLY
 static inline int x86_asidx_from_attrs(CPUState *cs, MemTxAttrs attrs)
 {
     return !!attrs.secure;
@@ -1554,7 +1548,6 @@ void x86_stl_phys_notdirty(CPUState *cs, hwaddr addr, uint32_t val);
 void x86_stw_phys(CPUState *cs, hwaddr addr, uint32_t val);
 void x86_stl_phys(CPUState *cs, hwaddr addr, uint32_t val);
 void x86_stq_phys(CPUState *cs, hwaddr addr, uint64_t val);
-#endif
 
 void breakpoint_handler(CPUState *cs);
 
@@ -1651,9 +1644,7 @@ void tcg_x86_init(void);
 #include "exec/cpu-all.h"
 #include "svm.h"
 
-#if !defined(CONFIG_USER_ONLY)
 #include "hw/i386/apic.h"
-#endif
 
 static inline void cpu_get_tb_cpu_state(CPUX86State *env, target_ulong *pc,
                                         target_ulong *cs_base, uint32_t *flags)

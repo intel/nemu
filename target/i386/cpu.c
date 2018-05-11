@@ -40,19 +40,15 @@
 #include "qom/qom-qobject.h"
 #include "sysemu/arch_init.h"
 
-#if defined(CONFIG_KVM)
 #include <linux/kvm_para.h>
-#endif
 
 #include "sysemu/sysemu.h"
 #include "hw/qdev-properties.h"
 #include "hw/i386/topology.h"
-#ifndef CONFIG_USER_ONLY
 #include "exec/address-spaces.h"
 #include "hw/hw.h"
 #include "hw/xen/xen.h"
 #include "hw/i386/apic_internal.h"
-#endif
 
 #include "disas/capstone.h"
 
@@ -2112,11 +2108,9 @@ static bool lmce_supported(void)
 {
     uint64_t mce_cap = 0;
 
-#ifdef CONFIG_KVM
     if (kvm_ioctl(kvm_state, KVM_X86_GET_MCE_CAP_SUPPORTED, &mce_cap) < 0) {
         return false;
     }
-#endif
 
     return !!(mce_cap & MCG_LMCE_P);
 }
@@ -2241,7 +2235,6 @@ static const TypeInfo max_x86_cpu_type_info = {
     .class_init = max_x86_cpu_class_init,
 };
 
-#if defined(CONFIG_KVM) || defined(CONFIG_HVF)
 static void host_x86_cpu_class_init(ObjectClass *oc, void *data)
 {
     X86CPUClass *xcc = X86_CPU_CLASS(oc);
@@ -2264,7 +2257,6 @@ static const TypeInfo host_x86_cpu_type_info = {
     .class_init = host_x86_cpu_class_init,
 };
 
-#endif
 
 static void report_unavailable_features(FeatureWord w, uint32_t mask)
 {
@@ -3231,14 +3223,12 @@ static void x86_register_cpudef_type(X86CPUDefinition *def)
     g_free(typename);
 }
 
-#if !defined(CONFIG_USER_ONLY)
 
 void cpu_clear_apic_feature(CPUX86State *env)
 {
     env->features[FEAT_1_EDX] &= ~CPUID_APIC;
 }
 
-#endif /* !CONFIG_USER_ONLY */
 
 void cpu_x86_cpuid(CPUX86State *env, uint32_t index, uint32_t count,
                    uint32_t *eax, uint32_t *ebx,
@@ -3771,25 +3761,6 @@ static void x86_cpu_reset(CPUState *s)
     cr4 = 0;
     xcr0 = XSTATE_FP_MASK;
 
-#ifdef CONFIG_USER_ONLY
-    /* Enable all the features for user-mode.  */
-    if (env->features[FEAT_1_EDX] & CPUID_SSE) {
-        xcr0 |= XSTATE_SSE_MASK;
-    }
-    for (i = 2; i < ARRAY_SIZE(x86_ext_save_areas); i++) {
-        const ExtSaveArea *esa = &x86_ext_save_areas[i];
-        if (env->features[esa->feature] & esa->bits) {
-            xcr0 |= 1ull << i;
-        }
-    }
-
-    if (env->features[FEAT_1_ECX] & CPUID_EXT_XSAVE) {
-        cr4 |= CR4_OSFXSR_MASK | CR4_OSXSAVE_MASK;
-    }
-    if (env->features[FEAT_7_0_EBX] & CPUID_7_0_EBX_FSGSBASE) {
-        cr4 |= CR4_FSGSBASE_MASK;
-    }
-#endif
 
     env->xcr0 = xcr0;
     cpu_x86_update_cr4(env, cr4);
@@ -3807,7 +3778,6 @@ static void x86_cpu_reset(CPUState *s)
     env->interrupt_injected = -1;
     env->exception_injected = -1;
     env->nmi_injected = false;
-#if !defined(CONFIG_USER_ONLY)
     /* We hard-wire the BSP to the first CPU. */
     apic_designate_bsp(cpu->apic_state, s->cpu_index == 0);
 
@@ -3819,10 +3789,8 @@ static void x86_cpu_reset(CPUState *s)
     else if (hvf_enabled()) {
         hvf_reset_vcpu(s);
     }
-#endif
 }
 
-#ifndef CONFIG_USER_ONLY
 bool cpu_is_bsp(X86CPU *cpu)
 {
     return cpu_get_apic_base(cpu->apic_state) & MSR_IA32_APICBASE_BSP;
@@ -3834,7 +3802,6 @@ static void x86_cpu_machine_reset_cb(void *opaque)
     X86CPU *cpu = opaque;
     cpu_reset(CPU(cpu));
 }
-#endif
 
 static void mce_init(X86CPU *cpu)
 {
@@ -3853,7 +3820,6 @@ static void mce_init(X86CPU *cpu)
     }
 }
 
-#ifndef CONFIG_USER_ONLY
 APICCommonClass *apic_get_class(void)
 {
     const char *apic_type = "apic";
@@ -3923,11 +3889,6 @@ static void x86_cpu_machine_done(Notifier *n, void *unused)
         memory_region_add_subregion_overlap(cpu->cpu_as_root, 0, cpu->smram, 1);
     }
 }
-#else
-static void x86_cpu_apic_realize(X86CPU *cpu, Error **errp)
-{
-}
-#endif
 
 /* Note: Only safe for use on x86(-64) hosts */
 static uint32_t x86_host_phys_bits(void)
@@ -4316,7 +4277,6 @@ static void x86_cpu_realizefn(DeviceState *dev, Error **errp)
         return;
     }
 
-#ifndef CONFIG_USER_ONLY
     qemu_register_reset(x86_cpu_machine_reset_cb, cpu);
 
     if (cpu->env.features[FEAT_1_EDX] & CPUID_APIC || smp_cpus > 1) {
@@ -4325,11 +4285,9 @@ static void x86_cpu_realizefn(DeviceState *dev, Error **errp)
             goto out;
         }
     }
-#endif
 
     mce_init(cpu);
 
-#ifndef CONFIG_USER_ONLY
     if (tcg_enabled()) {
         cpu->cpu_as_mem = g_new(MemoryRegion, 1);
         cpu->cpu_as_root = g_new(MemoryRegion, 1);
@@ -4354,7 +4312,6 @@ static void x86_cpu_realizefn(DeviceState *dev, Error **errp)
         cpu->machine_done.notify = x86_cpu_machine_done;
         qemu_add_machine_init_done_notifier(&cpu->machine_done);
     }
-#endif
 
     qemu_init_vcpu(cs);
 
@@ -4393,10 +4350,8 @@ static void x86_cpu_unrealizefn(DeviceState *dev, Error **errp)
     X86CPUClass *xcc = X86_CPU_GET_CLASS(dev);
     Error *local_err = NULL;
 
-#ifndef CONFIG_USER_ONLY
     cpu_remove_sync(CPU(dev));
     qemu_unregister_reset(x86_cpu_machine_reset_cb, dev);
-#endif
 
     if (cpu->apic_state) {
         object_unparent(OBJECT(cpu->apic_state));
@@ -4745,18 +4700,10 @@ void x86_update_hflags(CPUX86State *env)
 }
 
 static Property x86_cpu_properties[] = {
-#ifdef CONFIG_USER_ONLY
-    /* apic_id = 0 by default for *-user, see commit 9886e834 */
-    DEFINE_PROP_UINT32("apic-id", X86CPU, apic_id, 0),
-    DEFINE_PROP_INT32("thread-id", X86CPU, thread_id, 0),
-    DEFINE_PROP_INT32("core-id", X86CPU, core_id, 0),
-    DEFINE_PROP_INT32("socket-id", X86CPU, socket_id, 0),
-#else
     DEFINE_PROP_UINT32("apic-id", X86CPU, apic_id, UNASSIGNED_APIC_ID),
     DEFINE_PROP_INT32("thread-id", X86CPU, thread_id, -1),
     DEFINE_PROP_INT32("core-id", X86CPU, core_id, -1),
     DEFINE_PROP_INT32("socket-id", X86CPU, socket_id, -1),
-#endif
     DEFINE_PROP_INT32("node-id", X86CPU, node_id, CPU_UNSET_NUMA_NODE_ID),
     DEFINE_PROP_BOOL("pmu", X86CPU, enable_pmu, false),
     { .name  = "hv-spinlocks", .info  = &qdev_prop_spinlocks },
@@ -4839,9 +4786,6 @@ static void x86_cpu_common_class_init(ObjectClass *oc, void *data)
     cc->gdb_write_register = x86_cpu_gdb_write_register;
     cc->get_arch_id = x86_cpu_get_arch_id;
     cc->get_paging_enabled = x86_cpu_get_paging_enabled;
-#ifdef CONFIG_USER_ONLY
-    cc->handle_mmu_fault = x86_cpu_handle_mmu_fault;
-#else
     cc->asidx_from_attrs = x86_asidx_from_attrs;
     cc->get_memory_mapping = x86_cpu_get_memory_mapping;
     cc->get_phys_page_debug = x86_cpu_get_phys_page_debug;
@@ -4850,7 +4794,6 @@ static void x86_cpu_common_class_init(ObjectClass *oc, void *data)
     cc->write_elf32_note = x86_cpu_write_elf32_note;
     cc->write_elf32_qemunote = x86_cpu_write_elf32_qemunote;
     cc->vmsd = &vmstate_x86_cpu;
-#endif
     cc->gdb_arch_name = x86_gdb_arch_name;
 #ifdef TARGET_X86_64
     cc->gdb_core_xml_file = "i386-64bit.xml";
@@ -4910,9 +4853,7 @@ static void x86_cpu_register_types(void)
     }
     type_register_static(&max_x86_cpu_type_info);
     type_register_static(&x86_base_cpu_type_info);
-#if defined(CONFIG_KVM) || defined(CONFIG_HVF)
     type_register_static(&host_x86_cpu_type_info);
-#endif
 }
 
 type_init(x86_cpu_register_types)

@@ -342,7 +342,6 @@ void rcu_disable_atfork(void)
     atfork_depth--;
 }
 
-#ifdef CONFIG_POSIX
 static void rcu_init_lock(void)
 {
     if (atfork_depth < 1) {
@@ -372,13 +371,10 @@ static void rcu_init_child(void)
     memset(&registry, 0, sizeof(registry));
     rcu_init_complete();
 }
-#endif
 
 static void __attribute__((__constructor__)) rcu_init(void)
 {
     smp_mb_global_init();
-#ifdef CONFIG_POSIX
     pthread_atfork(rcu_init_lock, rcu_init_unlock, rcu_init_child);
-#endif
     rcu_init_complete();
 }

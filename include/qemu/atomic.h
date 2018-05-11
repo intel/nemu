@@ -82,8 +82,6 @@
  */
 #if defined(__SANITIZE_THREAD__)
 #define smp_read_barrier_depends()   ({ barrier(); __atomic_thread_fence(__ATOMIC_CONSUME); })
-#elif defined(__alpha__)
-#define smp_read_barrier_depends()   asm volatile("mb":::"memory")
 #else
 #define smp_read_barrier_depends()   barrier()
 #endif
@@ -242,9 +240,6 @@
 #endif
 
 
-#ifdef __alpha__
-#define smp_read_barrier_depends()   asm volatile("mb":::"memory")
-#endif
 
 #if defined(__i386__) || defined(__x86_64__) || defined(__s390x__)
 
@@ -274,13 +269,8 @@
  * (http://patchwork.ozlabs.org/patch/126184/, Nov 2011).
  */
 #define smp_wmb()          ({ asm volatile("eieio" ::: "memory"); (void)0; })
-#if defined(__powerpc64__)
-#define smp_mb_release()   ({ asm volatile("lwsync" ::: "memory"); (void)0; })
-#define smp_mb_acquire()   ({ asm volatile("lwsync" ::: "memory"); (void)0; })
-#else
 #define smp_mb_release()   ({ asm volatile("sync" ::: "memory"); (void)0; })
 #define smp_mb_acquire()   ({ asm volatile("sync" ::: "memory"); (void)0; })
-#endif
 #define smp_mb()           ({ asm volatile("sync" ::: "memory"); (void)0; })
 
 #endif /* _ARCH_PPC */

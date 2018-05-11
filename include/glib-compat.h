@@ -39,14 +39,6 @@ static inline gint64 qemu_g_get_monotonic_time(void)
 #define g_get_monotonic_time() qemu_g_get_monotonic_time()
 #endif
 
-#if defined(_WIN32) && !GLIB_CHECK_VERSION(2, 50, 0)
-/*
- * g_poll has a problem on Windows when using
- * timeouts < 10ms, so use wrapper.
- */
-#define g_poll(fds, nfds, timeout) g_poll_fixed(fds, nfds, timeout)
-gint g_poll_fixed(GPollFD *fds, guint nfds, gint timeout);
-#endif
 
 #if !GLIB_CHECK_VERSION(2, 30, 0)
 /* Not a 100% compatible implementation, but good enough for most

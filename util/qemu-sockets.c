@@ -337,13 +337,8 @@ listen_ok:
     return slisten;
 }
 
-#ifdef _WIN32
-#define QEMU_SOCKET_RC_INPROGRESS(rc) \
-    ((rc) == -EINPROGRESS || (rc) == -EWOULDBLOCK || (rc) == -WSAEALREADY)
-#else
 #define QEMU_SOCKET_RC_INPROGRESS(rc) \
     ((rc) == -EINPROGRESS)
-#endif
 
 static int inet_connect_addr(struct addrinfo *addr, Error **errp);
 
@@ -821,7 +816,6 @@ static int vsock_parse(VsockSocketAddress *addr, const char *str,
 }
 #endif /* CONFIG_AF_VSOCK */
 
-#ifndef _WIN32
 
 static int unix_listen_saddr(UnixSocketAddress *saddr,
                              Error **errp)
@@ -945,23 +939,6 @@ static int unix_connect_saddr(UnixSocketAddress *saddr, Error **errp)
     return -1;
 }
 
-#else
-
-static int unix_listen_saddr(UnixSocketAddress *saddr,
-                             Error **errp)
-{
-    error_setg(errp, "unix sockets are not available on windows");
-    errno = ENOTSUP;
-    return -1;
-}
-
-static int unix_connect_saddr(UnixSocketAddress *saddr, Error **errp)
-{
-    error_setg(errp, "unix sockets are not available on windows");
-    errno = ENOTSUP;
-    return -1;
-}
-#endif
 
 /* compatibility wrapper */
 int unix_listen(const char *str, Error **errp)

@@ -299,7 +299,6 @@ static void test_io_channel_ipv6_async(void)
 }
 
 
-#ifndef _WIN32
 static void test_io_channel_unix(bool async)
 {
     SocketAddress *listen_addr = g_new0(SocketAddress, 1);
@@ -453,7 +452,6 @@ static void test_io_channel_unix_listen_cleanup(void)
     unlink(TEST_SOCKET);
 }
 
-#endif /* _WIN32 */
 
 
 static void test_io_channel_ipv4_fd(void)
@@ -517,7 +515,6 @@ int main(int argc, char **argv)
                         test_io_channel_ipv6_async);
     }
 
-#ifndef _WIN32
     g_test_add_func("/io/channel/socket/unix-sync",
                     test_io_channel_unix_sync);
     g_test_add_func("/io/channel/socket/unix-async",
@@ -526,7 +523,6 @@ int main(int argc, char **argv)
                     test_io_channel_unix_fd_pass);
     g_test_add_func("/io/channel/socket/unix-listen-cleanup",
                     test_io_channel_unix_listen_cleanup);
-#endif /* _WIN32 */
 
     return g_test_run();
 }

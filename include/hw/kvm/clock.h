@@ -11,14 +11,6 @@
  *
  */
 
-#ifdef CONFIG_KVM
 
 void kvmclock_create(void);
 
-#else /* CONFIG_KVM */
-
-static inline void kvmclock_create(void)
-{
-}
-
-#endif /* !CONFIG_KVM */

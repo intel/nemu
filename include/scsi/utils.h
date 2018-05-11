@@ -1,9 +1,7 @@
 #ifndef SCSI_UTILS_H
 #define SCSI_UTILS_H 1
 
-#ifdef CONFIG_LINUX
 #include <scsi/sg.h>
-#endif
 
 #define SCSI_CMD_BUF_SIZE      16
 #define SCSI_SENSE_LEN         18
@@ -117,7 +115,6 @@ uint32_t scsi_cdb_xfer(uint8_t *buf);
 int scsi_cdb_length(uint8_t *buf);
 
 /* Linux SG_IO interface.  */
-#ifdef CONFIG_LINUX
 #define SG_ERR_DRIVER_TIMEOUT  0x06
 #define SG_ERR_DRIVER_SENSE    0x08
 
@@ -130,6 +127,5 @@ int scsi_cdb_length(uint8_t *buf);
 
 int sg_io_sense_from_errno(int errno_value, struct sg_io_hdr *io_hdr,
                            SCSISense *sense);
-#endif
 
 #endif
