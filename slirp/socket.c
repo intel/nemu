@@ -9,9 +9,6 @@
 #include "qemu-common.h"
 #include "slirp.h"
 #include "ip_icmp.h"
-#ifdef __sun__
-#include <sys/filio.h>
-#endif
 
 static void sofcantrcvmore(struct socket *so);
 static void sofcantsendmore(struct socket *so);
@@ -538,11 +535,7 @@ sorecvfrom(struct socket *so)
 	} else {                            	/* A "normal" UDP packet */
 	  struct mbuf *m;
           int len;
-#ifdef _WIN32
-          unsigned long n;
-#else
           int n;
-#endif
 
 	  m = m_get(so->slirp);
 	  if (!m) {
@@ -746,11 +739,7 @@ tcp_listen(Slirp *slirp, uint32_t haddr, u_int hport, uint32_t laddr,
                 }
 		sofree(so);
 		/* Restore the real errno */
-#ifdef _WIN32
-		WSASetLastError(tmperrno);
-#else
 		errno = tmperrno;
-#endif
 		return NULL;
 	}
 	qemu_setsockopt(s, SOL_SOCKET, SO_OOBINLINE, &opt, sizeof(int));

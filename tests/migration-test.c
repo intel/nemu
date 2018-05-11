@@ -27,10 +27,8 @@ const unsigned start_address = 1024 * 1024;
 const unsigned end_address = 100 * 1024 * 1024;
 bool got_stop;
 
-#if defined(__linux__)
 #include <sys/syscall.h>
 #include <sys/vfs.h>
-#endif
 
 #if defined(__linux__) && defined(__NR_userfaultfd) && defined(CONFIG_EVENTFD)
 #include <sys/eventfd.h>

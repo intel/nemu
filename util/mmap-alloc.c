@@ -16,13 +16,10 @@
 
 #define HUGETLBFS_MAGIC       0x958458f6
 
-#ifdef CONFIG_LINUX
 #include <sys/vfs.h>
-#endif
 
 size_t qemu_fd_getpagesize(int fd)
 {
-#ifdef CONFIG_LINUX
     struct statfs fs;
     int ret;
 
@@ -39,14 +36,12 @@ size_t qemu_fd_getpagesize(int fd)
     /* SPARC Linux needs greater alignment than the pagesize */
     return QEMU_VMALLOC_ALIGN;
 #endif
-#endif
 
     return getpagesize();
 }
 
 size_t qemu_mempath_getpagesize(const char *mem_path)
 {
-#ifdef CONFIG_LINUX
     struct statfs fs;
     int ret;
 
@@ -68,7 +63,6 @@ size_t qemu_mempath_getpagesize(const char *mem_path)
     /* SPARC Linux needs greater alignment than the pagesize */
     return QEMU_VMALLOC_ALIGN;
 #endif
-#endif
 
     return getpagesize();
 }
@@ -80,21 +74,7 @@ void *qemu_ram_mmap(int fd, size_t size, size_t align, bool shared)
      * space, even if size is already aligned.
      */
     size_t total = size + align;
-#if defined(__powerpc64__) && defined(__linux__)
-    /* On ppc64 mappings in the same segment (aka slice) must share the same
-     * page size. Since we will be re-allocating part of this segment
-     * from the supplied fd, we should make sure to use the same page size, to
-     * this end we mmap the supplied fd.  In this case, set MAP_NORESERVE to
-     * avoid allocating backing store memory.
-     * We do this unless we are using the system page size, in which case
-     * anonymous memory is OK.
-     */
-    int anonfd = fd == -1 || qemu_fd_getpagesize(fd) == getpagesize() ? -1 : fd;
-    int flags = anonfd == -1 ? MAP_ANONYMOUS : MAP_NORESERVE;
-    void *ptr = mmap(0, total, PROT_NONE, flags | MAP_PRIVATE, anonfd, 0);
-#else
     void *ptr = mmap(0, total, PROT_NONE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-#endif
     size_t offset;
     void *ptr1;
 

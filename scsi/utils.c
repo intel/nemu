@@ -517,7 +517,6 @@ const char *scsi_command_name(uint8_t cmd)
     return names[cmd];
 }
 
-#ifdef CONFIG_LINUX
 int sg_io_sense_from_errno(int errno_value, struct sg_io_hdr *io_hdr,
                            SCSISense *sense)
 {
@@ -550,4 +549,3 @@ int sg_io_sense_from_errno(int errno_value, struct sg_io_hdr *io_hdr,
         }
     }
 }
-#endif

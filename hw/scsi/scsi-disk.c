@@ -40,9 +40,7 @@ do { printf("scsi-disk: " fmt , ## __VA_ARGS__); } while (0)
 #include "sysemu/dma.h"
 #include "qemu/cutils.h"
 
-#ifdef __linux
 #include <scsi/sg.h>
-#endif
 
 #define SCSI_WRITE_SAME_MAX         524288
 #define SCSI_DMA_BUF_SIZE           131072
@@ -2565,7 +2563,6 @@ static SCSIRequest *scsi_new_request(SCSIDevice *d, uint32_t tag, uint32_t lun,
     return req;
 }
 
-#ifdef __linux__
 static int get_device_type(SCSIDiskState *s)
 {
     uint8_t cmd[16];
@@ -2898,7 +2895,6 @@ static int scsi_block_parse_cdb(SCSIDevice *d, SCSICommand *cmd,
     }
 }
 
-#endif
 
 static
 BlockAIOCB *scsi_dma_readv(int64_t offset, QEMUIOVector *iov,
@@ -3034,7 +3030,6 @@ static const TypeInfo scsi_cd_info = {
     .class_init    = scsi_cd_class_initfn,
 };
 
-#ifdef __linux__
 static Property scsi_block_properties[] = {
     DEFINE_BLOCK_ERROR_PROPERTIES(SCSIDiskState, qdev.conf),         \
     DEFINE_PROP_DRIVE("drive", SCSIDiskState, qdev.conf.blk),
@@ -3067,7 +3062,6 @@ static const TypeInfo scsi_block_info = {
     .parent        = TYPE_SCSI_DISK_BASE,
     .class_init    = scsi_block_class_initfn,
 };
-#endif
 
 static Property scsi_disk_properties[] = {
     DEFINE_SCSI_DISK_PROPERTIES(),
@@ -3113,9 +3107,7 @@ static void scsi_disk_register_types(void)
     type_register_static(&scsi_disk_base_info);
     type_register_static(&scsi_hd_info);
     type_register_static(&scsi_cd_info);
-#ifdef __linux__
     type_register_static(&scsi_block_info);
-#endif
     type_register_static(&scsi_disk_info);
 }
 

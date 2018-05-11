@@ -28,15 +28,9 @@
 #include "qapi/error.h"
 #include "chardev/char.h"
 
-#ifdef _WIN32
-#include "chardev/char-win.h"
-#include "chardev/char-win-stdio.h"
-#else
 #include <termios.h>
 #include "chardev/char-fd.h"
-#endif
 
-#ifndef _WIN32
 /* init terminal so that we can grab keys */
 static struct termios oldtty;
 static int old_fd0_flags;
@@ -114,7 +108,6 @@ static void qemu_chr_open_stdio(Chardev *chr,
     }
     qemu_chr_set_echo_stdio(chr, false);
 }
-#endif
 
 static void qemu_chr_parse_stdio(QemuOpts *opts, ChardevBackend *backend,
                                  Error **errp)
@@ -133,26 +126,18 @@ static void char_stdio_class_init(ObjectClass *oc, void *data)
     ChardevClass *cc = CHARDEV_CLASS(oc);
 
     cc->parse = qemu_chr_parse_stdio;
-#ifndef _WIN32
     cc->open = qemu_chr_open_stdio;
     cc->chr_set_echo = qemu_chr_set_echo_stdio;
-#endif
 }
 
 static void char_stdio_finalize(Object *obj)
 {
-#ifndef _WIN32
     term_exit();
-#endif
 }
 
 static const TypeInfo char_stdio_type_info = {
     .name = TYPE_CHARDEV_STDIO,
-#ifdef _WIN32
-    .parent = TYPE_CHARDEV_WIN_STDIO,
-#else
     .parent = TYPE_CHARDEV_FD,
-#endif
     .instance_finalize = char_stdio_finalize,
     .class_init = char_stdio_class_init,
 };

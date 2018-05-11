@@ -47,10 +47,6 @@ int main(int argc, char **argv)
 #endif
 #endif /* CONFIG_SDL */
 
-#ifdef CONFIG_COCOA
-#undef main
-#define main qemu_main
-#endif /* CONFIG_COCOA */
 
 
 #include "qemu/error-report.h"
@@ -1147,7 +1143,6 @@ bool defaults_enabled(void)
     return has_defaults;
 }
 
-#ifndef _WIN32
 static int parse_add_fd(void *opaque, QemuOpts *opts, Error **errp)
 {
     int fd, dupfd, flags;
@@ -1214,7 +1209,6 @@ static int cleanup_add_fd(void *opaque, QemuOpts *opts, Error **errp)
 
     return 0;
 }
-#endif
 
 /***********************************************************/
 /* QEMU Block devices */
@@ -4013,17 +4007,11 @@ int main(int argc, char **argv, char **envp)
                 }
                 break;
             case QEMU_OPTION_add_fd:
-#ifndef _WIN32
                 opts = qemu_opts_parse_noisily(qemu_find_opts("add-fd"),
                                                optarg, false);
                 if (!opts) {
                     exit(1);
                 }
-#else
-                error_report("File descriptor passing is disabled on this "
-                             "platform");
-                exit(1);
-#endif
                 break;
             case QEMU_OPTION_object:
                 opts = qemu_opts_parse_noisily(qemu_find_opts("object"),
@@ -4100,7 +4088,6 @@ int main(int argc, char **argv, char **envp)
         exit(1);
     }
 
-#ifndef _WIN32
     if (qemu_opts_foreach(qemu_find_opts("add-fd"),
                           parse_add_fd, NULL, NULL)) {
         exit(1);
@@ -4110,7 +4097,6 @@ int main(int argc, char **argv, char **envp)
                           cleanup_add_fd, NULL, NULL)) {
         exit(1);
     }
-#endif
 
     current_machine = MACHINE(object_new(object_class_get_name(
                           OBJECT_CLASS(machine_class))));

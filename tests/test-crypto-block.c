@@ -24,9 +24,7 @@
 #include "crypto/block.h"
 #include "qemu/buffer.h"
 #include "crypto/secret.h"
-#ifndef _WIN32
 #include <sys/resource.h>
-#endif
 
 #if (defined(_WIN32) || defined RUSAGE_THREAD) && \
     (defined(CONFIG_NETTLE_KDF) || defined(CONFIG_GCRYPT_KDF))

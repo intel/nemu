@@ -28,9 +28,7 @@
 #include "qemu-common.h"
 #include "exec/exec-all.h"
 #include "hw/qdev-properties.h"
-#if !defined(CONFIG_USER_ONLY)
 #include "hw/loader.h"
-#endif
 #include "hw/arm/arm.h"
 #include "sysemu/sysemu.h"
 #include "sysemu/hw_accel.h"
@@ -146,13 +144,6 @@ static void arm_cpu_reset(CPUState *s)
     if (arm_feature(env, ARM_FEATURE_AARCH64)) {
         /* 64 bit CPUs always start in 64 bit mode */
         env->aarch64 = 1;
-#if defined(CONFIG_USER_ONLY)
-        env->pstate = PSTATE_MODE_EL0t;
-        /* Userspace expects access to DC ZVA, CTL_EL0 and the cache ops */
-        env->cp15.sctlr_el[1] |= SCTLR_UCT | SCTLR_UCI | SCTLR_DZE;
-        /* and to the FP/Neon instructions */
-        env->cp15.cpacr_el1 = deposit64(env->cp15.cpacr_el1, 20, 2, 3);
-#else
         /* Reset into the highest available EL */
         if (arm_feature(env, ARM_FEATURE_EL3)) {
             env->pstate = PSTATE_MODE_EL3h;
@@ -162,24 +153,9 @@ static void arm_cpu_reset(CPUState *s)
             env->pstate = PSTATE_MODE_EL1h;
         }
         env->pc = cpu->rvbar;
-#endif
     } else {
-#if defined(CONFIG_USER_ONLY)
-        /* Userspace expects access to cp10 and cp11 for FP/Neon */
-        env->cp15.cpacr_el1 = deposit64(env->cp15.cpacr_el1, 20, 4, 0xf);
-#endif
     }
 
-#if defined(CONFIG_USER_ONLY)
-    env->uncached_cpsr = ARM_CPU_MODE_USR;
-    /* For user mode we must enable access to coprocessors */
-    env->vfp.xregs[ARM_VFP_FPEXC] = 1 << 30;
-    if (arm_feature(env, ARM_FEATURE_IWMMXT)) {
-        env->cp15.c15_cpar = 3;
-    } else if (arm_feature(env, ARM_FEATURE_XSCALE)) {
-        env->cp15.c15_cpar = 1;
-    }
-#else
     /* SVC mode with interrupts disabled.  */
     env->uncached_cpsr = ARM_CPU_MODE_SVC;
     env->daif = PSTATE_D | PSTATE_A | PSTATE_I | PSTATE_F;
@@ -257,7 +233,6 @@ static void arm_cpu_reset(CPUState *s)
     arm_clear_exclusive(env);
 
     env->vfp.xregs[ARM_VFP_FPEXC] = 0;
-#endif
 
     if (arm_feature(env, ARM_FEATURE_PMSA)) {
         if (cpu->pmsav7_dregion > 0) {
@@ -312,11 +287,9 @@ static void arm_cpu_reset(CPUState *s)
                               &env->vfp.fp_status);
     set_float_detect_tininess(float_tininess_before_rounding,
                               &env->vfp.standard_fp_status);
-#ifndef CONFIG_USER_ONLY
     if (kvm_enabled()) {
         kvm_arm_reset_vcpu(cpu);
     }
-#endif
 
     hw_breakpoint_update_all(cpu);
     hw_watchpoint_update_all(cpu);
@@ -401,7 +374,6 @@ static bool arm_v7m_cpu_exec_interrupt(CPUState *cs, int interrupt_request)
 }
 #endif
 
-#ifndef CONFIG_USER_ONLY
 static void arm_cpu_set_irq(void *opaque, int irq, int level)
 {
     ARMCPU *cpu = opaque;
@@ -434,7 +406,6 @@ static void arm_cpu_set_irq(void *opaque, int irq, int level)
 
 static void arm_cpu_kvm_set_irq(void *opaque, int irq, int level)
 {
-#ifdef CONFIG_KVM
     ARMCPU *cpu = opaque;
     CPUState *cs = CPU(cpu);
     int kvm_irq = KVM_ARM_IRQ_TYPE_CPU << KVM_ARM_IRQ_TYPE_SHIFT;
@@ -451,7 +422,6 @@ static void arm_cpu_kvm_set_irq(void *opaque, int irq, int level)
     }
     kvm_irq |= cs->cpu_index << KVM_ARM_IRQ_VCPU_SHIFT;
     kvm_set_irq(kvm_state, kvm_irq, level ? 1 : 0);
-#endif
 }
 
 static bool arm_cpu_virtio_is_big_endian(CPUState *cs)
@@ -463,7 +433,6 @@ static bool arm_cpu_virtio_is_big_endian(CPUState *cs)
     return arm_cpu_data_is_big_endian(env);
 }
 
-#endif
 
 static inline void set_feature(CPUARMState *env, int feature)
 {
@@ -530,11 +499,9 @@ static void arm_disas_set_info(CPUState *cpu, disassemble_info *info)
 #endif
     }
     info->flags &= ~INSN_ARM_BE32;
-#ifndef CONFIG_USER_ONLY
     if (sctlr_b) {
         info->flags |= INSN_ARM_BE32;
     }
-#endif
 }
 
 uint64_t arm_cpu_mp_affinity(int idx, uint8_t clustersz)
@@ -553,7 +520,6 @@ static void arm_cpu_initfn(Object *obj)
     cpu->cp_regs = g_hash_table_new_full(g_int_hash, g_int_equal,
                                          g_free, g_free);
 
-#ifndef CONFIG_USER_ONLY
     /* Our inbound IRQ and FIQ lines */
     if (kvm_enabled()) {
         /* VIRQ and VFIQ are unused with KVM but we add them to maintain
@@ -579,7 +545,6 @@ static void arm_cpu_initfn(Object *obj)
                              "gicv3-maintenance-interrupt", 1);
     qdev_init_gpio_out_named(DEVICE(cpu), &cpu->pmu_interrupt,
                              "pmu-interrupt", 1);
-#endif
 
     /* DTB consumers generally don't in fact care what the 'compatible'
      * string is, so always provide some string and trust that a hypothetical
@@ -668,14 +633,12 @@ static void arm_cpu_post_init(Object *obj)
         qdev_property_add_static(DEVICE(obj), &arm_cpu_has_el3_property,
                                  &error_abort);
 
-#ifndef CONFIG_USER_ONLY
         object_property_add_link(obj, "secure-memory",
                                  TYPE_MEMORY_REGION,
                                  (Object **)&cpu->secure_memory,
                                  qdev_prop_allow_set_link_before_realize,
                                  OBJ_PROP_LINK_UNREF_ON_RELEASE,
                                  &error_abort);
-#endif
     }
 
     if (arm_feature(&cpu->env, ARM_FEATURE_EL2)) {
@@ -942,7 +905,6 @@ static void arm_cpu_realizefn(DeviceState *dev, Error **errp)
 
     init_cpreg_list(cpu);
 
-#ifndef CONFIG_USER_ONLY
     if (cpu->has_el3 || arm_feature(env, ARM_FEATURE_M_SECURITY)) {
         cs->num_ases = 2;
 
@@ -960,7 +922,6 @@ static void arm_cpu_realizefn(DeviceState *dev, Error **errp)
     if (cpu->core_count == -1) {
         cpu->core_count = smp_cpus;
     }
-#endif
 
     qemu_init_vcpu(cs);
     cpu_reset(cs);
@@ -977,14 +938,6 @@ static ObjectClass *arm_cpu_class_by_name(const char *cpu_model)
 
     cpuname = g_strsplit(cpu_model, ",", 1);
     cpunamestr = cpuname[0];
-#ifdef CONFIG_USER_ONLY
-    /* For backwards compatibility usermode emulation allows "-cpu any",
-     * which has the same semantics as "-cpu max".
-     */
-    if (!strcmp(cpunamestr, "any")) {
-        cpunamestr = "max";
-    }
-#endif
     typename = g_strdup_printf(ARM_CPU_TYPE_NAME("%s"), cpunamestr);
     oc = object_class_by_name(typename);
     g_strfreev(cpuname);
@@ -997,7 +950,6 @@ static ObjectClass *arm_cpu_class_by_name(const char *cpu_model)
 }
 
 /* CPU models. These are not needed for the AArch64 linux-user build. */
-#if !defined(CONFIG_USER_ONLY) || !defined(TARGET_AARCH64)
 
 static void arm926_initfn(Object *obj)
 {
@@ -1269,11 +1221,9 @@ static void cortex_m33_initfn(Object *obj)
 static void arm_v7m_class_init(ObjectClass *oc, void *data)
 {
 #ifdef CONFIG_TCG
-#ifndef CONFIG_USER_ONLY
     CPUClass *cc = CPU_CLASS(oc);
 
     cc->do_interrupt = arm_v7m_cpu_do_interrupt;
-#endif
 
     cc->cpu_exec_interrupt = arm_v7m_cpu_exec_interrupt;
 #endif
@@ -1438,7 +1388,6 @@ static void cortex_a9_initfn(Object *obj)
     define_arm_cp_regs(cpu, cortexa9_cp_reginfo);
 }
 
-#ifndef CONFIG_USER_ONLY
 static uint64_t a15_l2ctlr_read(CPUARMState *env, const ARMCPRegInfo *ri)
 {
     /* Linux wants the number of processors from here.
@@ -1446,14 +1395,11 @@ static uint64_t a15_l2ctlr_read(CPUARMState *env, const ARMCPRegInfo *ri)
      */
     return ((smp_cpus - 1) << 24) | (1 << 23);
 }
-#endif
 
 static const ARMCPRegInfo cortexa15_cp_reginfo[] = {
-#ifndef CONFIG_USER_ONLY
     { .name = "L2CTLR", .cp = 15, .crn = 9, .crm = 0, .opc1 = 1, .opc2 = 2,
       .access = PL1_RW, .resetvalue = 0, .readfn = a15_l2ctlr_read,
       .writefn = arm_cp_write_ignore, },
-#endif
     { .name = "L2ECTLR", .cp = 15, .crn = 9, .crm = 0, .opc1 = 1, .opc2 = 3,
       .access = PL1_RW, .type = ARM_CP_CONST, .resetvalue = 0 },
     REGINFO_SENTINEL
@@ -1731,27 +1677,10 @@ static void arm_max_initfn(Object *obj)
         kvm_arm_set_cpu_features_from_host(cpu);
     } else {
         cortex_a15_initfn(obj);
-#ifdef CONFIG_USER_ONLY
-        /* We don't set these in system emulation mode for the moment,
-         * since we don't correctly set the ID registers to advertise them,
-         */
-        set_feature(&cpu->env, ARM_FEATURE_V8);
-        set_feature(&cpu->env, ARM_FEATURE_VFP4);
-        set_feature(&cpu->env, ARM_FEATURE_NEON);
-        set_feature(&cpu->env, ARM_FEATURE_THUMB2EE);
-        set_feature(&cpu->env, ARM_FEATURE_V8_AES);
-        set_feature(&cpu->env, ARM_FEATURE_V8_SHA1);
-        set_feature(&cpu->env, ARM_FEATURE_V8_SHA256);
-        set_feature(&cpu->env, ARM_FEATURE_V8_PMULL);
-        set_feature(&cpu->env, ARM_FEATURE_CRC);
-        set_feature(&cpu->env, ARM_FEATURE_V8_RDM);
-        set_feature(&cpu->env, ARM_FEATURE_V8_FCMA);
-#endif
     }
 }
 #endif
 
-#endif /* !defined(CONFIG_USER_ONLY) || !defined(TARGET_AARCH64) */
 
 typedef struct ARMCPUInfo {
     const char *name;
@@ -1760,7 +1689,6 @@ typedef struct ARMCPUInfo {
 } ARMCPUInfo;
 
 static const ARMCPUInfo arm_cpus[] = {
-#if !defined(CONFIG_USER_ONLY) || !defined(TARGET_AARCH64)
     { .name = "arm926",      .initfn = arm926_initfn },
     { .name = "arm946",      .initfn = arm946_initfn },
     { .name = "arm1026",     .initfn = arm1026_initfn },
@@ -1802,10 +1730,6 @@ static const ARMCPUInfo arm_cpus[] = {
 #ifndef TARGET_AARCH64
     { .name = "max",         .initfn = arm_max_initfn },
 #endif
-#ifdef CONFIG_USER_ONLY
-    { .name = "any",         .initfn = arm_max_initfn },
-#endif
-#endif
     { .name = NULL }
 };
 
@@ -1820,22 +1744,6 @@ static Property arm_cpu_properties[] = {
     DEFINE_PROP_END_OF_LIST()
 };
 
-#ifdef CONFIG_USER_ONLY
-static int arm_cpu_handle_mmu_fault(CPUState *cs, vaddr address, int size,
-                                    int rw, int mmu_idx)
-{
-    ARMCPU *cpu = ARM_CPU(cs);
-    CPUARMState *env = &cpu->env;
-
-    env->exception.vaddress = address;
-    if (rw == 2) {
-        cs->exception_index = EXCP_PREFETCH_ABORT;
-    } else {
-        cs->exception_index = EXCP_DATA_ABORT;
-    }
-    return 1;
-}
-#endif
 
 static gchar *arm_gdb_arch_name(CPUState *cs)
 {
@@ -1867,9 +1775,6 @@ static void arm_cpu_class_init(ObjectClass *oc, void *data)
     cc->set_pc = arm_cpu_set_pc;
     cc->gdb_read_register = arm_cpu_gdb_read_register;
     cc->gdb_write_register = arm_cpu_gdb_write_register;
-#ifdef CONFIG_USER_ONLY
-    cc->handle_mmu_fault = arm_cpu_handle_mmu_fault;
-#else
 #ifdef CONFIG_TCG
     cc->do_interrupt = arm_cpu_do_interrupt;
     cc->cpu_exec_interrupt = arm_cpu_exec_interrupt;
@@ -1883,7 +1788,6 @@ static void arm_cpu_class_init(ObjectClass *oc, void *data)
     cc->virtio_is_big_endian = arm_cpu_virtio_is_big_endian;
     cc->write_elf64_note = arm_cpu_write_elf64_note;
     cc->write_elf32_note = arm_cpu_write_elf32_note;
-#endif
     cc->gdb_num_core_regs = 26;
     cc->gdb_core_xml_file = "arm-core.xml";
     cc->gdb_arch_name = arm_gdb_arch_name;
@@ -1892,9 +1796,7 @@ static void arm_cpu_class_init(ObjectClass *oc, void *data)
     cc->debug_excp_handler = arm_debug_excp_handler;
 #endif
 
-#if !defined(CONFIG_USER_ONLY)
     cc->adjust_watchpoint_address = arm_adjust_watchpoint_address;
-#endif
 
     cc->disas_set_info = arm_disas_set_info;
 #ifdef CONFIG_TCG
@@ -1902,7 +1804,6 @@ static void arm_cpu_class_init(ObjectClass *oc, void *data)
 #endif
 }
 
-#ifdef CONFIG_KVM
 static void arm_host_initfn(Object *obj)
 {
     ARMCPU *cpu = ARM_CPU(obj);
@@ -1920,7 +1821,6 @@ static const TypeInfo host_arm_cpu_type_info = {
     .instance_init = arm_host_initfn,
 };
 
-#endif
 
 static void cpu_register(const ARMCPUInfo *info)
 {
@@ -1967,9 +1867,7 @@ static void arm_cpu_register_types(void)
         info++;
     }
 
-#ifdef CONFIG_KVM
     type_register_static(&host_arm_cpu_type_info);
-#endif
 }
 
 type_init(arm_cpu_register_types)

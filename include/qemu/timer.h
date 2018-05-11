@@ -847,17 +847,6 @@ static inline int64_t get_clock_realtime(void)
 /* Warning: don't insert tracepoints into these functions, they are
    also used by simpletrace backend and tracepoints would cause
    an infinite recursion! */
-#ifdef _WIN32
-extern int64_t clock_freq;
-
-static inline int64_t get_clock(void)
-{
-    LARGE_INTEGER ti;
-    QueryPerformanceCounter(&ti);
-    return muldiv64(ti.QuadPart, NANOSECONDS_PER_SECOND, clock_freq);
-}
-
-#else
 
 extern int use_rt_clock;
 
@@ -876,7 +865,6 @@ static inline int64_t get_clock(void)
         return get_clock_realtime();
     }
 }
-#endif
 
 /* icount */
 int64_t cpu_get_icount_raw(void);
@@ -893,15 +881,6 @@ void    cpu_update_icount(CPUState *cpu);
 static inline int64_t cpu_get_host_ticks(void)
 {
     int64_t retval;
-#ifdef _ARCH_PPC64
-    /* This reads timebase in one 64bit go and includes Cell workaround from:
-       http://ozlabs.org/pipermail/linuxppc-dev/2006-October/027052.html
-    */
-    __asm__ __volatile__ ("mftb    %0\n\t"
-                          "cmpwi   %0,0\n\t"
-                          "beq-    $-8"
-                          : "=r" (retval));
-#else
     /* http://ozlabs.org/pipermail/linuxppc-dev/1999-October/003889.html */
     unsigned long junk;
     __asm__ __volatile__ ("mfspr   %1,269\n\t"  /* mftbu */
@@ -910,7 +889,6 @@ static inline int64_t cpu_get_host_ticks(void)
                           "cmpw    %0,%1\n\t"
                           "bne     $-16"
                           : "=r" (retval), "=r" (junk));
-#endif
     return retval;
 }
 
@@ -942,15 +920,6 @@ static inline int64_t cpu_get_host_ticks(void)
 {
     int val;
     asm volatile ("mfctl %%cr16, %0" : "=r"(val));
-    return val;
-}
-
-#elif defined(__s390__)
-
-static inline int64_t cpu_get_host_ticks(void)
-{
-    int64_t val;
-    asm volatile("stck 0(%1)" : "=m" (val) : "a" (&val) : "cc");
     return val;
 }
 
@@ -1006,19 +975,6 @@ static inline int64_t cpu_get_host_ticks(void)
 
     MIPS_RDHWR("$2", count);
     return (int64_t)(count * cyc_per_count);
-}
-
-#elif defined(__alpha__)
-
-static inline int64_t cpu_get_host_ticks(void)
-{
-    uint64_t cc;
-    uint32_t cur, ofs;
-
-    asm volatile("rpcc %0" : "=r"(cc));
-    cur = cc;
-    ofs = cc >> 32;
-    return cur - ofs;
 }
 
 #else

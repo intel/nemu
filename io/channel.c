@@ -513,11 +513,6 @@ static void qio_channel_finalize(Object *obj)
 
     g_free(ioc->name);
 
-#ifdef _WIN32
-    if (ioc->event) {
-        CloseHandle(ioc->event);
-    }
-#endif
 }
 
 static const TypeInfo qio_channel_info = {

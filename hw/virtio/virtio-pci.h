@@ -363,7 +363,6 @@ struct VirtIOInputHIDPCI {
     VirtIOInputHID vdev;
 };
 
-#ifdef CONFIG_LINUX
 
 #define TYPE_VIRTIO_INPUT_HOST_PCI "virtio-input-host-pci"
 #define VIRTIO_INPUT_HOST_PCI(obj) \
@@ -374,7 +373,6 @@ struct VirtIOInputHostPCI {
     VirtIOInputHost vdev;
 };
 
-#endif
 
 /*
  * virtio-gpu-pci: This extends VirtioPCIProxy.

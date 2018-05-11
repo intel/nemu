@@ -35,7 +35,6 @@
 #include "block/aio.h"
 #include "qemu/error-report.h"
 
-#ifndef _WIN32
 
 /* If we have signalfd, we mask out the signals we want to handle and then
  * use signalfd to listen for them.  We rely on whatever the current signal
@@ -107,13 +106,6 @@ static int qemu_signal_init(void)
     return 0;
 }
 
-#else /* _WIN32 */
-
-static int qemu_signal_init(void)
-{
-    return 0;
-}
-#endif
 
 static AioContext *qemu_aio_context;
 static QEMUBH *qemu_notify_bh;
@@ -173,7 +165,6 @@ int qemu_init_main_loop(Error **errp)
 
 static int max_priority;
 
-#ifndef _WIN32
 static int glib_pollfds_idx;
 static int glib_n_poll_fds;
 
@@ -266,233 +257,6 @@ static int os_host_main_loop_wait(int64_t timeout)
 
     return ret;
 }
-#else
-/***********************************************************/
-/* Polling handling */
-
-typedef struct PollingEntry {
-    PollingFunc *func;
-    void *opaque;
-    struct PollingEntry *next;
-} PollingEntry;
-
-static PollingEntry *first_polling_entry;
-
-int qemu_add_polling_cb(PollingFunc *func, void *opaque)
-{
-    PollingEntry **ppe, *pe;
-    pe = g_malloc0(sizeof(PollingEntry));
-    pe->func = func;
-    pe->opaque = opaque;
-    for(ppe = &first_polling_entry; *ppe != NULL; ppe = &(*ppe)->next);
-    *ppe = pe;
-    return 0;
-}
-
-void qemu_del_polling_cb(PollingFunc *func, void *opaque)
-{
-    PollingEntry **ppe, *pe;
-    for(ppe = &first_polling_entry; *ppe != NULL; ppe = &(*ppe)->next) {
-        pe = *ppe;
-        if (pe->func == func && pe->opaque == opaque) {
-            *ppe = pe->next;
-            g_free(pe);
-            break;
-        }
-    }
-}
-
-/***********************************************************/
-/* Wait objects support */
-typedef struct WaitObjects {
-    int num;
-    int revents[MAXIMUM_WAIT_OBJECTS + 1];
-    HANDLE events[MAXIMUM_WAIT_OBJECTS + 1];
-    WaitObjectFunc *func[MAXIMUM_WAIT_OBJECTS + 1];
-    void *opaque[MAXIMUM_WAIT_OBJECTS + 1];
-} WaitObjects;
-
-static WaitObjects wait_objects = {0};
-
-int qemu_add_wait_object(HANDLE handle, WaitObjectFunc *func, void *opaque)
-{
-    WaitObjects *w = &wait_objects;
-    if (w->num >= MAXIMUM_WAIT_OBJECTS) {
-        return -1;
-    }
-    w->events[w->num] = handle;
-    w->func[w->num] = func;
-    w->opaque[w->num] = opaque;
-    w->revents[w->num] = 0;
-    w->num++;
-    return 0;
-}
-
-void qemu_del_wait_object(HANDLE handle, WaitObjectFunc *func, void *opaque)
-{
-    int i, found;
-    WaitObjects *w = &wait_objects;
-
-    found = 0;
-    for (i = 0; i < w->num; i++) {
-        if (w->events[i] == handle) {
-            found = 1;
-        }
-        if (found) {
-            w->events[i] = w->events[i + 1];
-            w->func[i] = w->func[i + 1];
-            w->opaque[i] = w->opaque[i + 1];
-            w->revents[i] = w->revents[i + 1];
-        }
-    }
-    if (found) {
-        w->num--;
-    }
-}
-
-void qemu_fd_register(int fd)
-{
-    WSAEventSelect(fd, event_notifier_get_handle(&qemu_aio_context->notifier),
-                   FD_READ | FD_ACCEPT | FD_CLOSE |
-                   FD_CONNECT | FD_WRITE | FD_OOB);
-}
-
-static int pollfds_fill(GArray *pollfds, fd_set *rfds, fd_set *wfds,
-                        fd_set *xfds)
-{
-    int nfds = -1;
-    int i;
-
-    for (i = 0; i < pollfds->len; i++) {
-        GPollFD *pfd = &g_array_index(pollfds, GPollFD, i);
-        int fd = pfd->fd;
-        int events = pfd->events;
-        if (events & G_IO_IN) {
-            FD_SET(fd, rfds);
-            nfds = MAX(nfds, fd);
-        }
-        if (events & G_IO_OUT) {
-            FD_SET(fd, wfds);
-            nfds = MAX(nfds, fd);
-        }
-        if (events & G_IO_PRI) {
-            FD_SET(fd, xfds);
-            nfds = MAX(nfds, fd);
-        }
-    }
-    return nfds;
-}
-
-static void pollfds_poll(GArray *pollfds, int nfds, fd_set *rfds,
-                         fd_set *wfds, fd_set *xfds)
-{
-    int i;
-
-    for (i = 0; i < pollfds->len; i++) {
-        GPollFD *pfd = &g_array_index(pollfds, GPollFD, i);
-        int fd = pfd->fd;
-        int revents = 0;
-
-        if (FD_ISSET(fd, rfds)) {
-            revents |= G_IO_IN;
-        }
-        if (FD_ISSET(fd, wfds)) {
-            revents |= G_IO_OUT;
-        }
-        if (FD_ISSET(fd, xfds)) {
-            revents |= G_IO_PRI;
-        }
-        pfd->revents = revents & pfd->events;
-    }
-}
-
-static int os_host_main_loop_wait(int64_t timeout)
-{
-    GMainContext *context = g_main_context_default();
-    GPollFD poll_fds[1024 * 2]; /* this is probably overkill */
-    int select_ret = 0;
-    int g_poll_ret, ret, i, n_poll_fds;
-    PollingEntry *pe;
-    WaitObjects *w = &wait_objects;
-    gint poll_timeout;
-    int64_t poll_timeout_ns;
-    static struct timeval tv0;
-    fd_set rfds, wfds, xfds;
-    int nfds;
-
-    g_main_context_acquire(context);
-
-    /* XXX: need to suppress polling by better using win32 events */
-    ret = 0;
-    for (pe = first_polling_entry; pe != NULL; pe = pe->next) {
-        ret |= pe->func(pe->opaque);
-    }
-    if (ret != 0) {
-        g_main_context_release(context);
-        return ret;
-    }
-
-    FD_ZERO(&rfds);
-    FD_ZERO(&wfds);
-    FD_ZERO(&xfds);
-    nfds = pollfds_fill(gpollfds, &rfds, &wfds, &xfds);
-    if (nfds >= 0) {
-        select_ret = select(nfds + 1, &rfds, &wfds, &xfds, &tv0);
-        if (select_ret != 0) {
-            timeout = 0;
-        }
-        if (select_ret > 0) {
-            pollfds_poll(gpollfds, nfds, &rfds, &wfds, &xfds);
-        }
-    }
-
-    g_main_context_prepare(context, &max_priority);
-    n_poll_fds = g_main_context_query(context, max_priority, &poll_timeout,
-                                      poll_fds, ARRAY_SIZE(poll_fds));
-    g_assert(n_poll_fds <= ARRAY_SIZE(poll_fds));
-
-    for (i = 0; i < w->num; i++) {
-        poll_fds[n_poll_fds + i].fd = (DWORD_PTR)w->events[i];
-        poll_fds[n_poll_fds + i].events = G_IO_IN;
-    }
-
-    if (poll_timeout < 0) {
-        poll_timeout_ns = -1;
-    } else {
-        poll_timeout_ns = (int64_t)poll_timeout * (int64_t)SCALE_MS;
-    }
-
-    poll_timeout_ns = qemu_soonest_timeout(poll_timeout_ns, timeout);
-
-    qemu_mutex_unlock_iothread();
-
-    replay_mutex_unlock();
-
-    g_poll_ret = qemu_poll_ns(poll_fds, n_poll_fds + w->num, poll_timeout_ns);
-
-    replay_mutex_lock();
-
-    qemu_mutex_lock_iothread();
-    if (g_poll_ret > 0) {
-        for (i = 0; i < w->num; i++) {
-            w->revents[i] = poll_fds[n_poll_fds + i].revents;
-        }
-        for (i = 0; i < w->num; i++) {
-            if (w->revents[i] && w->func[i]) {
-                w->func[i](w->opaque[i]);
-            }
-        }
-    }
-
-    if (g_main_context_check(context, max_priority, poll_fds, n_poll_fds)) {
-        g_main_context_dispatch(context);
-    }
-
-    g_main_context_release(context);
-
-    return select_ret || g_poll_ret;
-}
-#endif
 
 void main_loop_wait(int nonblocking)
 {

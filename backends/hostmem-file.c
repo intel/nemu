@@ -49,9 +49,6 @@ file_backend_memory_alloc(HostMemoryBackend *backend, Error **errp)
         error_setg(errp, "mem-path property not set");
         return;
     }
-#ifndef CONFIG_LINUX
-    error_setg(errp, "-mem-path not supported on this host");
-#else
     if (!host_memory_backend_mr_inited(backend)) {
         gchar *path;
         backend->force_prealloc = mem_prealloc;
@@ -62,7 +59,6 @@ file_backend_memory_alloc(HostMemoryBackend *backend, Error **errp)
                                  fb->mem_path, errp);
         g_free(path);
     }
-#endif
 }
 
 static char *get_mem_path(Object *o, Error **errp)

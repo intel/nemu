@@ -34,11 +34,7 @@
 #define QEMU_ARTIFICIAL
 #endif
 
-#if defined(_WIN32)
-# define QEMU_PACKED __attribute__((gcc_struct, packed))
-#else
 # define QEMU_PACKED __attribute__((packed))
-#endif
 
 #define QEMU_ALIGNED(X) __attribute__((aligned(X)))
 
@@ -107,11 +103,6 @@
 # else
    /* Use gnu_printf when supported (qemu uses standard format strings). */
 #  define GCC_FMT_ATTR(n, m) __attribute__((format(gnu_printf, n, m)))
-#  if defined(_WIN32)
-    /* Map __printf__ to __gnu_printf__ because we want standard format strings
-     * even when MinGW or GLib include files use __printf__. */
-#   define __printf__ __gnu_printf__
-#  endif
 # endif
 #else
 #define GCC_FMT_ATTR(n, m)

@@ -166,12 +166,10 @@ static ssize_t tap_receive(NetClientState *nc, const uint8_t *buf, size_t size)
     return tap_write_packet(s, iov, 1);
 }
 
-#ifndef __sun__
 ssize_t tap_read_packet(int tapfd, uint8_t *buf, int maxlen)
 {
     return read(tapfd, buf, maxlen);
 }
-#endif
 
 static void tap_send_completed(NetClientState *nc, ssize_t len)
 {

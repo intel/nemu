@@ -34,7 +34,6 @@ static void test_end(void)
     qtest_end();
 }
 
-#ifndef _WIN32
 
 static QVirtioPCIDevice *virtio_net_pci_init(QPCIBus *bus, int slot)
 {
@@ -241,7 +240,6 @@ static void pci_basic(gconstpointer data)
     g_free(dev);
     qtest_shutdown(qs);
 }
-#endif
 
 static void hotplug(void)
 {
@@ -261,11 +259,9 @@ static void hotplug(void)
 int main(int argc, char **argv)
 {
     g_test_init(&argc, &argv, NULL);
-#ifndef _WIN32
     qtest_add_data_func("/virtio/net/pci/basic", send_recv_test, pci_basic);
     qtest_add_data_func("/virtio/net/pci/rx_stop_cont",
                         stop_cont_test, pci_basic);
-#endif
     qtest_add_func("/virtio/net/pci/hotplug", hotplug);
 
     return g_test_run();

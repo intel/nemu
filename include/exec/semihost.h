@@ -26,37 +26,10 @@ typedef enum SemihostingTarget {
     SEMIHOSTING_TARGET_GDB
 } SemihostingTarget;
 
-#ifdef CONFIG_USER_ONLY
-static inline bool semihosting_enabled(void)
-{
-    return true;
-}
-
-static inline SemihostingTarget semihosting_get_target(void)
-{
-    return SEMIHOSTING_TARGET_AUTO;
-}
-
-static inline const char *semihosting_get_arg(int i)
-{
-    return NULL;
-}
-
-static inline int semihosting_get_argc(void)
-{
-    return 0;
-}
-
-static inline const char *semihosting_get_cmdline(void)
-{
-    return NULL;
-}
-#else
 bool semihosting_enabled(void);
 SemihostingTarget semihosting_get_target(void);
 const char *semihosting_get_arg(int i);
 int semihosting_get_argc(void);
 const char *semihosting_get_cmdline(void);
-#endif
 
 #endif

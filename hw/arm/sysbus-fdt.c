@@ -25,9 +25,7 @@
 #include "qapi/error.h"
 #include <libfdt.h>
 #include "qemu-common.h"
-#ifdef CONFIG_LINUX
 #include <linux/vfio.h>
-#endif
 #include "hw/arm/sysbus-fdt.h"
 #include "qemu/error-report.h"
 #include "sysemu/device_tree.h"
@@ -71,7 +69,6 @@ typedef struct HostProperty {
     bool optional;
 } HostProperty;
 
-#ifdef CONFIG_LINUX
 
 /**
  * copy_properties_from_host
@@ -413,14 +410,11 @@ static int add_amd_xgbe_fdt_node(SysBusDevice *sbdev, void *opaque)
     return 0;
 }
 
-#endif /* CONFIG_LINUX */
 
 /* list of supported dynamic sysbus devices */
 static const NodeCreationPair add_fdt_node_functions[] = {
-#ifdef CONFIG_LINUX
     {TYPE_VFIO_CALXEDA_XGMAC, add_calxeda_midway_xgmac_fdt_node},
     {TYPE_VFIO_AMD_XGBE, add_amd_xgbe_fdt_node},
-#endif
     {"", NULL}, /* last element */
 };
 

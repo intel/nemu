@@ -26,18 +26,13 @@
 #include "tcg.h"
 #include "hw/qdev-core.h"
 #include "hw/qdev-properties.h"
-#if !defined(CONFIG_USER_ONLY)
 #include "hw/boards.h"
 #include "hw/xen/xen.h"
-#endif
 #include "sysemu/kvm.h"
 #include "sysemu/sysemu.h"
 #include "qemu/timer.h"
 #include "qemu/config-file.h"
 #include "qemu/error-report.h"
-#if defined(CONFIG_USER_ONLY)
-#include "qemu.h"
-#else /* !CONFIG_USER_ONLY */
 #include "hw/hw.h"
 #include "exec/memory.h"
 #include "exec/ioport.h"
@@ -52,7 +47,6 @@
 #include <linux/falloc.h>
 #endif
 
-#endif
 #include "qemu/rcu_queue.h"
 #include "qemu/main-loop.h"
 #include "translate-all.h"
@@ -65,15 +59,12 @@
 #include "migration/vmstate.h"
 
 #include "qemu/range.h"
-#ifndef _WIN32
 #include "qemu/mmap-alloc.h"
-#endif
 
 #include "monitor/monitor.h"
 
 //#define DEBUG_SUBPAGE
 
-#if !defined(CONFIG_USER_ONLY)
 /* ram_list is read under rcu_read_lock()/rcu_read_unlock().  Writes
  * are protected by the ramlist lock.
  */
@@ -104,7 +95,6 @@ static MemoryRegion io_mem_unassigned;
  * (Set during postcopy)
  */
 #define RAM_UF_ZEROPAGE (1 << 3)
-#endif
 
 #ifdef TARGET_PAGE_BITS_VARY
 int target_page_bits;
@@ -142,7 +132,6 @@ bool set_preferred_target_page_bits(int bits)
     return true;
 }
 
-#if !defined(CONFIG_USER_ONLY)
 
 static void finalize_target_page_bits(void)
 {
@@ -234,9 +223,7 @@ struct DirtyBitmapSnapshot {
     unsigned long dirty[];
 };
 
-#endif
 
-#if !defined(CONFIG_USER_ONLY)
 
 static void phys_map_node_reserve(PhysPageMap *map, unsigned nodes)
 {
@@ -615,9 +602,7 @@ address_space_translate_for_iotlb(CPUState *cpu, int asidx, hwaddr addr,
     assert(!memory_region_is_iommu(section->mr));
     return section;
 }
-#endif
 
-#if !defined(CONFIG_USER_ONLY)
 
 static int cpu_common_post_load(void *opaque, int version_id)
 {
@@ -701,7 +686,6 @@ const VMStateDescription vmstate_cpu_common = {
     }
 };
 
-#endif
 
 CPUState *qemu_get_cpu(int index)
 {
@@ -716,7 +700,6 @@ CPUState *qemu_get_cpu(int index)
     return NULL;
 }
 
-#if !defined(CONFIG_USER_ONLY)
 void cpu_address_space_init(CPUState *cpu, int asidx,
                             const char *prefix, MemoryRegion *mr)
 {
@@ -758,7 +741,6 @@ AddressSpace *cpu_get_address_space(CPUState *cpu, int asidx)
     /* Return the AddressSpace corresponding to the specified index */
     return cpu->cpu_ases[asidx].as;
 }
-#endif
 
 void cpu_exec_unrealizefn(CPUState *cpu)
 {
@@ -775,7 +757,6 @@ void cpu_exec_unrealizefn(CPUState *cpu)
 }
 
 Property cpu_common_props[] = {
-#ifndef CONFIG_USER_ONLY
     /* Create a memory property for softmmu CPU object,
      * so users can wire up its memory. (This can't go in qom/cpu.c
      * because that file is compiled only once for both user-mode
@@ -784,7 +765,6 @@ Property cpu_common_props[] = {
      */
     DEFINE_PROP_LINK("memory", CPUState, memory, TYPE_MEMORY_REGION,
                      MemoryRegion *),
-#endif
     DEFINE_PROP_END_OF_LIST(),
 };
 
@@ -793,11 +773,9 @@ void cpu_exec_initfn(CPUState *cpu)
     cpu->as = NULL;
     cpu->num_ases = 0;
 
-#ifndef CONFIG_USER_ONLY
     cpu->thread_id = qemu_get_thread_id();
     cpu->memory = system_memory;
     object_ref(OBJECT(cpu->memory));
-#endif
 }
 
 void cpu_exec_realizefn(CPUState *cpu, Error **errp)
@@ -812,14 +790,12 @@ void cpu_exec_realizefn(CPUState *cpu, Error **errp)
         cc->tcg_initialize();
     }
 
-#ifndef CONFIG_USER_ONLY
     if (qdev_get_vmsd(DEVICE(cpu)) == NULL) {
         vmstate_register(NULL, cpu->cpu_index, &vmstate_cpu_common, cpu);
     }
     if (cc->vmsd != NULL) {
         vmstate_register(NULL, cpu->cpu_index, cc->vmsd, cpu);
     }
-#endif
 }
 
 const char *parse_cpu_model(const char *cpu_model)
@@ -845,16 +821,6 @@ const char *parse_cpu_model(const char *cpu_model)
     return cpu_type;
 }
 
-#if defined(CONFIG_USER_ONLY)
-static void breakpoint_invalidate(CPUState *cpu, target_ulong pc)
-{
-    mmap_lock();
-    tb_lock();
-    tb_invalidate_phys_page_range(pc, pc + 1, 0);
-    tb_unlock();
-    mmap_unlock();
-}
-#else
 static void breakpoint_invalidate(CPUState *cpu, target_ulong pc)
 {
     MemTxAttrs attrs;
@@ -866,30 +832,7 @@ static void breakpoint_invalidate(CPUState *cpu, target_ulong pc)
                                 phys | (pc & ~TARGET_PAGE_MASK));
     }
 }
-#endif
 
-#if defined(CONFIG_USER_ONLY)
-void cpu_watchpoint_remove_all(CPUState *cpu, int mask)
-
-{
-}
-
-int cpu_watchpoint_remove(CPUState *cpu, vaddr addr, vaddr len,
-                          int flags)
-{
-    return -ENOSYS;
-}
-
-void cpu_watchpoint_remove_by_ref(CPUState *cpu, CPUWatchpoint *watchpoint)
-{
-}
-
-int cpu_watchpoint_insert(CPUState *cpu, vaddr addr, vaddr len,
-                          int flags, CPUWatchpoint **watchpoint)
-{
-    return -ENOSYS;
-}
-#else
 /* Add a watchpoint.  */
 int cpu_watchpoint_insert(CPUState *cpu, vaddr addr, vaddr len,
                           int flags, CPUWatchpoint **watchpoint)
@@ -980,7 +923,6 @@ static inline bool cpu_watchpoint_address_matches(CPUWatchpoint *wp,
     return !(addr > wpend || wp->vaddr > addrend);
 }
 
-#endif
 
 /* Add a breakpoint.  */
 int cpu_breakpoint_insert(CPUState *cpu, vaddr pc, int flags,
@@ -1084,18 +1026,9 @@ void cpu_abort(CPUState *cpu, const char *fmt, ...)
     va_end(ap2);
     va_end(ap);
     replay_finish();
-#if defined(CONFIG_USER_ONLY)
-    {
-        struct sigaction act;
-        sigfillset(&act.sa_mask);
-        act.sa_handler = SIG_DFL;
-        sigaction(SIGABRT, &act, NULL);
-    }
-#endif
     abort();
 }
 
-#if !defined(CONFIG_USER_ONLY)
 /* Called from RCU critical section */
 static RAMBlock *qemu_get_ram_block(ram_addr_t addr)
 {
@@ -1305,9 +1238,7 @@ hwaddr memory_region_section_get_iotlb(CPUState *cpu,
 
     return iotlb;
 }
-#endif /* defined(CONFIG_USER_ONLY) */
 
-#if !defined(CONFIG_USER_ONLY)
 
 static int subpage_register (subpage_t *mmio, uint32_t start, uint32_t end,
                              uint16_t section);
@@ -1479,7 +1410,6 @@ void ram_block_dump(Monitor *mon)
     rcu_read_unlock();
 }
 
-#ifdef __linux__
 /*
  * FIXME TOCTTOU: this iterates over memory backends' mem-path, which
  * may or may not name the same files / on the same filesystem now as
@@ -1554,14 +1484,7 @@ long qemu_getrampagesize(void)
 
     return hpsize;
 }
-#else
-long qemu_getrampagesize(void)
-{
-    return getpagesize();
-}
-#endif
 
-#ifdef __linux__
 static int64_t get_file_size(int fd)
 {
     int64_t size = lseek(fd, 0, SEEK_END);
@@ -1648,11 +1571,6 @@ static void *file_ram_alloc(RAMBlock *block,
         return NULL;
     }
     block->mr->align = MAX(block->page_size, block->mr->align);
-#if defined(__s390x__)
-    if (kvm_enabled()) {
-        block->mr->align = MAX(block->mr->align, QEMU_VMALLOC_ALIGN);
-    }
-#endif
 
     if (memory < block->page_size) {
         error_setg(errp, "memory size 0x" RAM_ADDR_FMT " must be equal to "
@@ -1700,7 +1618,6 @@ static void *file_ram_alloc(RAMBlock *block,
     block->fd = fd;
     return area;
 }
-#endif
 
 /* Allocate space within the ram_addr_t space that governs the
  * dirty bitmaps.
@@ -2038,7 +1955,6 @@ static void ram_block_add(RAMBlock *new_block, Error **errp, bool shared)
     }
 }
 
-#ifdef __linux__
 RAMBlock *qemu_ram_alloc_from_fd(ram_addr_t size, MemoryRegion *mr,
                                  bool share, int fd,
                                  Error **errp)
@@ -2124,7 +2040,6 @@ RAMBlock *qemu_ram_alloc_from_file(ram_addr_t size, MemoryRegion *mr,
 
     return block;
 }
-#endif
 
 static
 RAMBlock *qemu_ram_alloc_internal(ram_addr_t size, ram_addr_t max_size,
@@ -2193,11 +2108,9 @@ static void reclaim_ramblock(RAMBlock *block)
         ;
     } else if (xen_enabled()) {
         xen_invalidate_map_cache_entry(block->host);
-#ifndef _WIN32
     } else if (block->fd >= 0) {
         qemu_ram_munmap(block->host, block->max_length);
         close(block->fd);
-#endif
     } else {
         qemu_anon_ram_free(block->host, block->max_length);
     }
@@ -2224,7 +2137,6 @@ void qemu_ram_free(RAMBlock *block)
     qemu_mutex_unlock_ramlist();
 }
 
-#ifndef _WIN32
 void qemu_ram_remap(ram_addr_t addr, ram_addr_t length)
 {
     RAMBlock *block;
@@ -2271,7 +2183,6 @@ void qemu_ram_remap(ram_addr_t addr, ram_addr_t length)
         }
     }
 }
-#endif /* !_WIN32 */
 
 /* Return a host pointer to ram allocated with qemu_ram_alloc.
  * This should not be used for general purpose DMA.  Use address_space_map
@@ -2938,50 +2849,8 @@ MemoryRegion *get_system_io(void)
     return system_io;
 }
 
-#endif /* !defined(CONFIG_USER_ONLY) */
 
 /* physical memory access (slow version, mainly for debug) */
-#if defined(CONFIG_USER_ONLY)
-int cpu_memory_rw_debug(CPUState *cpu, target_ulong addr,
-                        uint8_t *buf, int len, int is_write)
-{
-    int l, flags;
-    target_ulong page;
-    void * p;
-
-    while (len > 0) {
-        page = addr & TARGET_PAGE_MASK;
-        l = (page + TARGET_PAGE_SIZE) - addr;
-        if (l > len)
-            l = len;
-        flags = page_get_flags(page);
-        if (!(flags & PAGE_VALID))
-            return -1;
-        if (is_write) {
-            if (!(flags & PAGE_WRITE))
-                return -1;
-            /* XXX: this code should not depend on lock_user */
-            if (!(p = lock_user(VERIFY_WRITE, addr, l, 0)))
-                return -1;
-            memcpy(p, buf, l);
-            unlock_user(p, addr, l);
-        } else {
-            if (!(flags & PAGE_READ))
-                return -1;
-            /* XXX: this code should not depend on lock_user */
-            if (!(p = lock_user(VERIFY_READ, addr, l, 1)))
-                return -1;
-            memcpy(buf, p, l);
-            unlock_user(p, addr, 0);
-        }
-        len -= l;
-        buf += l;
-        addr += l;
-    }
-    return 0;
-}
-
-#else
 
 static void invalidate_and_set_dirty(MemoryRegion *mr, hwaddr addr,
                                      hwaddr length)
@@ -3701,7 +3570,6 @@ int qemu_target_page_bits_min(void)
 {
     return TARGET_PAGE_BITS_MIN;
 }
-#endif
 
 /*
  * A helper function for the _utterly broken_ virtio device model to find out if
@@ -3717,7 +3585,6 @@ bool target_words_bigendian(void)
 #endif
 }
 
-#ifndef CONFIG_USER_ONLY
 bool cpu_physical_memory_is_io(hwaddr phys_addr)
 {
     MemoryRegion*mr;
@@ -3845,7 +3712,6 @@ err:
     return ret;
 }
 
-#endif
 
 void page_size_init(void)
 {
@@ -3860,7 +3726,6 @@ void page_size_init(void)
     qemu_host_page_mask = -(intptr_t)qemu_host_page_size;
 }
 
-#if !defined(CONFIG_USER_ONLY)
 
 static void mtree_print_phys_entries(fprintf_function mon, void *f,
                                      int start, int end, int skip, int ptr)
@@ -3942,4 +3807,3 @@ void mtree_print_dispatch(fprintf_function mon, void *f,
     }
 }
 
-#endif

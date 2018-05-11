@@ -16,7 +16,6 @@
 #ifndef QEMU_TAP_LINUX_H
 #define QEMU_TAP_LINUX_H
 
-#ifdef __linux__
 
 #include <linux/ioctl.h>
 
@@ -32,7 +31,6 @@
 #define TUNSETVNETLE _IOW('T', 220, int)
 #define TUNSETVNETBE _IOW('T', 222, int)
 
-#endif
 
 /* TUNSETIFF ifr flags */
 #define IFF_TAP          0x0002

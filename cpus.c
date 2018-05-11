@@ -54,7 +54,6 @@
 #include "sysemu/replay.h"
 #include "hw/boards.h"
 
-#ifdef CONFIG_LINUX
 
 #include <sys/prctl.h>
 
@@ -70,7 +69,6 @@
 #define PR_MCE_KILL_EARLY 1
 #endif
 
-#endif /* CONFIG_LINUX */
 
 int64_t max_delay;
 int64_t max_advance;
@@ -1048,7 +1046,6 @@ static void cpu_handle_guest_debug(CPUState *cpu)
     cpu->stopped = true;
 }
 
-#ifdef CONFIG_LINUX
 static void sigbus_reraise(void)
 {
     sigset_t set;
@@ -1096,11 +1093,6 @@ static void qemu_init_sigbus(void)
 
     prctl(PR_MCE_KILL, PR_MCE_KILL_SET, PR_MCE_KILL_EARLY, 0, 0);
 }
-#else /* !CONFIG_LINUX */
-static void qemu_init_sigbus(void)
-{
-}
-#endif /* !CONFIG_LINUX */
 
 static QemuMutex qemu_global_mutex;
 
@@ -1176,12 +1168,6 @@ static void qemu_wait_io_event(CPUState *cpu)
         qemu_cond_wait(cpu->halt_cond, &qemu_global_mutex);
     }
 
-#ifdef _WIN32
-    /* Eat dummy APC queued by qemu_cpu_kick_thread.  */
-    if (!tcg_enabled()) {
-        SleepEx(0, TRUE);
-    }
-#endif
     qemu_wait_io_event_common(cpu);
 }
 
@@ -1230,10 +1216,6 @@ static void *qemu_kvm_cpu_thread_fn(void *arg)
 
 static void *qemu_dummy_cpu_thread_fn(void *arg)
 {
-#ifdef _WIN32
-    error_report("qtest is not supported under Windows");
-    exit(1);
-#else
     CPUState *cpu = arg;
     sigset_t waitset;
     int r;
@@ -1269,7 +1251,6 @@ static void *qemu_dummy_cpu_thread_fn(void *arg)
 
     rcu_unregister_thread();
     return NULL;
-#endif
 }
 
 static int64_t tcg_get_icount_limit(void)
@@ -1614,11 +1595,6 @@ static void *qemu_whpx_cpu_thread_fn(void *arg)
     return NULL;
 }
 
-#ifdef _WIN32
-static void CALLBACK dummy_apc_func(ULONG_PTR unused)
-{
-}
-#endif
 
 /* Multi-threaded TCG
  *
@@ -1692,7 +1668,6 @@ static void *qemu_tcg_cpu_thread_fn(void *arg)
 
 static void qemu_cpu_kick_thread(CPUState *cpu)
 {
-#ifndef _WIN32
     int err;
 
     if (cpu->thread_kicked) {
@@ -1704,17 +1679,6 @@ static void qemu_cpu_kick_thread(CPUState *cpu)
         fprintf(stderr, "qemu:%s: %s", __func__, strerror(err));
         exit(1);
     }
-#else /* _WIN32 */
-    if (!qemu_cpu_is_self(cpu)) {
-        if (whpx_enabled()) {
-            whpx_vcpu_kick(cpu);
-        } else if (!QueueUserAPC(dummy_apc_func, cpu->hThread, 0)) {
-            fprintf(stderr, "%s: QueueUserAPC failed with error %lu\n",
-                    __func__, GetLastError());
-            exit(1);
-        }
-    }
-#endif
 }
 
 void qemu_cpu_kick(CPUState *cpu)
@@ -1889,9 +1853,6 @@ static void qemu_tcg_init_vcpu(CPUState *cpu)
             single_tcg_halt_cond = cpu->halt_cond;
             single_tcg_cpu_thread = cpu->thread;
         }
-#ifdef _WIN32
-        cpu->hThread = qemu_thread_get_handle(cpu->thread);
-#endif
     } else {
         /* For non-MTTCG cases we share the thread */
         cpu->thread = single_tcg_cpu_thread;
@@ -1914,9 +1875,6 @@ static void qemu_hax_start_vcpu(CPUState *cpu)
              cpu->cpu_index);
     qemu_thread_create(cpu->thread, thread_name, qemu_hax_cpu_thread_fn,
                        cpu, QEMU_THREAD_JOINABLE);
-#ifdef _WIN32
-    cpu->hThread = qemu_thread_get_handle(cpu->thread);
-#endif
 }
 
 static void qemu_kvm_start_vcpu(CPUState *cpu)
@@ -1961,9 +1919,6 @@ static void qemu_whpx_start_vcpu(CPUState *cpu)
              cpu->cpu_index);
     qemu_thread_create(cpu->thread, thread_name, qemu_whpx_cpu_thread_fn,
                        cpu, QEMU_THREAD_JOINABLE);
-#ifdef _WIN32
-    cpu->hThread = qemu_thread_get_handle(cpu->thread);
-#endif
 }
 
 static void qemu_dummy_start_vcpu(CPUState *cpu)
@@ -2113,12 +2068,6 @@ CpuInfoList *qmp_query_cpus(Error **errp)
 #if defined(TARGET_I386)
         X86CPU *x86_cpu = X86_CPU(cpu);
         CPUX86State *env = &x86_cpu->env;
-#elif defined(TARGET_PPC)
-        PowerPCCPU *ppc_cpu = POWERPC_CPU(cpu);
-        CPUPPCState *env = &ppc_cpu->env;
-#elif defined(TARGET_SPARC)
-        SPARCCPU *sparc_cpu = SPARC_CPU(cpu);
-        CPUSPARCState *env = &sparc_cpu->env;
 #elif defined(TARGET_RISCV)
         RISCVCPU *riscv_cpu = RISCV_CPU(cpu);
         CPURISCVState *env = &riscv_cpu->env;
@@ -2128,9 +2077,6 @@ CpuInfoList *qmp_query_cpus(Error **errp)
 #elif defined(TARGET_TRICORE)
         TriCoreCPU *tricore_cpu = TRICORE_CPU(cpu);
         CPUTriCoreState *env = &tricore_cpu->env;
-#elif defined(TARGET_S390X)
-        S390CPU *s390_cpu = S390_CPU(cpu);
-        CPUS390XState *env = &s390_cpu->env;
 #endif
 
         cpu_synchronize_state(cpu);
@@ -2145,22 +2091,12 @@ CpuInfoList *qmp_query_cpus(Error **errp)
 #if defined(TARGET_I386)
         info->value->arch = CPU_INFO_ARCH_X86;
         info->value->u.x86.pc = env->eip + env->segs[R_CS].base;
-#elif defined(TARGET_PPC)
-        info->value->arch = CPU_INFO_ARCH_PPC;
-        info->value->u.ppc.nip = env->nip;
-#elif defined(TARGET_SPARC)
-        info->value->arch = CPU_INFO_ARCH_SPARC;
-        info->value->u.q_sparc.pc = env->pc;
-        info->value->u.q_sparc.npc = env->npc;
 #elif defined(TARGET_MIPS)
         info->value->arch = CPU_INFO_ARCH_MIPS;
         info->value->u.q_mips.PC = env->active_tc.PC;
 #elif defined(TARGET_TRICORE)
         info->value->arch = CPU_INFO_ARCH_TRICORE;
         info->value->u.tricore.PC = env->PC;
-#elif defined(TARGET_S390X)
-        info->value->arch = CPU_INFO_ARCH_S390;
-        info->value->u.s390.cpu_state = env->cpu_state;
 #elif defined(TARGET_RISCV)
         info->value->arch = CPU_INFO_ARCH_RISCV;
         info->value->u.riscv.pc = env->pc;
@@ -2197,10 +2133,6 @@ CpuInfoFastList *qmp_query_cpus_fast(Error **errp)
     MachineClass *mc = MACHINE_GET_CLASS(ms);
     CpuInfoFastList *head = NULL, *cur_item = NULL;
     CPUState *cpu;
-#if defined(TARGET_S390X)
-    S390CPU *s390_cpu;
-    CPUS390XState *env;
-#endif
 
     CPU_FOREACH(cpu) {
         CpuInfoFastList *info = g_malloc0(sizeof(*info));
@@ -2218,12 +2150,6 @@ CpuInfoFastList *qmp_query_cpus_fast(Error **errp)
             info->value->props = props;
         }
 
-#if defined(TARGET_S390X)
-        s390_cpu = S390_CPU(cpu);
-        env = &s390_cpu->env;
-        info->value->arch = CPU_INFO_ARCH_S390;
-        info->value->u.s390.cpu_state = env->cpu_state;
-#endif
         if (!cur_item) {
             head = cur_item = info;
         } else {

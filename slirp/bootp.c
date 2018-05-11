@@ -24,11 +24,6 @@
 #include "qemu/osdep.h"
 #include "slirp.h"
 
-#if defined(_WIN32)
-/* Windows ntohl() returns an u_long value.
- * Add a type cast to match the format strings. */
-# define ntohl(n) ((uint32_t)ntohl(n))
-#endif
 
 /* XXX: only DHCP is supported */
 

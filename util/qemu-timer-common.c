@@ -27,23 +27,6 @@
 /***********************************************************/
 /* real time host monotonic timer */
 
-#ifdef _WIN32
-
-int64_t clock_freq;
-
-static void __attribute__((constructor)) init_get_clock(void)
-{
-    LARGE_INTEGER freq;
-    int ret;
-    ret = QueryPerformanceFrequency(&freq);
-    if (ret == 0) {
-        fprintf(stderr, "Could not calibrate ticks\n");
-        exit(1);
-    }
-    clock_freq = freq.QuadPart;
-}
-
-#else
 
 int use_rt_clock;
 
@@ -59,4 +42,3 @@ static void __attribute__((constructor)) init_get_clock(void)
     }
 #endif
 }
-#endif

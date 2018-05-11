@@ -147,7 +147,6 @@ static void test_to_from_buf(void)
 
 static void test_io(void)
 {
-#ifndef _WIN32
 /* socketpair(PF_UNIX) which does not exist on windows */
 
     int sv[2];
@@ -253,7 +252,6 @@ static void test_io(void)
        g_free(buf);
        g_free(siov);
      }
-#endif
 }
 
 static void test_discard_front(void)

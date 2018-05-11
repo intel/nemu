@@ -20,7 +20,6 @@
 #ifndef MEMORY_INTERNAL_H
 #define MEMORY_INTERNAL_H
 
-#ifndef CONFIG_USER_ONLY
 static inline AddressSpaceDispatch *flatview_to_dispatch(FlatView *fv)
 {
     return fv->dispatch;
@@ -107,5 +106,4 @@ void memory_notdirty_write_prepare(NotDirtyInfo *ndi,
  */
 void memory_notdirty_write_complete(NotDirtyInfo *ndi);
 
-#endif
 #endif

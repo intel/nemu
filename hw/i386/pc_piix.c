@@ -48,10 +48,6 @@
 #include "cpu.h"
 #include "qapi/error.h"
 #include "qemu/error-report.h"
-#ifdef CONFIG_XEN
-#include <xen/hvm/hvm_info_table.h>
-#include "hw/xen/xen_pt.h"
-#endif
 #include "migration/global_state.h"
 #include "migration/misc.h"
 #include "kvm_i386.h"
@@ -377,30 +373,6 @@ static void pc_init_isa(MachineState *machine)
     pc_init1(machine, TYPE_I440FX_PCI_HOST_BRIDGE, TYPE_I440FX_PCI_DEVICE);
 }
 
-#ifdef CONFIG_XEN
-static void pc_xen_hvm_init_pci(MachineState *machine)
-{
-    const char *pci_type = has_igd_gfx_passthru ?
-                TYPE_IGD_PASSTHROUGH_I440FX_PCI_DEVICE : TYPE_I440FX_PCI_DEVICE;
-
-    pc_init1(machine,
-             TYPE_I440FX_PCI_HOST_BRIDGE,
-             pci_type);
-}
-
-static void pc_xen_hvm_init(MachineState *machine)
-{
-    PCMachineState *pcms = PC_MACHINE(machine);
-
-    if (!xen_enabled()) {
-        error_report("xenfv machine requires the xen accelerator");
-        exit(1);
-    }
-
-    pc_xen_hvm_init_pci(machine);
-    pci_create_simple(pcms->bus, -1, "xen-platform");
-}
-#endif
 
 #define DEFINE_I440FX_MACHINE(suffix, name, compatfn, optionfn) \
     static void pc_init_##suffix(MachineState *machine) \
@@ -1124,14 +1096,3 @@ DEFINE_PC_MACHINE(isapc, "isapc", pc_init_isa,
                   isapc_machine_options);
 
 
-#ifdef CONFIG_XEN
-static void xenfv_machine_options(MachineClass *m)
-{
-    m->desc = "Xen Fully-virtualized PC";
-    m->max_cpus = HVM_MAX_VCPUS;
-    m->default_machine_opts = "accel=xen";
-}
-
-DEFINE_PC_MACHINE(xenfv, "xenfv", pc_xen_hvm_init,
-                  xenfv_machine_options);
-#endif

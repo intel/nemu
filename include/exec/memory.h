@@ -14,7 +14,6 @@
 #ifndef MEMORY_H
 #define MEMORY_H
 
-#ifndef CONFIG_USER_ONLY
 
 #include "exec/cpu-common.h"
 #include "exec/hwaddr.h"
@@ -506,7 +505,6 @@ void memory_region_init_resizeable_ram(MemoryRegion *mr,
                                                        uint64_t length,
                                                        void *host),
                                        Error **errp);
-#ifdef __linux__
 /**
  * memory_region_init_ram_from_file:  Initialize RAM memory region with a
  *                                    mmap-ed backend.
@@ -556,7 +554,6 @@ void memory_region_init_ram_from_fd(MemoryRegion *mr,
                                     bool share,
                                     int fd,
                                     Error **errp);
-#endif
 
 /**
  * memory_region_init_ram_ptr:  Initialize RAM memory region from a
@@ -2012,6 +2009,5 @@ address_space_write_cached(MemoryRegionCache *cache, hwaddr addr,
     address_space_write(cache->as, cache->xlat + addr, MEMTXATTRS_UNSPECIFIED, buf, len);
 }
 
-#endif
 
 #endif

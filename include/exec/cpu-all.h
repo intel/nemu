@@ -149,23 +149,6 @@ static inline void tswap64s(uint64_t *s)
 
 /* MMU memory access macros */
 
-#if defined(CONFIG_USER_ONLY)
-#include "exec/user/abitypes.h"
-
-/* On some host systems the guest address space is reserved on the host.
- * This allows the guest address space to be offset to a convenient location.
- */
-extern unsigned long guest_base;
-extern int have_guest_base;
-extern unsigned long reserved_va;
-
-#if HOST_LONG_BITS <= TARGET_VIRT_ADDR_SPACE_BITS
-#define GUEST_ADDR_MAX (~0ul)
-#else
-#define GUEST_ADDR_MAX (reserved_va ? reserved_va - 1 : \
-                                    (1ul << TARGET_VIRT_ADDR_SPACE_BITS) - 1)
-#endif
-#else
 
 #include "exec/hwaddr.h"
 uint32_t lduw_phys(AddressSpace *as, hwaddr addr);
@@ -213,7 +196,6 @@ void address_space_stl_cached(MemoryRegionCache *cache, hwaddr addr, uint32_t va
                             MemTxAttrs attrs, MemTxResult *result);
 void address_space_stq_cached(MemoryRegionCache *cache, hwaddr addr, uint64_t val,
                             MemTxAttrs attrs, MemTxResult *result);
-#endif
 
 /* page related stuff */
 
@@ -252,22 +234,7 @@ extern intptr_t qemu_host_page_mask;
 /* Invalidate the TLB entry immediately, helpful for s390x
  * Low-Address-Protection. Used with PAGE_WRITE in tlb_set_page_with_attrs() */
 #define PAGE_WRITE_INV 0x0040
-#if defined(CONFIG_BSD) && defined(CONFIG_USER_ONLY)
-/* FIXME: Code that sets/uses this is broken and needs to go away.  */
-#define PAGE_RESERVED  0x0020
-#endif
 
-#if defined(CONFIG_USER_ONLY)
-void page_dump(FILE *f);
-
-typedef int (*walk_memory_regions_fn)(void *, target_ulong,
-                                      target_ulong, unsigned long);
-int walk_memory_regions(void *, walk_memory_regions_fn);
-
-int page_get_flags(target_ulong address);
-void page_set_flags(target_ulong start, target_ulong end, int flags);
-int page_check_range(target_ulong start, target_ulong len, int flags);
-#endif
 
 CPUArchState *cpu_copy(CPUArchState *env);
 
@@ -323,7 +290,6 @@ CPUArchState *cpu_copy(CPUArchState *env);
      | CPU_INTERRUPT_TGT_EXT_3   \
      | CPU_INTERRUPT_TGT_EXT_4)
 
-#if !defined(CONFIG_USER_ONLY)
 
 /* Flags stored in the low bits of the TLB virtual address.  These are
  * defined so that fast path ram access is all zeros.
@@ -345,7 +311,6 @@ CPUArchState *cpu_copy(CPUArchState *env);
 
 void dump_exec_info(FILE *f, fprintf_function cpu_fprintf);
 void dump_opcount_info(FILE *f, fprintf_function cpu_fprintf);
-#endif /* !CONFIG_USER_ONLY */
 
 int cpu_memory_rw_debug(CPUState *cpu, target_ulong addr,
                         uint8_t *buf, int len, int is_write);

@@ -29,11 +29,7 @@ void qtest_init(const char *qtest_chrdev, const char *qtest_log, Error **errp);
 
 static inline int qtest_available(void)
 {
-#ifdef CONFIG_POSIX
     return 1;
-#else
-    return 0;
-#endif
 }
 
 #endif

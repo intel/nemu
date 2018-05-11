@@ -370,7 +370,6 @@ static bool cap_disas_host(disassemble_info *info, void *code, size_t size)
     return true;
 }
 
-#if !defined(CONFIG_USER_ONLY)
 /* Disassemble COUNT insns at PC for the target.  */
 static bool cap_disas_monitor(disassemble_info *info, uint64_t pc, int count)
 {
@@ -413,7 +412,6 @@ static bool cap_disas_monitor(disassemble_info *info, uint64_t pc, int count)
     cs_close(&handle);
     return true;
 }
-#endif /* !CONFIG_USER_ONLY */
 #else
 # define cap_disas_target(i, p, s)  false
 # define cap_disas_host(i, p, s)  false
@@ -519,16 +517,11 @@ void disas(FILE *out, void *code, unsigned long size)
     s.info.disassembler_options = (char *)"any";
     print_insn = print_insn_ppc;
     s.info.cap_arch = CS_ARCH_PPC;
-# ifdef _ARCH_PPC64
-    s.info.cap_mode = CS_MODE_64;
-# endif
 #elif defined(__riscv__)
     print_insn = print_insn_riscv;
 #elif defined(__aarch64__) && defined(CONFIG_ARM_A64_DIS)
     print_insn = print_insn_arm_a64;
     s.info.cap_arch = CS_ARCH_ARM64;
-#elif defined(__alpha__)
-    print_insn = print_insn_alpha;
 #elif defined(__sparc__)
     print_insn = print_insn_sparc;
     s.info.mach = bfd_mach_sparc_v9b;
@@ -542,8 +535,6 @@ void disas(FILE *out, void *code, unsigned long size)
     print_insn = print_insn_little_mips;
 #elif defined(__m68k__)
     print_insn = print_insn_m68k;
-#elif defined(__s390__)
-    print_insn = print_insn_s390;
 #elif defined(__hppa__)
     print_insn = print_insn_hppa;
 #endif
@@ -580,7 +571,6 @@ const char *lookup_symbol(target_ulong orig_addr)
     return symbol;
 }
 
-#if !defined(CONFIG_USER_ONLY)
 
 #include "monitor/monitor.h"
 
@@ -641,4 +631,3 @@ void monitor_disas(Monitor *mon, CPUState *cpu,
         pc += count;
     }
 }
-#endif

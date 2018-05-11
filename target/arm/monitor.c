@@ -46,7 +46,6 @@ static GICCapabilityList *gic_cap_list_add(GICCapabilityList *head,
 
 static inline void gic_cap_kvm_probe(GICCapability *v2, GICCapability *v3)
 {
-#ifdef CONFIG_KVM
     int fdarray[3];
 
     if (!kvm_arm_create_scratch_host_vcpu(NULL, fdarray, NULL)) {
@@ -64,7 +63,6 @@ static inline void gic_cap_kvm_probe(GICCapability *v2, GICCapability *v3)
     }
 
     kvm_arm_destroy_scratch_host_vcpu(fdarray);
-#endif
 }
 
 GICCapabilityList *qmp_query_gic_capabilities(Error **errp)

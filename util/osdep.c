@@ -78,43 +78,23 @@ static int qemu_mprotect__osdep(void *addr, size_t size, int prot)
     g_assert(!((uintptr_t)addr & ~qemu_real_host_page_mask));
     g_assert(!(size & ~qemu_real_host_page_mask));
 
-#ifdef _WIN32
-    DWORD old_protect;
-
-    if (!VirtualProtect(addr, size, prot, &old_protect)) {
-        error_report("%s: VirtualProtect failed with error code %ld",
-                     __func__, GetLastError());
-        return -1;
-    }
-    return 0;
-#else
     if (mprotect(addr, size, prot)) {
         error_report("%s: mprotect failed: %s", __func__, strerror(errno));
         return -1;
     }
     return 0;
-#endif
 }
 
 int qemu_mprotect_rwx(void *addr, size_t size)
 {
-#ifdef _WIN32
-    return qemu_mprotect__osdep(addr, size, PAGE_EXECUTE_READWRITE);
-#else
     return qemu_mprotect__osdep(addr, size, PROT_READ | PROT_WRITE | PROT_EXEC);
-#endif
 }
 
 int qemu_mprotect_none(void *addr, size_t size)
 {
-#ifdef _WIN32
-    return qemu_mprotect__osdep(addr, size, PAGE_NOACCESS);
-#else
     return qemu_mprotect__osdep(addr, size, PROT_NONE);
-#endif
 }
 
-#ifndef _WIN32
 
 static int fcntl_op_setlk = -1;
 static int fcntl_op_getlk = -1;
@@ -277,7 +257,6 @@ int qemu_lock_fd_test(int fd, int64_t start, int64_t len, bool exclusive)
         return fl.l_type == F_UNLCK ? 0 : -EAGAIN;
     }
 }
-#endif
 
 /*
  * Opens a file with FD_CLOEXEC set
@@ -287,7 +266,6 @@ int qemu_open(const char *name, int flags, ...)
     int ret;
     int mode = 0;
 
-#ifndef _WIN32
     const char *fdset_id_str;
 
     /* Attempt dup of fd from fd set */
@@ -320,7 +298,6 @@ int qemu_open(const char *name, int flags, ...)
 
         return dupfd;
     }
-#endif
 
     if (flags & O_CREAT) {
         va_list ap;
@@ -455,7 +432,6 @@ const char *qemu_hw_version(void)
 
 void fips_set_state(bool requested)
 {
-#ifdef __linux__
     if (requested) {
         FILE *fds = fopen("/proc/sys/crypto/fips_enabled", "r");
         if (fds != NULL) {
@@ -463,9 +439,6 @@ void fips_set_state(bool requested)
             fclose(fds);
         }
     }
-#else
-    fips_enabled = false;
-#endif /* __linux__ */
 
 #ifdef _FIPS_DEBUG
     fprintf(stderr, "FIPS mode %s (requested %s)\n",
@@ -479,27 +452,9 @@ bool fips_get_state(void)
     return fips_enabled;
 }
 
-#ifdef _WIN32
-static void socket_cleanup(void)
-{
-    WSACleanup();
-}
-#endif
 
 int socket_init(void)
 {
-#ifdef _WIN32
-    WSADATA Data;
-    int ret, err;
-
-    ret = WSAStartup(MAKEWORD(2, 2), &Data);
-    if (ret != 0) {
-        err = WSAGetLastError();
-        fprintf(stderr, "WSAStartup: %d\n", err);
-        return -1;
-    }
-    atexit(socket_cleanup);
-#endif
     return 0;
 }
 

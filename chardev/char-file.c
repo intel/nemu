@@ -27,11 +27,7 @@
 #include "qemu/option.h"
 #include "chardev/char.h"
 
-#ifdef _WIN32
-#include "chardev/char-win.h"
-#else
 #include "chardev/char-fd.h"
-#endif
 
 static void qmp_chardev_open_file(Chardev *chr,
                                   ChardevBackend *backend,
@@ -39,35 +35,6 @@ static void qmp_chardev_open_file(Chardev *chr,
                                   Error **errp)
 {
     ChardevFile *file = backend->u.file.data;
-#ifdef _WIN32
-    HANDLE out;
-    DWORD accessmode;
-    DWORD flags;
-
-    if (file->has_in) {
-        error_setg(errp, "input file not supported");
-        return;
-    }
-
-    if (file->has_append && file->append) {
-        /* Append to file if it already exists. */
-        accessmode = FILE_GENERIC_WRITE & ~FILE_WRITE_DATA;
-        flags = OPEN_ALWAYS;
-    } else {
-        /* Truncate file if it already exists. */
-        accessmode = GENERIC_WRITE;
-        flags = CREATE_ALWAYS;
-    }
-
-    out = CreateFile(file->out, accessmode, FILE_SHARE_READ, NULL, flags,
-                     FILE_ATTRIBUTE_NORMAL, NULL);
-    if (out == INVALID_HANDLE_VALUE) {
-        error_setg(errp, "open %s failed", file->out);
-        return;
-    }
-
-    win_chr_set_file(chr, out, false);
-#else
     int flags, in = -1, out;
 
     flags = O_WRONLY | O_CREAT | O_BINARY;
@@ -92,7 +59,6 @@ static void qmp_chardev_open_file(Chardev *chr,
     }
 
     qemu_chr_open_fd(chr, in, out);
-#endif
 }
 
 static void qemu_chr_parse_file_out(QemuOpts *opts, ChardevBackend *backend,
@@ -124,11 +90,7 @@ static void char_file_class_init(ObjectClass *oc, void *data)
 
 static const TypeInfo char_file_type_info = {
     .name = TYPE_CHARDEV_FILE,
-#ifdef _WIN32
-    .parent = TYPE_CHARDEV_WIN,
-#else
     .parent = TYPE_CHARDEV_FD,
-#endif
     .class_init = char_file_class_init,
 };
 

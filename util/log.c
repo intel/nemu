@@ -85,12 +85,7 @@ void qemu_set_log(int log_flags)
 
             setvbuf(qemu_logfile, logfile_buf, _IOLBF, sizeof(logfile_buf));
         } else {
-#if defined(_WIN32)
-            /* Win32 doesn't support line-buffering, so use unbuffered output. */
-            setvbuf(qemu_logfile, NULL, _IONBF, 0);
-#else
             setvbuf(qemu_logfile, NULL, _IOLBF, 0);
-#endif
             log_append = 1;
         }
     }

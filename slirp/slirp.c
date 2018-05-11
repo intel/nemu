@@ -31,9 +31,7 @@
 #include "hw/hw.h"
 #include "qemu/cutils.h"
 
-#ifndef _WIN32
 #include <net/if.h>
-#endif
 
 /* host loopback address */
 struct in_addr loopback_addr;
@@ -51,77 +49,15 @@ static QTAILQ_HEAD(slirp_instances, Slirp) slirp_instances =
     QTAILQ_HEAD_INITIALIZER(slirp_instances);
 
 static struct in_addr dns_addr;
-#ifndef _WIN32
 static struct in6_addr dns6_addr;
-#endif
 static u_int dns_addr_time;
-#ifndef _WIN32
 static u_int dns6_addr_time;
-#endif
 
 #define TIMEOUT_FAST 2  /* milliseconds */
 #define TIMEOUT_SLOW 499  /* milliseconds */
 /* for the aging of certain requests like DNS */
 #define TIMEOUT_DEFAULT 1000  /* milliseconds */
 
-#ifdef _WIN32
-
-int get_dns_addr(struct in_addr *pdns_addr)
-{
-    FIXED_INFO *FixedInfo=NULL;
-    ULONG    BufLen;
-    DWORD    ret;
-    IP_ADDR_STRING *pIPAddr;
-    struct in_addr tmp_addr;
-
-    if (dns_addr.s_addr != 0 && (curtime - dns_addr_time) < TIMEOUT_DEFAULT) {
-        *pdns_addr = dns_addr;
-        return 0;
-    }
-
-    FixedInfo = (FIXED_INFO *)GlobalAlloc(GPTR, sizeof(FIXED_INFO));
-    BufLen = sizeof(FIXED_INFO);
-
-    if (ERROR_BUFFER_OVERFLOW == GetNetworkParams(FixedInfo, &BufLen)) {
-        if (FixedInfo) {
-            GlobalFree(FixedInfo);
-            FixedInfo = NULL;
-        }
-        FixedInfo = GlobalAlloc(GPTR, BufLen);
-    }
-
-    if ((ret = GetNetworkParams(FixedInfo, &BufLen)) != ERROR_SUCCESS) {
-        printf("GetNetworkParams failed. ret = %08x\n", (u_int)ret );
-        if (FixedInfo) {
-            GlobalFree(FixedInfo);
-            FixedInfo = NULL;
-        }
-        return -1;
-    }
-
-    pIPAddr = &(FixedInfo->DnsServerList);
-    inet_aton(pIPAddr->IpAddress.String, &tmp_addr);
-    *pdns_addr = tmp_addr;
-    dns_addr = tmp_addr;
-    dns_addr_time = curtime;
-    if (FixedInfo) {
-        GlobalFree(FixedInfo);
-        FixedInfo = NULL;
-    }
-    return 0;
-}
-
-int get_dns6_addr(struct in6_addr *pdns6_addr, uint32_t *scope_id)
-{
-    return -1;
-}
-
-static void winsock_cleanup(void)
-{
-    WSACleanup();
-}
-
-#else
 
 static int get_dns_addr_cached(void *pdns_addr, void *cached_addr,
                                socklen_t addrlen,
@@ -247,24 +183,16 @@ int get_dns6_addr(struct in6_addr *pdns6_addr, uint32_t *scope_id)
                                     scope_id, &dns6_addr_time);
 }
 
-#endif
 
 static void slirp_init_once(void)
 {
     static int initialized;
-#ifdef _WIN32
-    WSADATA Data;
-#endif
 
     if (initialized) {
         return;
     }
     initialized = 1;
 
-#ifdef _WIN32
-    WSAStartup(MAKEWORD(2,0), &Data);
-    atexit(winsock_cleanup);
-#endif
 
     loopback_addr.s_addr = htonl(INADDR_LOOPBACK);
     loopback_mask = htonl(IN_CLASSA_NET);
@@ -1284,13 +1212,7 @@ static int slirp_socket_pre_load(void *opaque)
     return 0;
 }
 
-#ifndef _WIN32
 #define VMSTATE_SIN4_ADDR(f, s, t) VMSTATE_UINT32_TEST(f, s, t)
-#else
-/* Win uses u_long rather than uint32_t - but it's still 32bits long */
-#define VMSTATE_SIN4_ADDR(f, s, t) VMSTATE_SINGLE_TEST(f, s, t, 0, \
-                                       vmstate_info_uint32, u_long)
-#endif
 
 /* The OS provided ss_family field isn't that portable; it's size
  * and type varies (16/8 bit, signed, unsigned)

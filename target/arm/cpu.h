@@ -578,10 +578,6 @@ typedef struct CPUARMState {
         uint32_t cregs[16];
     } iwmmxt;
 
-#if defined(CONFIG_USER_ONLY)
-    /* For usermode syscall translation.  */
-    int eabi;
-#endif
 
     struct CPUBreakpoint *cpu_breakpoint[16];
     struct CPUWatchpoint *cpu_watchpoint[16];
@@ -846,9 +842,7 @@ uint64_t arm_cpu_mp_affinity(int idx, uint8_t clustersz);
 
 #define ENV_OFFSET offsetof(ARMCPU, env)
 
-#ifndef CONFIG_USER_ONLY
 extern const struct VMStateDescription vmstate_arm_cpu;
-#endif
 
 void arm_cpu_do_interrupt(CPUState *cpu);
 void arm_v7m_cpu_do_interrupt(CPUState *cpu);
@@ -1454,7 +1448,6 @@ static inline int arm_feature(CPUARMState *env, int feature)
     return (env->features & (1ULL << feature)) != 0;
 }
 
-#if !defined(CONFIG_USER_ONLY)
 /* Return true if exception levels below EL3 are in secure state,
  * or would be following an exception return to that level.
  * Unlike arm_is_secure() (which is always a question about the
@@ -1498,17 +1491,6 @@ static inline bool arm_is_secure(CPUARMState *env)
     return arm_is_secure_below_el3(env);
 }
 
-#else
-static inline bool arm_is_secure_below_el3(CPUARMState *env)
-{
-    return false;
-}
-
-static inline bool arm_is_secure(CPUARMState *env)
-{
-    return false;
-}
-#endif
 
 /* Return true if the specified exception level is running in AArch64 state. */
 static inline bool arm_el_is_aa64(CPUARMState *env, int el)
@@ -1590,14 +1572,7 @@ uint32_t arm_phys_excp_target_el(CPUState *cs, uint32_t excp_idx,
                                  uint32_t cur_el, bool secure);
 
 /* Interface between CPU and Interrupt controller.  */
-#ifndef CONFIG_USER_ONLY
 bool armv7m_nvic_can_take_pending_exception(void *opaque);
-#else
-static inline bool armv7m_nvic_can_take_pending_exception(void *opaque)
-{
-    return true;
-}
-#endif
 /**
  * armv7m_nvic_set_pending: mark the specified exception as pending
  * @opaque: the NVIC
@@ -1677,14 +1652,7 @@ int armv7m_nvic_raw_execution_priority(void *opaque);
  * @secure: the security state to test
  * This corresponds to the pseudocode IsReqExecPriNeg().
  */
-#ifndef CONFIG_USER_ONLY
 bool armv7m_nvic_neg_prio_requested(void *opaque, bool secure);
-#else
-static inline bool armv7m_nvic_neg_prio_requested(void *opaque, bool secure)
-{
-    return false;
-}
-#endif
 
 /* Interface for defining coprocessor registers.
  * Registers are defined in tables of arm_cp_reginfo structs
@@ -2176,15 +2144,11 @@ bool write_cpustate_to_list(ARMCPU *cpu);
 #define ARM_CPUID_TI915T      0x54029152
 #define ARM_CPUID_TI925T      0x54029252
 
-#if defined(CONFIG_USER_ONLY)
-#define TARGET_PAGE_BITS 12
-#else
 /* ARMv7 and later CPUs have 4K pages minimum, but ARMv5 and v6
  * have to support 1K tiny pages.
  */
 #define TARGET_PAGE_BITS_VARY
 #define TARGET_PAGE_BITS_MIN 10
-#endif
 
 #if defined(TARGET_AARCH64)
 #  define TARGET_PHYS_ADDR_SPACE_BITS 48
@@ -2657,9 +2621,7 @@ static inline bool arm_sctlr_b(CPUARMState *env)
          * let linux-user ignore the fact that it conflicts with SCTLR_B.
          * This lets people run BE32 binaries with "-cpu any".
          */
-#ifndef CONFIG_USER_ONLY
         !arm_feature(env, ARM_FEATURE_V7) &&
-#endif
         (env->cp15.sctlr_el[1] & SCTLR_B) != 0;
 }
 
@@ -2671,20 +2633,6 @@ static inline bool arm_cpu_data_is_big_endian(CPUARMState *env)
     /* In 32bit endianness is determined by looking at CPSR's E bit */
     if (!is_a64(env)) {
         return
-#ifdef CONFIG_USER_ONLY
-            /* In system mode, BE32 is modelled in line with the
-             * architecture (as word-invariant big-endianness), where loads
-             * and stores are done little endian but from addresses which
-             * are adjusted by XORing with the appropriate constant. So the
-             * endianness to use for the raw data access is not affected by
-             * SCTLR.B.
-             * In user mode, however, we model BE32 as byte-invariant
-             * big-endianness (because user-only code cannot tell the
-             * difference), and so we need to use a data access endianness
-             * that depends on SCTLR.B.
-             */
-            arm_sctlr_b(env) ||
-#endif
                 ((env->uncached_cpsr & CPSR_E) ? 1 : 0);
     }
 
@@ -2798,36 +2746,13 @@ static inline bool arm_cpu_data_is_big_endian(CPUARMState *env)
 
 static inline bool bswap_code(bool sctlr_b)
 {
-#ifdef CONFIG_USER_ONLY
-    /* BE8 (SCTLR.B = 0, TARGET_WORDS_BIGENDIAN = 1) is mixed endian.
-     * The invalid combination SCTLR.B=1/CPSR.E=1/TARGET_WORDS_BIGENDIAN=0
-     * would also end up as a mixed-endian mode with BE code, LE data.
-     */
-    return
-#ifdef TARGET_WORDS_BIGENDIAN
-        1 ^
-#endif
-        sctlr_b;
-#else
     /* All code access in ARM is little endian, and there are no loaders
      * doing swaps that need to be reversed
      */
     return 0;
-#endif
 }
 
-#ifdef CONFIG_USER_ONLY
-static inline bool arm_cpu_bswap_data(CPUARMState *env)
-{
-    return
-#ifdef TARGET_WORDS_BIGENDIAN
-       1 ^
-#endif
-       arm_cpu_data_is_big_endian(env);
-}
-#endif
 
-#ifndef CONFIG_USER_ONLY
 /**
  * arm_regime_tbi0:
  * @env: CPUARMState
@@ -2849,18 +2774,6 @@ uint32_t arm_regime_tbi0(CPUARMState *env, ARMMMUIdx mmu_idx);
  * Returns: the TBI1 value.
  */
 uint32_t arm_regime_tbi1(CPUARMState *env, ARMMMUIdx mmu_idx);
-#else
-/* We can't handle tagged addresses properly in user-only mode */
-static inline uint32_t arm_regime_tbi0(CPUARMState *env, ARMMMUIdx mmu_idx)
-{
-    return 0;
-}
-
-static inline uint32_t arm_regime_tbi1(CPUARMState *env, ARMMMUIdx mmu_idx)
-{
-    return 0;
-}
-#endif
 
 void cpu_get_tb_cpu_state(CPUARMState *env, target_ulong *pc,
                           target_ulong *cs_base, uint32_t *flags);
@@ -2871,7 +2784,6 @@ enum {
     QEMU_PSCI_CONDUIT_HVC = 2,
 };
 
-#ifndef CONFIG_USER_ONLY
 /* Return the address space index to use for a memory access */
 static inline int arm_asidx_from_attrs(CPUState *cs, MemTxAttrs attrs)
 {
@@ -2886,7 +2798,6 @@ static inline AddressSpace *arm_addressspace(CPUState *cs, MemTxAttrs attrs)
 {
     return cpu_get_address_space(cs, arm_asidx_from_attrs(cs, attrs));
 }
-#endif
 
 /**
  * arm_register_el_change_hook:

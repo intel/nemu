@@ -58,12 +58,10 @@ static void progress_simple_init(void)
     state.end = progress_simple_end;
 }
 
-#ifdef CONFIG_POSIX
 static void sigusr_print(int signal)
 {
     print_pending = 1;
 }
-#endif
 
 static void progress_dummy_print(void)
 {
@@ -79,7 +77,6 @@ static void progress_dummy_end(void)
 
 static void progress_dummy_init(void)
 {
-#ifdef CONFIG_POSIX
     struct sigaction action;
     sigset_t set;
 
@@ -100,7 +97,6 @@ static void progress_dummy_init(void)
     sigemptyset(&set);
     sigaddset(&set, SIGUSR1);
     pthread_sigmask(SIG_UNBLOCK, &set, NULL);
-#endif
 
     state.print = progress_dummy_print;
     state.end = progress_dummy_end;

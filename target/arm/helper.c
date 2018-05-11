@@ -16,7 +16,6 @@
 #include "sysemu/kvm.h"
 #include "fpu/softfloat.h"
 
-#ifndef CONFIG_USER_ONLY
 static bool get_phys_addr_lpae(CPUARMState *env, target_ulong address,
                                MMUAccessType access_type, ARMMMUIdx mmu_idx,
                                hwaddr *phys_ptr, MemTxAttrs *txattrs, int *prot,
@@ -27,7 +26,6 @@ static bool get_phys_addr_lpae(CPUARMState *env, target_ulong address,
 #define PMCRD   0x8
 #define PMCRC   0x4
 #define PMCRE   0x1
-#endif
 
 static uint64_t raw_read(CPUARMState *env, const ARMCPRegInfo *ri)
 {
@@ -231,7 +229,6 @@ void init_cpreg_list(ARMCPU *cpu)
     g_list_free(keys);
 }
 
-#ifndef CONFIG_USER_ONLY
 
 static uint64_t gt_get_countervalue(CPUARMState *env)
 {
@@ -313,7 +310,6 @@ void arm_gt_stimer_cb(void *opaque)
     gt_recalc_timer(cpu, GTIMER_SEC);
 }
 
-#endif
 
 void hw_watchpoint_update(ARMCPU *cpu, int n)
 {
@@ -550,12 +546,10 @@ void arm_cpu_list(FILE *f, fprintf_function cpu_fprintf)
     (*cpu_fprintf)(f, "Available CPUs:\n");
     g_slist_foreach(list, arm_cpu_list_entry, &s);
     g_slist_free(list);
-#ifdef CONFIG_KVM
     /* The 'host' CPU type is dynamically registered only if KVM is
      * enabled, so we have to special-case it here:
      */
     (*cpu_fprintf)(f, "  host (only available in KVM mode)\n");
-#endif
 }
 
 
@@ -1033,29 +1027,6 @@ void cpsr_write(CPUARMState *env, uint32_t val, uint32_t mask,
     env->uncached_cpsr = (env->uncached_cpsr & ~mask) | (val & mask);
 }
 
-#if defined(CONFIG_USER_ONLY)
-
-void switch_mode(CPUARMState *env, int mode)
-{
-    ARMCPU *cpu = arm_env_get_cpu(env);
-
-    if (mode != ARM_CPU_MODE_USR) {
-        cpu_abort(CPU(cpu), "Tried to switch out of user mode\n");
-    }
-}
-
-uint32_t arm_phys_excp_target_el(CPUState *cs, uint32_t excp_idx,
-                                 uint32_t cur_el, bool secure)
-{
-    return 1;
-}
-
-void aarch64_sync_64_to_32(CPUARMState *env)
-{
-    g_assert_not_reached();
-}
-
-#else
 
 void switch_mode(CPUARMState *env, int mode)
 {
@@ -1428,7 +1399,6 @@ void aarch64_sync_64_to_32(CPUARMState *env)
     env->regs[15] = env->pc;
 }
 
-#endif
 
 /* Convert a possible stage1+2 MMU index into the appropriate
  * stage 1 MMU index

@@ -658,31 +658,6 @@ static int pickNaNMulAdd(flag aIsQNaN, flag aIsSNaN, flag bIsQNaN, flag bIsSNaN,
         }
     }
 }
-#elif defined(TARGET_PPC)
-static int pickNaNMulAdd(flag aIsQNaN, flag aIsSNaN, flag bIsQNaN, flag bIsSNaN,
-                         flag cIsQNaN, flag cIsSNaN, flag infzero,
-                         float_status *status)
-{
-    /* For PPC, the (inf,zero,qnan) case sets InvalidOp, but we prefer
-     * to return an input NaN if we have one (ie c) rather than generating
-     * a default NaN
-     */
-    if (infzero) {
-        float_raise(float_flag_invalid, status);
-        return 2;
-    }
-
-    /* If fRA is a NaN return it; otherwise if fRB is a NaN return it;
-     * otherwise return fRC. Note that muladd on PPC is (fRA * fRC) + frB
-     */
-    if (aIsSNaN || aIsQNaN) {
-        return 0;
-    } else if (cIsSNaN || cIsQNaN) {
-        return 2;
-    } else {
-        return 1;
-    }
-}
 #else
 /* A default implementation: prefer a to b to c.
  * This is unlikely to actually match any real implementation.

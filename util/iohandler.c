@@ -29,9 +29,7 @@
 #include "block/aio.h"
 #include "qemu/main-loop.h"
 
-#ifndef _WIN32
 #include <sys/wait.h>
-#endif
 
 /* This context runs on top of main loop. We can't reuse qemu_aio_context
  * because iohandlers mustn't be polled by aio_poll(qemu_aio_context). */
@@ -76,7 +74,6 @@ void event_notifier_set_handler(EventNotifier *e,
 
 /* reaping of zombies.  right now we're not passing the status to
    anyone, but it would be possible to add a callback.  */
-#ifndef _WIN32
 typedef struct ChildProcessRecord {
     int pid;
     QLIST_ENTRY(ChildProcessRecord) next;
@@ -133,4 +130,3 @@ int qemu_add_child_watch(pid_t pid)
     QLIST_INSERT_HEAD(&child_watches, rec, next);
     return 0;
 }
-#endif

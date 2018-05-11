@@ -73,7 +73,6 @@ int qemu_memfd_create(const char *name, size_t size, bool hugetlb,
 
     htsize = htsize << MFD_HUGE_SHIFT;
 
-#ifdef CONFIG_LINUX
     int mfd = -1;
     unsigned int flags = MFD_CLOEXEC;
 
@@ -103,7 +102,6 @@ err:
     if (mfd >= 0) {
         close(mfd);
     }
-#endif
     error_setg_errno(errp, errno, "failed to create memfd");
     return -1;
 }
@@ -202,7 +200,6 @@ bool qemu_memfd_alloc_check(void)
  */
 bool qemu_memfd_check(void)
 {
-#ifdef CONFIG_LINUX
     static int memfd_check = MEMFD_TODO;
 
     if (memfd_check == MEMFD_TODO) {
@@ -216,7 +213,4 @@ bool qemu_memfd_check(void)
     }
 
     return memfd_check == MEMFD_OK;
-#else
-    return false;
-#endif
 }

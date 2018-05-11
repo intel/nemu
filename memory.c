@@ -1546,7 +1546,6 @@ void memory_region_init_resizeable_ram(MemoryRegion *mr,
     mr->dirty_log_mask = tcg_enabled() ? (1 << DIRTY_MEMORY_CODE) : 0;
 }
 
-#ifdef __linux__
 void memory_region_init_ram_from_file(MemoryRegion *mr,
                                       struct Object *owner,
                                       const char *name,
@@ -1580,7 +1579,6 @@ void memory_region_init_ram_from_fd(MemoryRegion *mr,
     mr->ram_block = qemu_ram_alloc_from_fd(size, mr, share, fd, errp);
     mr->dirty_log_mask = tcg_enabled() ? (1 << DIRTY_MEMORY_CODE) : 0;
 }
-#endif
 
 void memory_region_init_ram_ptr(MemoryRegion *mr,
                                 Object *owner,
@@ -2991,11 +2989,9 @@ static void mtree_print_flatview(gpointer key, gpointer value,
         range++;
     }
 
-#if !defined(CONFIG_USER_ONLY)
     if (fvi->dispatch_tree && view->root) {
         mtree_print_dispatch(p, f, view->dispatch, view->root);
     }
-#endif
 
     p(f, "\n");
 }

@@ -23,9 +23,7 @@
 #include "hw/virtio/virtio-blk.h"
 #include "dataplane/virtio-blk.h"
 #include "scsi/constants.h"
-#ifdef __linux__
 # include <scsi/sg.h>
-#endif
 #include "hw/virtio/virtio-bus.h"
 #include "hw/virtio/virtio-access.h"
 
@@ -146,7 +144,6 @@ out:
     aio_context_release(blk_get_aio_context(s->conf.conf.blk));
 }
 
-#ifdef __linux__
 
 typedef struct {
     VirtIOBlockReq *req;
@@ -197,7 +194,6 @@ out:
     g_free(ioctl_req);
 }
 
-#endif
 
 static VirtIOBlockReq *virtio_blk_get_request(VirtIOBlock *s, VirtQueue *vq)
 {
@@ -217,11 +213,9 @@ static int virtio_blk_handle_scsi_req(VirtIOBlockReq *req)
     VirtQueueElement *elem = &req->elem;
     VirtIOBlock *blk = req->dev;
 
-#ifdef __linux__
     int i;
     VirtIOBlockIoctlReq *ioctl_req;
     BlockAIOCB *acb;
-#endif
 
     /*
      * We require at least one output segment each for the virtio_blk_outhdr
@@ -254,7 +248,6 @@ static int virtio_blk_handle_scsi_req(VirtIOBlockReq *req)
         goto fail;
     }
 
-#ifdef __linux__
     ioctl_req = g_new0(VirtIOBlockIoctlReq, 1);
     ioctl_req->req = req;
     ioctl_req->hdr.interface_id = 'S';
@@ -306,9 +299,6 @@ static int virtio_blk_handle_scsi_req(VirtIOBlockReq *req)
         goto fail;
     }
     return -EINPROGRESS;
-#else
-    abort();
-#endif
 
 fail:
     /* Just put anything nonzero so that the ioctl fails in the guest.  */
@@ -1017,9 +1007,7 @@ static Property virtio_blk_properties[] = {
     DEFINE_BLOCK_CHS_PROPERTIES(VirtIOBlock, conf.conf),
     DEFINE_PROP_STRING("serial", VirtIOBlock, conf.serial),
     DEFINE_PROP_BIT("config-wce", VirtIOBlock, conf.config_wce, 0, true),
-#ifdef __linux__
     DEFINE_PROP_BIT("scsi", VirtIOBlock, conf.scsi, 0, false),
-#endif
     DEFINE_PROP_BIT("request-merging", VirtIOBlock, conf.request_merging, 0,
                     true),
     DEFINE_PROP_UINT16("num-queues", VirtIOBlock, conf.num_queues, 1),

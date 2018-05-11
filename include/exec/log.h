@@ -48,13 +48,6 @@ static inline void log_disas(void *code, unsigned long size)
     disas(qemu_logfile, code, size);
 }
 
-#if defined(CONFIG_USER_ONLY)
-/* page_dump() output to the log file: */
-static inline void log_page_dump(void)
-{
-    page_dump(qemu_logfile);
-}
-#endif
 #endif
 
 #endif

@@ -277,7 +277,6 @@ static void test_multi_co_mutex_2_30(void)
 
 /* Same test with fair mutexes, for performance comparison.  */
 
-#ifdef CONFIG_LINUX
 #include "qemu/futex.h"
 
 /* The nodes for the mutex reside in this structure (on which we try to avoid
@@ -374,7 +373,6 @@ static void test_multi_fair_mutex_10(void)
 {
     test_multi_fair_mutex(NUM_CONTEXTS, 10);
 }
-#endif
 
 /* Same test with pthread mutexes, for performance comparison and
  * portability.  */
@@ -443,17 +441,13 @@ int main(int argc, char **argv)
         g_test_add_func("/aio/multi/schedule", test_multi_co_schedule_1);
         g_test_add_func("/aio/multi/mutex/contended", test_multi_co_mutex_1);
         g_test_add_func("/aio/multi/mutex/handoff", test_multi_co_mutex_2_3);
-#ifdef CONFIG_LINUX
         g_test_add_func("/aio/multi/mutex/mcs", test_multi_fair_mutex_1);
-#endif
         g_test_add_func("/aio/multi/mutex/pthread", test_multi_mutex_1);
     } else {
         g_test_add_func("/aio/multi/schedule", test_multi_co_schedule_10);
         g_test_add_func("/aio/multi/mutex/contended", test_multi_co_mutex_10);
         g_test_add_func("/aio/multi/mutex/handoff", test_multi_co_mutex_2_30);
-#ifdef CONFIG_LINUX
         g_test_add_func("/aio/multi/mutex/mcs", test_multi_fair_mutex_10);
-#endif
         g_test_add_func("/aio/multi/mutex/pthread", test_multi_mutex_10);
     }
     return g_test_run();

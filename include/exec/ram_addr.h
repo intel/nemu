@@ -19,7 +19,6 @@
 #ifndef RAM_ADDR_H
 #define RAM_ADDR_H
 
-#ifndef CONFIG_USER_ONLY
 #include "hw/xen/xen.h"
 #include "exec/ramlist.h"
 
@@ -285,7 +284,6 @@ static inline void cpu_physical_memory_set_dirty_range(ram_addr_t start,
     xen_hvm_modified_memory(start, length);
 }
 
-#if !defined(_WIN32)
 static inline void cpu_physical_memory_set_dirty_lebitmap(unsigned long *bitmap,
                                                           ram_addr_t start,
                                                           ram_addr_t pages)
@@ -359,7 +357,6 @@ static inline void cpu_physical_memory_set_dirty_lebitmap(unsigned long *bitmap,
         }
     }
 }
-#endif /* not _WIN32 */
 
 bool cpu_physical_memory_test_and_clear_dirty(ram_addr_t start,
                                               ram_addr_t length,
@@ -446,5 +443,4 @@ uint64_t cpu_physical_memory_sync_dirty_bitmap(RAMBlock *rb,
 
     return num_dirty;
 }
-#endif
 #endif

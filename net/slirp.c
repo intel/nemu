@@ -26,10 +26,8 @@
 #include "net/slirp.h"
 
 
-#ifndef _WIN32
 #include <pwd.h>
 #include <sys/wait.h>
-#endif
 #include "net/net.h"
 #include "clients.h"
 #include "hub.h"
@@ -81,9 +79,7 @@ typedef struct SlirpState {
     QTAILQ_ENTRY(SlirpState) entry;
     Slirp *slirp;
     Notifier exit_notifier;
-#ifndef _WIN32
     gchar *smb_dir;
-#endif
 } SlirpState;
 
 static struct slirp_config_str *slirp_configs;
@@ -97,15 +93,11 @@ static int slirp_hostfwd(SlirpState *s, const char *redir_str,
 static int slirp_guestfwd(SlirpState *s, const char *config_str,
                           int legacy_format, Error **errp);
 
-#ifndef _WIN32
 static const char *legacy_smb_export;
 
 static int slirp_smb(SlirpState *s, const char *exported_dir,
                      struct in_addr vserver_addr, Error **errp);
 static void slirp_smb_cleanup(SlirpState *s);
-#else
-static inline void slirp_smb_cleanup(SlirpState *s) { }
-#endif
 
 void slirp_output(void *opaque, const uint8_t *pkt, int pkt_len)
 {
@@ -168,9 +160,7 @@ static int net_slirp_init(NetClientState *peer, const char *model,
     struct in6_addr ip6_prefix;
     struct in6_addr ip6_host;
     struct in6_addr ip6_dns;
-#ifndef _WIN32
     struct in_addr smbsrv = { .s_addr = 0 };
-#endif
     NetClientState *nc;
     SlirpState *s;
     char buf[20];
@@ -285,24 +275,11 @@ static int net_slirp_init(NetClientState *peer, const char *model,
         return -1;
     }
 
-#ifndef _WIN32
     if (vsmbserver && !inet_aton(vsmbserver, &smbsrv)) {
         error_setg(errp, "Failed to parse SMB address");
         return -1;
     }
-#endif
 
-#if defined(_WIN32) && (_WIN32_WINNT < 0x0600)
-    /* No inet_pton helper before Vista... */
-    if (vprefix6) {
-        /* Unsupported */
-        error_setg(errp, "IPv6 prefix not supported");
-        return -1;
-    }
-    memset(&ip6_prefix, 0, sizeof(ip6_prefix));
-    ip6_prefix.s6_addr[0] = 0xfe;
-    ip6_prefix.s6_addr[1] = 0xc0;
-#else
     if (!vprefix6) {
         vprefix6 = "fec0::";
     }
@@ -310,7 +287,6 @@ static int net_slirp_init(NetClientState *peer, const char *model,
         error_setg(errp, "Failed to parse IPv6 prefix");
         return -1;
     }
-#endif
 
     if (!vprefix6_len) {
         vprefix6_len = 64;
@@ -322,10 +298,6 @@ static int net_slirp_init(NetClientState *peer, const char *model,
     }
 
     if (vhost6) {
-#if defined(_WIN32) && (_WIN32_WINNT < 0x0600)
-        error_setg(errp, "IPv6 host not supported");
-        return -1;
-#else
         if (!inet_pton(AF_INET6, vhost6, &ip6_host)) {
             error_setg(errp, "Failed to parse IPv6 host");
             return -1;
@@ -334,17 +306,12 @@ static int net_slirp_init(NetClientState *peer, const char *model,
             error_setg(errp, "IPv6 Host doesn't belong to network");
             return -1;
         }
-#endif
     } else {
         ip6_host = ip6_prefix;
         ip6_host.s6_addr[15] |= 2;
     }
 
     if (vnameserver6) {
-#if defined(_WIN32) && (_WIN32_WINNT < 0x0600)
-        error_setg(errp, "IPv6 DNS not supported");
-        return -1;
-#else
         if (!inet_pton(AF_INET6, vnameserver6, &ip6_dns)) {
             error_setg(errp, "Failed to parse IPv6 DNS");
             return -1;
@@ -353,7 +320,6 @@ static int net_slirp_init(NetClientState *peer, const char *model,
             error_setg(errp, "IPv6 DNS doesn't belong to network");
             return -1;
         }
-#endif
     } else {
         ip6_dns = ip6_prefix;
         ip6_dns.s6_addr[15] |= 3;
@@ -387,7 +353,6 @@ static int net_slirp_init(NetClientState *peer, const char *model,
             }
         }
     }
-#ifndef _WIN32
     if (!smb_export) {
         smb_export = legacy_smb_export;
     }
@@ -396,7 +361,6 @@ static int net_slirp_init(NetClientState *peer, const char *model,
             goto error;
         }
     }
-#endif
 
     s->exit_notifier.notify = slirp_smb_exit;
     qemu_add_exit_notifier(&s->exit_notifier);
@@ -623,7 +587,6 @@ int net_slirp_redir(const char *redir_str)
     return res;
 }
 
-#ifndef _WIN32
 
 /* automatic user mode samba server configuration */
 static void slirp_smb_cleanup(SlirpState *s)
@@ -760,7 +723,6 @@ int net_slirp_smb(const char *exported_dir)
     return 0;
 }
 
-#endif /* !defined(_WIN32) */
 
 struct GuestFwd {
     CharBackend hd;

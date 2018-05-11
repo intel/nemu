@@ -3,11 +3,6 @@
 #ifndef QEMU_SOCKETS_H
 #define QEMU_SOCKETS_H
 
-#ifdef _WIN32
-
-int inet_aton(const char *cp, struct in_addr *ia);
-
-#endif /* !_WIN32 */
 
 #include "qapi/qapi-types-sockets.h"
 

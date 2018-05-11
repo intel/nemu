@@ -181,20 +181,6 @@ void error_setg_errno_internal(Error **errp,
                                int os_error, const char *fmt, ...)
     GCC_FMT_ATTR(6, 7);
 
-#ifdef _WIN32
-/*
- * Just like error_setg(), with @win32_error info added to the message.
- * If @win32_error is non-zero, ": " + g_win32_error_message(win32_err)
- * is appended to the human-readable error message.
- */
-#define error_setg_win32(errp, win32_err, fmt, ...)                     \
-    error_setg_win32_internal((errp), __FILE__, __LINE__, __func__,     \
-                              (win32_err), (fmt), ## __VA_ARGS__)
-void error_setg_win32_internal(Error **errp,
-                               const char *src, int line, const char *func,
-                               int win32_err, const char *fmt, ...)
-    GCC_FMT_ATTR(6, 7);
-#endif
 
 /*
  * Propagate error object (if any) from @local_err to @dst_errp.

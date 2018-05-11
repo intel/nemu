@@ -21,9 +21,7 @@
 #include "qemu/osdep.h"
 #include "qapi/error.h"
 #include "crypto/init.h"
-#ifndef _WIN32
 #include <sys/resource.h>
-#endif
 
 #if ((defined(CONFIG_NETTLE) || defined(CONFIG_GCRYPT)) && \
      (defined(_WIN32) || defined(RUSAGE_THREAD)))

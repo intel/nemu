@@ -29,9 +29,7 @@
 #include "sysemu/sysemu.h"
 #include "sysemu/cpus.h"
 
-#ifdef CONFIG_POSIX
 #include <pthread.h>
-#endif
 
 #ifdef CONFIG_PPOLL
 #include <poll.h>
