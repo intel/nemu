@@ -6,4 +6,3 @@ common-obj-y += qemu-fsdev-opts.o qemu-fsdev-throttle.o
 
 # Toplevel always builds this; targets without virtio will put it in
 # common-obj-y
-common-obj-$(CONFIG_ALL) += qemu-fsdev-dummy.o

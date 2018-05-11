@@ -5,8 +5,6 @@ common-obj-y += eth.o
 common-obj-$(CONFIG_L2TPV3) += l2tpv3.o
 common-obj-$(CONFIG_POSIX) += vhost-user.o
 common-obj-$(CONFIG_SLIRP) += slirp.o
-common-obj-$(CONFIG_VDE) += vde.o
-common-obj-$(CONFIG_NETMAP) += netmap.o
 common-obj-y += filter.o
 common-obj-y += filter-buffer.o
 common-obj-y += filter-mirror.o
@@ -16,12 +14,8 @@ common-obj-y += filter-rewriter.o
 common-obj-y += filter-replay.o
 
 tap-obj-$(CONFIG_LINUX) = tap-linux.o
-tap-obj-$(CONFIG_BSD) = tap-bsd.o
-tap-obj-$(CONFIG_SOLARIS) = tap-solaris.o
 tap-obj-y ?= tap-stub.o
 common-obj-$(CONFIG_POSIX) += tap.o $(tap-obj-y)
-common-obj-$(CONFIG_WIN32) += tap-win32.o
 
 vde.o-libs = $(VDE_LIBS)
 
-common-obj-$(CONFIG_CAN_BUS) += can/
