@@ -32,21 +32,15 @@
 #if defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
 #include <dev/ppbus/ppi.h>
 #include <dev/ppbus/ppbconf.h>
-#elif defined(__DragonFly__)
-#include <dev/misc/ppi/ppi.h>
-#include <bus/ppbus/ppbconf.h>
 #endif
 #else
-#ifdef __linux__
 #include <linux/ppdev.h>
 #include <linux/parport.h>
-#endif
 #endif
 
 #include "chardev/char-fd.h"
 #include "chardev/char-parallel.h"
 
-#if defined(__linux__)
 
 typedef struct {
     Chardev parent;
@@ -172,7 +166,6 @@ static void qemu_chr_open_pp_fd(Chardev *chr,
     drv->fd = fd;
     drv->mode = IEEE1284_MODE_COMPAT;
 }
-#endif /* __linux__ */
 
 #if defined(__FreeBSD__) || defined(__FreeBSD_kernel__) || defined(__DragonFly__)
 
@@ -275,17 +268,11 @@ static void char_parallel_class_init(ObjectClass *oc, void *data)
 
     cc->parse = qemu_chr_parse_parallel;
     cc->open = qmp_chardev_open_parallel;
-#if defined(__linux__)
     cc->chr_ioctl = pp_ioctl;
-#elif defined(__FreeBSD__) || defined(__FreeBSD_kernel__) || \
-    defined(__DragonFly__)
-    cc->chr_ioctl = pp_ioctl;
-#endif
 }
 
 static void char_parallel_finalize(Object *obj)
 {
-#if defined(__linux__)
     Chardev *chr = CHARDEV(obj);
     ParallelChardev *drv = PARALLEL_CHARDEV(chr);
     int fd = drv->fd;
@@ -294,10 +281,6 @@ static void char_parallel_finalize(Object *obj)
     ioctl(fd, PPRELEASE);
     close(fd);
     qemu_chr_be_event(chr, CHR_EVENT_CLOSED);
-#elif defined(__FreeBSD__) || defined(__FreeBSD_kernel__) || \
-    defined(__DragonFly__)
-    /* FIXME: close fd? */
-#endif
 }
 
 static const TypeInfo char_parallel_type_info = {

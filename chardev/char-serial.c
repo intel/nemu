@@ -28,31 +28,12 @@
 #include "io/channel-file.h"
 #include "qapi/error.h"
 
-#ifdef _WIN32
-#include "chardev/char-win.h"
-#else
 #include <sys/ioctl.h>
 #include <termios.h>
 #include "chardev/char-fd.h"
-#endif
 
 #include "chardev/char-serial.h"
 
-#ifdef _WIN32
-
-static void qmp_chardev_open_serial(Chardev *chr,
-                                    ChardevBackend *backend,
-                                    bool *be_opened,
-                                    Error **errp)
-{
-    ChardevHostdev *serial = backend->u.serial.data;
-
-    win_chr_serial_init(chr, serial->device, errp);
-}
-
-#elif defined(__linux__) || defined(__sun__) || defined(__FreeBSD__)      \
-    || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__DragonFly__) \
-    || defined(__GLIBC__)
 
 static void tty_serial_init(int fd, int speed,
                             int parity, int data_bits, int stop_bits)
@@ -274,7 +255,6 @@ static void qmp_chardev_open_serial(Chardev *chr,
 
     qemu_chr_open_fd(chr, fd, fd);
 }
-#endif /* __linux__ || __sun__ */
 
 #ifdef HAVE_CHARDEV_SERIAL
 static void qemu_chr_parse_serial(QemuOpts *opts, ChardevBackend *backend,
@@ -299,19 +279,13 @@ static void char_serial_class_init(ObjectClass *oc, void *data)
 
     cc->parse = qemu_chr_parse_serial;
     cc->open = qmp_chardev_open_serial;
-#ifndef _WIN32
     cc->chr_ioctl = tty_serial_ioctl;
-#endif
 }
 
 
 static const TypeInfo char_serial_type_info = {
     .name = TYPE_CHARDEV_SERIAL,
-#ifdef _WIN32
-    .parent = TYPE_CHARDEV_WIN,
-#else
     .parent = TYPE_CHARDEV_FD,
-#endif
     .class_init = char_serial_class_init,
 };
 

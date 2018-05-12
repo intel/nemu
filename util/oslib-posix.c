@@ -39,9 +39,7 @@
 #include <sys/signal.h>
 #include "qemu/cutils.h"
 
-#ifdef CONFIG_LINUX
 #include <sys/syscall.h>
-#endif
 
 #ifdef __FreeBSD__
 #include <sys/sysctl.h>
@@ -49,9 +47,6 @@
 #include <libutil.h>
 #endif
 
-#ifdef __NetBSD__
-#include <sys/sysctl.h>
-#endif
 
 #include "qemu/mmap-alloc.h"
 
@@ -76,11 +71,7 @@ static bool memset_thread_failed;
 
 int qemu_get_thread_id(void)
 {
-#if defined(__linux__)
     return syscall(SYS_gettid);
-#else
-    return getpid();
-#endif
 }
 
 int qemu_daemon(int nochdir, int noclose)
@@ -245,7 +236,6 @@ void qemu_init_exec_dir(const char *argv0)
 
     assert(!exec_dir[0]);
 
-#if defined(__linux__)
     {
         int len;
         len = readlink("/proc/self/exe", buf, sizeof(buf) - 1);
@@ -254,24 +244,6 @@ void qemu_init_exec_dir(const char *argv0)
             p = buf;
         }
     }
-#elif defined(__FreeBSD__) \
-      || (defined(__NetBSD__) && defined(KERN_PROC_PATHNAME))
-    {
-#if defined(__FreeBSD__)
-        static int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1};
-#else
-        static int mib[4] = {CTL_KERN, KERN_PROC_ARGS, -1, KERN_PROC_PATHNAME};
-#endif
-        size_t len = sizeof(buf) - 1;
-
-        *buf = '\0';
-        if (!sysctl(mib, ARRAY_SIZE(mib), buf, &len, NULL, 0) &&
-            *buf) {
-            buf[sizeof(buf) - 1] = '\0';
-            p = buf;
-        }
-    }
-#endif
     /* If we don't have any way of figuring out the actual executable
        location then try argv[0].  */
     if (!p) {
