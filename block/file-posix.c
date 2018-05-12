@@ -1723,64 +1723,6 @@ static int raw_truncate(BlockDriverState *bs, int64_t offset,
     return 0;
 }
 
-#if   defined(CONFIG_BSD)
-static int64_t raw_getlength(BlockDriverState *bs)
-{
-    BDRVRawState *s = bs->opaque;
-    int fd = s->fd;
-    int64_t size;
-    struct stat sb;
-#if defined (__FreeBSD__) || defined(__FreeBSD_kernel__)
-    int reopened = 0;
-#endif
-    int ret;
-
-    ret = fd_open(bs);
-    if (ret < 0)
-        return ret;
-
-#if defined (__FreeBSD__) || defined(__FreeBSD_kernel__)
-again:
-#endif
-    if (!fstat(fd, &sb) && (S_IFCHR & sb.st_mode)) {
-#ifdef DIOCGMEDIASIZE
-	if (ioctl(fd, DIOCGMEDIASIZE, (off_t *)&size))
-#elif defined(DIOCGPART)
-        {
-                struct partinfo pi;
-                if (ioctl(fd, DIOCGPART, &pi) == 0)
-                        size = pi.media_size;
-                else
-                        size = 0;
-        }
-        if (size == 0)
-#endif
-        size = lseek(fd, 0LL, SEEK_END);
-        if (size < 0) {
-            return -errno;
-        }
-#if defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
-        switch(s->type) {
-        case FTYPE_CD:
-            /* XXX FreeBSD acd returns UINT_MAX sectors for an empty drive */
-            if (size == 2048LL * (unsigned)-1)
-                size = 0;
-            /* XXX no disc?  maybe we need to reopen... */
-            if (size <= 0 && !reopened && cdrom_reopen(bs) >= 0) {
-                reopened = 1;
-                goto again;
-            }
-        }
-#endif
-    } else {
-        size = lseek(fd, 0, SEEK_END);
-        if (size < 0) {
-            return -errno;
-        }
-    }
-    return size;
-}
-#else
 static int64_t raw_getlength(BlockDriverState *bs)
 {
     BDRVRawState *s = bs->opaque;
@@ -1798,7 +1740,6 @@ static int64_t raw_getlength(BlockDriverState *bs)
     }
     return size;
 }
-#endif
 
 static int64_t raw_get_allocated_file_size(BlockDriverState *bs)
 {

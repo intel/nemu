@@ -103,8 +103,6 @@ void *qemu_try_memalign(size_t alignment, size_t size)
         errno = ret;
         ptr = NULL;
     }
-#elif defined(CONFIG_BSD)
-    ptr = valloc(size);
 #else
     ptr = memalign(alignment, size);
 #endif

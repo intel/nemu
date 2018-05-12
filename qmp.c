@@ -129,7 +129,6 @@ void qmp_cpu_add(int64_t id, Error **errp)
     }
 }
 
-#ifndef CONFIG_VNC
 /* If VNC support is enabled, the "true" query-vnc command is
    defined in the VNC subsystem */
 VncInfo *qmp_query_vnc(Error **errp)
@@ -143,7 +142,6 @@ VncInfo2List *qmp_query_vnc_servers(Error **errp)
     error_setg(errp, QERR_FEATURE_DISABLED, "vnc");
     return NULL;
 };
-#endif
 
 #ifndef CONFIG_SPICE
 /*
@@ -359,50 +357,6 @@ void qmp_expire_password(const char *protocol, const char *whenstr,
     error_setg(errp, QERR_INVALID_PARAMETER, "protocol");
 }
 
-#ifdef CONFIG_VNC
-void qmp_change_vnc_password(const char *password, Error **errp)
-{
-    if (vnc_display_password(NULL, password) < 0) {
-        error_setg(errp, QERR_SET_PASSWD_FAILED);
-    }
-}
-
-static void qmp_change_vnc_listen(const char *target, Error **errp)
-{
-    QemuOptsList *olist = qemu_find_opts("vnc");
-    QemuOpts *opts;
-
-    if (strstr(target, "id=")) {
-        error_setg(errp, "id not supported");
-        return;
-    }
-
-    opts = qemu_opts_find(olist, "default");
-    if (opts) {
-        qemu_opts_del(opts);
-    }
-    opts = vnc_parse(target, errp);
-    if (!opts) {
-        return;
-    }
-
-    vnc_display_open("default", errp);
-}
-
-static void qmp_change_vnc(const char *target, bool has_arg, const char *arg,
-                           Error **errp)
-{
-    if (strcmp(target, "passwd") == 0 || strcmp(target, "password") == 0) {
-        if (!has_arg) {
-            error_setg(errp, QERR_MISSING_PARAMETER, "password");
-        } else {
-            qmp_change_vnc_password(arg, errp);
-        }
-    } else {
-        qmp_change_vnc_listen(target, errp);
-    }
-}
-#else
 void qmp_change_vnc_password(const char *password, Error **errp)
 {
     error_setg(errp, QERR_FEATURE_DISABLED, "vnc");
@@ -412,7 +366,6 @@ static void qmp_change_vnc(const char *target, bool has_arg, const char *arg,
 {
     error_setg(errp, QERR_FEATURE_DISABLED, "vnc");
 }
-#endif /* !CONFIG_VNC */
 
 void qmp_change(const char *device, const char *target,
                 bool has_arg, const char *arg, Error **errp)
@@ -677,12 +630,6 @@ void qmp_add_client(const char *protocol, const char *fdname,
             close(fd);
         }
         return;
-#ifdef CONFIG_VNC
-    } else if (strcmp(protocol, "vnc") == 0) {
-        skipauth = has_skipauth ? skipauth : false;
-        vnc_display_add_client(NULL, fd, skipauth);
-        return;
-#endif
     } else if ((s = qemu_chr_find(protocol)) != NULL) {
         if (qemu_chr_add_client(s, fd) < 0) {
             error_setg(errp, "failed to add client");

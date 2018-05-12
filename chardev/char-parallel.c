@@ -28,15 +28,8 @@
 #include "qemu/option.h"
 #include <sys/ioctl.h>
 
-#ifdef CONFIG_BSD
-#if defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
-#include <dev/ppbus/ppi.h>
-#include <dev/ppbus/ppbconf.h>
-#endif
-#else
 #include <linux/ppdev.h>
 #include <linux/parport.h>
-#endif
 
 #include "chardev/char-fd.h"
 #include "chardev/char-parallel.h"

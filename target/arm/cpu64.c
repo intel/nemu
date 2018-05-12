@@ -303,9 +303,6 @@ static void aarch64_cpu_class_init(ObjectClass *oc, void *data)
 {
     CPUClass *cc = CPU_CLASS(oc);
 
-#ifdef CONFIG_TCG
-    cc->cpu_exec_interrupt = arm_cpu_exec_interrupt;
-#endif
     cc->set_pc = aarch64_cpu_set_pc;
     cc->gdb_read_register = aarch64_cpu_gdb_read_register;
     cc->gdb_write_register = aarch64_cpu_gdb_write_register;

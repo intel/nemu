@@ -1383,23 +1383,6 @@ static void hmp_info_registers(Monitor *mon, const QDict *qdict)
     }
 }
 
-#ifdef CONFIG_TCG
-static void hmp_info_jit(Monitor *mon, const QDict *qdict)
-{
-    if (!tcg_enabled()) {
-        error_report("JIT information is only available with accel=tcg");
-        return;
-    }
-
-    dump_exec_info((FILE *)mon, monitor_fprintf);
-    dump_drift_info((FILE *)mon, monitor_fprintf);
-}
-
-static void hmp_info_opcount(Monitor *mon, const QDict *qdict)
-{
-    dump_opcount_info((FILE *)mon, monitor_fprintf);
-}
-#endif
 
 static void hmp_info_history(Monitor *mon, const QDict *qdict)
 {
