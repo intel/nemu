@@ -15,60 +15,9 @@ int qemu_dcache_linesize = 0;
  * Operating system specific detection mechanisms.
  */
 
-#if defined(_WIN32)
-
-static void sys_cache_info(int *isize, int *dsize)
-{
-    SYSTEM_LOGICAL_PROCESSOR_INFORMATION *buf;
-    DWORD size = 0;
-    BOOL success;
-    size_t i, n;
-
-    /* Check for the required buffer size first.  Note that if the zero
-       size we use for the probe results in success, then there is no
-       data available; fail in that case.  */
-    success = GetLogicalProcessorInformation(0, &size);
-    if (success || GetLastError() != ERROR_INSUFFICIENT_BUFFER) {
-        return;
-    }
-
-    n = size / sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION);
-    size = n * sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION);
-    buf = g_new0(SYSTEM_LOGICAL_PROCESSOR_INFORMATION, n);
-    if (!GetLogicalProcessorInformation(buf, &size)) {
-        goto fail;
-    }
-
-    for (i = 0; i < n; i++) {
-        if (buf[i].Relationship == RelationCache
-            && buf[i].Cache.Level == 1) {
-            switch (buf[i].Cache.Type) {
-            case CacheUnified:
-                *isize = *dsize = buf[i].Cache.LineSize;
-                break;
-            case CacheInstruction:
-                *isize = buf[i].Cache.LineSize;
-                break;
-            case CacheData:
-                *dsize = buf[i].Cache.LineSize;
-                break;
-            default:
-                break;
-            }
-        }
-    }
- fail:
-    g_free(buf);
-}
-
-#elif defined(__APPLE__) \
-      || defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
+#if   defined(__APPLE__)  || defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
 # include <sys/sysctl.h>
-# if defined(__APPLE__)
-#  define SYSCTL_CACHELINE_NAME "hw.cachelinesize"
-# else
 #  define SYSCTL_CACHELINE_NAME "machdep.cacheline_size"
-# endif
 
 static void sys_cache_info(int *isize, int *dsize)
 {

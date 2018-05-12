@@ -52,12 +52,6 @@
 /* The following block of code temporarily renames the daemon() function so the
  * compiler does not see the warning associated with it in stdlib.h on OSX
  */
-#ifdef __APPLE__
-#define daemon qemu_fake_daemon_function
-#include <stdlib.h>
-#undef daemon
-extern int daemon(int, int);
-#endif
 
 #include <stdarg.h>
 #include <stddef.h>
@@ -85,24 +79,11 @@ extern int daemon(int, int);
 #include <setjmp.h>
 #include <signal.h>
 
-#ifdef __OpenBSD__
-#include <sys/signal.h>
-#endif
 
-#ifndef _WIN32
 #include <sys/wait.h>
-#else
-#define WIFEXITED(x)   1
-#define WEXITSTATUS(x) (x)
-#endif
 
-#ifdef _WIN32
-#include "sysemu/os-win32.h"
-#endif
 
-#ifdef CONFIG_POSIX
 #include "sysemu/os-posix.h"
-#endif
 
 #include "glib-compat.h"
 #include "qemu/typedefs.h"
@@ -334,37 +315,22 @@ void qemu_anon_ram_free(void *ptr, size_t size);
 
 #endif
 
-#ifdef _WIN32
 #define HAVE_CHARDEV_SERIAL 1
-#elif defined(__linux__) || defined(__sun__) || defined(__FreeBSD__)    \
-    || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__DragonFly__) \
-    || defined(__GLIBC__)
-#define HAVE_CHARDEV_SERIAL 1
-#endif
 
-#if defined(__linux__) || defined(__FreeBSD__) ||               \
-    defined(__FreeBSD_kernel__) || defined(__DragonFly__)
 #define HAVE_CHARDEV_PARPORT 1
-#endif
 
-#if defined(CONFIG_LINUX)
 #ifndef BUS_MCEERR_AR
 #define BUS_MCEERR_AR 4
 #endif
 #ifndef BUS_MCEERR_AO
 #define BUS_MCEERR_AO 5
 #endif
-#endif
 
-#if defined(__linux__) && \
-    (defined(__x86_64__) || defined(__arm__) || defined(__aarch64__))
+#if defined(__linux__) && (defined(__x86_64__) || defined(__arm__) || defined(__aarch64__))
    /* Use 2 MiB alignment so transparent hugepages can be used by KVM.
       Valgrind does not support alignments larger than 1 MiB,
       therefore we need special code which handles running on Valgrind. */
 #  define QEMU_VMALLOC_ALIGN (512 * 4096)
-#elif defined(__linux__) && defined(__s390x__)
-   /* Use 1 MiB (segment size) alignment so gmap can be used by KVM. */
-#  define QEMU_VMALLOC_ALIGN (256 * 4096)
 #elif defined(__linux__) && defined(__sparc__)
 #include <sys/shm.h>
 #  define QEMU_VMALLOC_ALIGN MAX(getpagesize(), SHMLBA)
@@ -372,7 +338,6 @@ void qemu_anon_ram_free(void *ptr, size_t size);
 #  define QEMU_VMALLOC_ALIGN getpagesize()
 #endif
 
-#ifdef CONFIG_POSIX
 struct qemu_signalfd_siginfo {
     uint32_t ssi_signo;   /* Signal number */
     int32_t  ssi_errno;   /* Error number (unused) */
@@ -398,7 +363,6 @@ struct qemu_signalfd_siginfo {
 int qemu_signalfd(const sigset_t *mask);
 void sigaction_invoke(struct sigaction *action,
                       struct qemu_signalfd_siginfo *info);
-#endif
 
 int qemu_madvise(void *addr, size_t len, int advice);
 int qemu_mprotect_rwx(void *addr, size_t size);
@@ -406,9 +370,7 @@ int qemu_mprotect_none(void *addr, size_t size);
 
 int qemu_open(const char *name, int flags, ...);
 int qemu_close(int fd);
-#ifndef _WIN32
 int qemu_dup(int fd);
-#endif
 int qemu_lock_fd(int fd, int64_t start, int64_t len, bool exclusive);
 int qemu_unlock_fd(int fd, int64_t start, int64_t len);
 int qemu_lock_fd_test(int fd, int64_t start, int64_t len, bool exclusive);
@@ -441,22 +403,7 @@ ssize_t writev(int fd, const struct iovec *iov, int iov_cnt);
 #include <sys/uio.h>
 #endif
 
-#ifdef _WIN32
-static inline void qemu_timersub(const struct timeval *val1,
-                                 const struct timeval *val2,
-                                 struct timeval *res)
-{
-    res->tv_sec = val1->tv_sec - val2->tv_sec;
-    if (val1->tv_usec < val2->tv_usec) {
-        res->tv_sec--;
-        res->tv_usec = val1->tv_usec - val2->tv_usec + 1000 * 1000;
-    } else {
-        res->tv_usec = val1->tv_usec - val2->tv_usec;
-    }
-}
-#else
 #define qemu_timersub timersub
-#endif
 
 void qemu_set_cloexec(int fd);
 
