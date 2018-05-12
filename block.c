@@ -47,11 +47,6 @@
 #include "qemu/cutils.h"
 #include "qemu/id.h"
 
-#ifdef CONFIG_BSD
-#include <sys/ioctl.h>
-#include <sys/queue.h>
-#include <sys/disk.h>
-#endif
 
 
 #define NOT_DONE 0x7fffffff /* used while emulated sync operation in progress */

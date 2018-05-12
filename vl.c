@@ -34,18 +34,6 @@
 #include "sysemu/seccomp.h"
 #endif
 
-#ifdef CONFIG_SDL
-#if defined(__APPLE__) || defined(main)
-#include <SDL.h>
-int qemu_main(int argc, char **argv, char **envp);
-int main(int argc, char **argv)
-{
-    return qemu_main(argc, argv, NULL);
-}
-#undef main
-#define main qemu_main
-#endif
-#endif /* CONFIG_SDL */
 
 
 
@@ -3239,12 +3227,8 @@ int main(int argc, char **argv, char **envp)
                 dpy.type = DISPLAY_TYPE_NONE;
                 break;
             case QEMU_OPTION_curses:
-#ifdef CONFIG_CURSES
-                dpy.type = DISPLAY_TYPE_CURSES;
-#else
                 error_report("curses support is disabled");
                 exit(1);
-#endif
                 break;
             case QEMU_OPTION_portrait:
                 graphic_rotate = 90;
@@ -3650,13 +3634,8 @@ int main(int argc, char **argv, char **envp)
                 dpy.window_close = false;
                 break;
             case QEMU_OPTION_sdl:
-#ifdef CONFIG_SDL
-                dpy.type = DISPLAY_TYPE_SDL;
-                break;
-#else
                 error_report("SDL support is disabled");
                 exit(1);
-#endif
             case QEMU_OPTION_pidfile:
                 pid_file = optarg;
                 break;
@@ -3886,10 +3865,8 @@ int main(int argc, char **argv, char **envp)
                 configure_rtc(opts);
                 break;
             case QEMU_OPTION_tb_size:
-#ifndef CONFIG_TCG
                 error_report("TCG is disabled");
                 exit(1);
-#endif
                 if (qemu_strtoul(optarg, NULL, 0, &tcg_tb_size) < 0) {
                     error_report("Invalid argument to -tb-size");
                     exit(1);
@@ -4257,12 +4234,6 @@ int main(int argc, char **argv, char **envp)
             error_report("-nographic cannot be used with -daemonize");
             exit(1);
         }
-#ifdef CONFIG_CURSES
-        if (dpy.type == DISPLAY_TYPE_CURSES) {
-            error_report("curses display cannot be used with -daemonize");
-            exit(1);
-        }
-#endif
     }
 
     if (nographic) {
@@ -4299,17 +4270,9 @@ int main(int argc, char **argv, char **envp)
         }
     }
 
-#if defined(CONFIG_VNC)
-    if (!QTAILQ_EMPTY(&(qemu_find_opts("vnc")->head))) {
-        display_remote++;
-    }
-#endif
     if (dpy.type == DISPLAY_TYPE_DEFAULT && !display_remote) {
         if (!qemu_display_find_default(&dpy)) {
             dpy.type = DISPLAY_TYPE_NONE;
-#if defined(CONFIG_VNC)
-            vnc_parse("localhost:0,to=99,id=default", &error_abort);
-#endif
         }
     }
     if (dpy.type == DISPLAY_TYPE_DEFAULT) {
@@ -4654,10 +4617,6 @@ int main(int argc, char **argv, char **envp)
     os_setup_signal_handling();
 
     /* init remote displays */
-#ifdef CONFIG_VNC
-    qemu_opts_foreach(qemu_find_opts("vnc"),
-                      vnc_init_func, NULL, NULL);
-#endif
 
     if (using_spice) {
         qemu_spice_display_init();

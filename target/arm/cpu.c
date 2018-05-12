@@ -349,30 +349,6 @@ bool arm_cpu_exec_interrupt(CPUState *cs, int interrupt_request)
     return ret;
 }
 
-#if defined(CONFIG_TCG) && (!defined(CONFIG_USER_ONLY) || !defined(TARGET_AARCH64))
-static bool arm_v7m_cpu_exec_interrupt(CPUState *cs, int interrupt_request)
-{
-    CPUClass *cc = CPU_GET_CLASS(cs);
-    ARMCPU *cpu = ARM_CPU(cs);
-    CPUARMState *env = &cpu->env;
-    bool ret = false;
-
-    /* ARMv7-M interrupt masking works differently than -A or -R.
-     * There is no FIQ/IRQ distinction. Instead of I and F bits
-     * masking FIQ and IRQ interrupts, an exception is taken only
-     * if it is higher priority than the current execution priority
-     * (which depends on state like BASEPRI, FAULTMASK and the
-     * currently active exception).
-     */
-    if (interrupt_request & CPU_INTERRUPT_HARD
-        && (armv7m_nvic_can_take_pending_exception(env->nvic))) {
-        cs->exception_index = EXCP_IRQ;
-        cc->do_interrupt(cs);
-        ret = true;
-    }
-    return ret;
-}
-#endif
 
 static void arm_cpu_set_irq(void *opaque, int irq, int level)
 {
@@ -898,10 +874,6 @@ static void arm_cpu_realizefn(DeviceState *dev, Error **errp)
         set_feature(env, ARM_FEATURE_VBAR);
     }
 
-#ifdef CONFIG_TCG
-    register_cp_regs_for_features(cpu);
-    arm_cpu_register_gdb_regs_for_features(cpu);
-#endif
 
     init_cpreg_list(cpu);
 
@@ -1220,13 +1192,6 @@ static void cortex_m33_initfn(Object *obj)
 
 static void arm_v7m_class_init(ObjectClass *oc, void *data)
 {
-#ifdef CONFIG_TCG
-    CPUClass *cc = CPU_CLASS(oc);
-
-    cc->do_interrupt = arm_v7m_cpu_do_interrupt;
-
-    cc->cpu_exec_interrupt = arm_v7m_cpu_exec_interrupt;
-#endif
 }
 
 static const ARMCPRegInfo cortexr5_cp_reginfo[] = {
@@ -1775,13 +1740,6 @@ static void arm_cpu_class_init(ObjectClass *oc, void *data)
     cc->set_pc = arm_cpu_set_pc;
     cc->gdb_read_register = arm_cpu_gdb_read_register;
     cc->gdb_write_register = arm_cpu_gdb_write_register;
-#ifdef CONFIG_TCG
-    cc->do_interrupt = arm_cpu_do_interrupt;
-    cc->cpu_exec_interrupt = arm_cpu_exec_interrupt;
-    cc->do_unaligned_access = arm_cpu_do_unaligned_access;
-    cc->do_transaction_failed = arm_cpu_do_transaction_failed;
-    cc->debug_check_watchpoint = arm_debug_check_watchpoint;
-#endif
     cc->get_phys_page_attrs_debug = arm_cpu_get_phys_page_attrs_debug;
     cc->asidx_from_attrs = arm_asidx_from_attrs;
     cc->vmsd = &vmstate_arm_cpu;
@@ -1792,16 +1750,10 @@ static void arm_cpu_class_init(ObjectClass *oc, void *data)
     cc->gdb_core_xml_file = "arm-core.xml";
     cc->gdb_arch_name = arm_gdb_arch_name;
     cc->gdb_stop_before_watchpoint = true;
-#if defined(CONFIG_TCG) && !defined(CONFIG_USER_ONLY)
-    cc->debug_excp_handler = arm_debug_excp_handler;
-#endif
 
     cc->adjust_watchpoint_address = arm_adjust_watchpoint_address;
 
     cc->disas_set_info = arm_disas_set_info;
-#ifdef CONFIG_TCG
-    cc->tcg_initialize = arm_translate_init;
-#endif
 }
 
 static void arm_host_initfn(Object *obj)

@@ -1,11 +1,6 @@
 #ifndef QEMU_CAPSTONE_H
 #define QEMU_CAPSTONE_H 1
 
-#ifdef CONFIG_CAPSTONE
-
-#include <capstone.h>
-
-#else
 
 /* Just enough to allow backends to init without ifdefs.  */
 
@@ -34,5 +29,4 @@
 #define CS_MODE_MIPS32           0
 #define CS_MODE_MIPS64           0
 
-#endif /* CONFIG_CAPSTONE */
 #endif /* QEMU_CAPSTONE_H */
