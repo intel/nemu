@@ -12,6 +12,12 @@
 #undef TARGET_S390X
 #undef TARGET_PPC
 #undef TARGET_SPARC
+#undef CONFIG_VNC
+#undef CONFIG_SDL
+#undef CONFIG_CURSES
+#undef CONFIG_BSD
+#undef CONFIG_TCG
+#undef CONFIG_CAPSTONE
 #undef _WIN32
 #undef __sun__
 #undef __s390__
