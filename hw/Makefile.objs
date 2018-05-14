@@ -1,4 +1,3 @@
-devices-dirs-$(call land,$(CONFIG_VIRTFS),$(call lor,$(CONFIG_VIRTIO),$(CONFIG_XEN))) += 9pfs/
 devices-dirs-$(CONFIG_SOFTMMU) += acpi/
 devices-dirs-$(CONFIG_SOFTMMU) += audio/
 devices-dirs-$(CONFIG_SOFTMMU) += block/
@@ -15,7 +14,6 @@ devices-dirs-$(CONFIG_SOFTMMU) += intc/
 devices-dirs-$(CONFIG_SOFTMMU) += isa/
 devices-dirs-$(CONFIG_SOFTMMU) += misc/
 devices-dirs-$(CONFIG_SOFTMMU) += net/
-devices-dirs-$(CONFIG_SOFTMMU) += rdma/
 devices-dirs-$(CONFIG_SOFTMMU) += nvram/
 devices-dirs-$(CONFIG_SOFTMMU) += pci/
 devices-dirs-$(CONFIG_PCI) += pci-bridge/ pci-host/
