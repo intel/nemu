@@ -28,34 +28,8 @@ typedef struct testdef {
 } testdef_t;
 
 static testdef_t x86_tests[] = {
-    { "pc", "e1000" },
     { "pc", "virtio-net-pci" },
-    { "q35", "e1000e" },
     { "q35", "virtio-net-pci", },
-    { NULL },
-};
-
-static testdef_t x86_tests_slow[] = {
-    { "pc", "ne2k_pci", },
-    { "pc", "i82550", },
-    { "pc", "rtl8139" },
-    { "pc", "vmxnet3" },
-    { NULL },
-};
-
-static testdef_t ppc64_tests[] = {
-    { "pseries", "spapr-vlan" },
-    { "pseries", "virtio-net-pci", },
-    { NULL },
-};
-
-static testdef_t ppc64_tests_slow[] = {
-    { "pseries", "e1000" },
-    { NULL },
-};
-
-static testdef_t s390x_tests[] = {
-    { "s390-ccw-virtio", "virtio-net-ccw" },
     { NULL },
 };
 
@@ -63,6 +37,9 @@ static void test_pxe_one(const testdef_t *test, bool ipv6)
 {
     char *args;
 
+    /* TODO: This test will not pass as it needs TCG
+     * We may need to delete this whole PXE test
+     */
     args = g_strdup_printf(
         "-machine %s,accel=kvm:tcg -nodefaults -boot order=n "
         "-netdev user,id=" NETNAME ",tftp=./,bootfile=%s,ipv4=%s,ipv6=%s "
@@ -125,17 +102,8 @@ int main(int argc, char *argv[])
 
     if (strcmp(arch, "i386") == 0 || strcmp(arch, "x86_64") == 0) {
         test_batch(x86_tests, false);
-        if (g_test_slow()) {
-            test_batch(x86_tests_slow, false);
-        }
-    } else if (strcmp(arch, "ppc64") == 0) {
-        test_batch(ppc64_tests, g_test_slow());
-        if (g_test_slow()) {
-            test_batch(ppc64_tests_slow, true);
-        }
-    } else if (g_str_equal(arch, "s390x")) {
-        test_batch(s390x_tests, g_test_slow());
     }
+
     ret = g_test_run();
     boot_sector_cleanup(disk);
     return ret;

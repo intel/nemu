@@ -73,7 +73,6 @@
 #include "qom/cpu.h"
 #include "hw/nmi.h"
 #include "hw/i386/intel_iommu.h"
-#include "hw/net/ne2000-isa.h"
 
 /* debug PC/ISA interrupts */
 //#define DEBUG_IRQ
@@ -1060,23 +1059,6 @@ static void load_linux(PCMachineState *pcms,
     nb_option_roms++;
 }
 
-#define NE2000_NB_MAX 6
-
-static const int ne2000_io[NE2000_NB_MAX] = { 0x300, 0x320, 0x340, 0x360,
-                                              0x280, 0x380 };
-static const int ne2000_irq[NE2000_NB_MAX] = { 9, 10, 11, 3, 4, 5 };
-
-void pc_init_ne2k_isa(ISABus *bus, NICInfo *nd)
-{
-    static int nb_ne2k = 0;
-
-    if (nb_ne2k == NE2000_NB_MAX)
-        return;
-    isa_ne2000_init(bus, ne2000_io[nb_ne2k],
-                    ne2000_irq[nb_ne2k], nd);
-    nb_ne2k++;
-}
-
 DeviceState *cpu_get_current_apic(void)
 {
     if (current_cpu) {
@@ -1628,24 +1610,6 @@ void pc_basic_device_init(ISABus *isa_bus, qemu_irq *gsi,
 
     /* Super I/O */
     pc_superio_init(isa_bus, create_fdctrl, no_vmport);
-}
-
-void pc_nic_init(PCMachineClass *pcmc, ISABus *isa_bus, PCIBus *pci_bus)
-{
-    int i;
-
-    rom_set_order_override(FW_CFG_ORDER_OVERRIDE_NIC);
-    for (i = 0; i < nb_nics; i++) {
-        NICInfo *nd = &nd_table[i];
-        const char *model = nd->model ? nd->model : pcmc->default_nic_model;
-
-        if (g_str_equal(model, "ne2k_isa")) {
-            pc_init_ne2k_isa(isa_bus, nd);
-        } else {
-            pci_nic_init_nofail(nd, pci_bus, model, NULL);
-        }
-    }
-    rom_reset_order_override();
 }
 
 void ioapic_init_gsi(GSIState *gsi_state, const char *parent_name)

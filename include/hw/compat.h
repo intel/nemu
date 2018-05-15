@@ -14,10 +14,6 @@
         .driver   = "vhost-user-blk-pci",\
         .property = "vectors",\
         .value    = "2",\
-    },{\
-        .driver   = "e1000",\
-        .property = "migrate_tso_props",\
-        .value    = "off",\
     },
 
 #define HW_COMPAT_2_10 \
@@ -160,10 +156,6 @@
         .driver   = "virtio-blk-device",\
         .property = "scsi",\
         .value    = "true",\
-    },{\
-        .driver   = "e1000",\
-        .property = "extra_mac_registers",\
-        .value    = "off",\
     },{\
         .driver   = "virtio-pci",\
         .property = "x-disable-pcie",\

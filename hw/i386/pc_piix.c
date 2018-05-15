@@ -235,8 +235,6 @@ static void pc_init1(MachineState *machine,
     pc_basic_device_init(isa_bus, pcms->gsi, &rtc_state, true,
                          (pcms->vmport != ON_OFF_AUTO_ON), pcms->pit, 0x4);
 
-    pc_nic_init(pcmc, isa_bus, pci_bus);
-
     ide_drive_get(hd, ARRAY_SIZE(hd));
     if (pcmc->pci_enabled) {
         PCIDevice *dev;
@@ -389,7 +387,7 @@ static void pc_init_isa(MachineState *machine)
 static void pc_i440fx_machine_options(MachineClass *m)
 {
     PCMachineClass *pcmc = PC_MACHINE_CLASS(m);
-    pcmc->default_nic_model = "e1000";
+    pcmc->default_nic_model = "none";
 
     m->family = "pc_piix";
     m->desc = "Standard PC (i440FX + PIIX, 1996)";
@@ -637,11 +635,7 @@ DEFINE_I440FX_MACHINE(v1_4, "pc-i440fx-1.4", pc_compat_1_4,
             .driver   = "virtio-net-pci", \
             .property = "mq", \
             .value    = "off", \
-        }, {\
-            .driver   = "e1000",\
-            .property = "autonegotiation",\
-            .value    = "off",\
-        },
+        }, 
 
 
 static void pc_i440fx_1_3_machine_options(MachineClass *m)
@@ -1088,7 +1082,7 @@ static void isapc_machine_options(MachineClass *m)
     pcmc->gigabyte_align = false;
     pcmc->smbios_legacy_mode = true;
     pcmc->has_reserved_memory = false;
-    pcmc->default_nic_model = "ne2k_isa";
+    pcmc->default_nic_model = "none";
     m->default_cpu_type = X86_CPU_TYPE_NAME("486");
 }
 

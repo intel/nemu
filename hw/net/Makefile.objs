@@ -1,15 +1,3 @@
-
-# PCI network cards
-common-obj-$(CONFIG_NE2000_PCI) += ne2000.o
-common-obj-$(CONFIG_E1000_PCI) += e1000.o e1000x_common.o
-
-common-obj-$(CONFIG_NE2000_ISA) += ne2000-isa.o
-
-
-
 obj-$(CONFIG_VIRTIO) += virtio-net.o
 obj-y += vhost_net.o
-
-
 obj-$(call lnot,$(CONFIG_ROCKER)) += rocker/qmp-norocker.o
-

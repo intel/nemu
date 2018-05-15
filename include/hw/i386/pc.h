@@ -228,11 +228,9 @@ void pc_basic_device_init(ISABus *isa_bus, qemu_irq *gsi,
                           bool no_vmport,
                           bool has_pit,
                           uint32_t hpet_irqs);
-void pc_init_ne2k_isa(ISABus *bus, NICInfo *nd);
 void pc_cmos_init(PCMachineState *pcms,
                   BusState *ide0, BusState *ide1,
                   ISADevice *s);
-void pc_nic_init(PCMachineClass *pcmc, ISABus *isa_bus, PCIBus *pci_bus);
 void pc_pci_device_init(PCIBus *pci_bus);
 
 typedef void (*cpu_set_smm_t)(int smm, void *arg);
@@ -788,10 +786,6 @@ bool e820_get_entry(int, uint32_t, uint64_t *, uint64_t *);
 #define PC_COMPAT_1_6 \
     PC_CPU_MODEL_IDS("1.6.0") \
     {\
-        .driver   = "e1000",\
-        .property = "mitigation",\
-        .value    = "off",\
-    },{\
         .driver   = "qemu64-" TYPE_X86_CPU,\
         .property = "model",\
         .value    = stringify(2),\
@@ -892,22 +886,6 @@ bool e820_get_entry(int, uint32_t, uint64_t *, uint64_t *);
         .driver   = "virtio-net-pci", \
         .property = "ctrl_guest_offloads", \
         .value    = "off", \
-    },{\
-        .driver   = "e1000",\
-        .property = "romfile",\
-        .value    = "pxe-e1000.rom",\
-    },{\
-        .driver   = "ne2k_pci",\
-        .property = "romfile",\
-        .value    = "pxe-ne2k_pci.rom",\
-    },{\
-        .driver   = "pcnet",\
-        .property = "romfile",\
-        .value    = "pxe-pcnet.rom",\
-    },{\
-        .driver   = "rtl8139",\
-        .property = "romfile",\
-        .value    = "pxe-rtl8139.rom",\
     },{\
         .driver   = "virtio-net-pci",\
         .property = "romfile",\
