@@ -18,9 +18,6 @@
 /ui/input-keymap-*.c
 *-timestamp
 /*-softmmu
-/*-darwin-user
-/*-linux-user
-/*-bsd-user
 /ivshmem-client
 /ivshmem-server
 /libdis*

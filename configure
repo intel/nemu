@@ -237,18 +237,6 @@ supported_target() {
     case "$1" in
         *-softmmu)
             ;;
-        *-linux-user)
-            if test "$linux" != "yes"; then
-                print_error "Target '$target' is only available on a Linux host"
-                return 1
-            fi
-            ;;
-        *-bsd-user)
-            if test "$bsd" != "yes"; then
-                print_error "Target '$target' is only available on a BSD host"
-                return 1
-            fi
-            ;;
         *)
             print_error "Invalid target name '$target'"
             return 1
@@ -380,8 +368,6 @@ linux="no"
 solaris="no"
 profiler="no"
 softmmu="yes"
-linux_user="no"
-bsd_user="no"
 blobs="yes"
 pkgversion=""
 pie=""
@@ -784,7 +770,6 @@ Linux)
   audio_drv_list="oss"
   audio_possible_drivers="oss alsa sdl pa"
   linux="yes"
-  linux_user="yes"
   kvm="yes"
   vhost_net="yes"
   vhost_crypto="yes"
@@ -1066,19 +1051,6 @@ for opt do
   ;;
   --enable-system) softmmu="yes"
   ;;
-  --disable-user)
-      linux_user="no" ;
-      bsd_user="no" ;
-  ;;
-  --enable-user) ;;
-  --disable-linux-user) linux_user="no"
-  ;;
-  --enable-linux-user) linux_user="yes"
-  ;;
-  --disable-bsd-user) bsd_user="no"
-  ;;
-  --enable-bsd-user) bsd_user="yes"
-  ;;
   --enable-pie) pie="yes"
   ;;
   --disable-pie) pie="no"
@@ -1338,25 +1310,12 @@ esac
 
 QEMU_CFLAGS="$CPU_CFLAGS $QEMU_CFLAGS"
 
-# For user-mode emulation the host arch has to be one we explicitly
-# support, even if we're using TCI.
-if [ "$ARCH" = "unknown" ]; then
-  bsd_user="no"
-  linux_user="no"
-fi
-
 default_target_list=""
 
 mak_wilds=""
 
 if [ "$softmmu" = "yes" ]; then
     mak_wilds="${mak_wilds} $source_path/default-configs/*-softmmu.mak"
-fi
-if [ "$linux_user" = "yes" ]; then
-    mak_wilds="${mak_wilds} $source_path/default-configs/*-linux-user.mak"
-fi
-if [ "$bsd_user" = "yes" ]; then
-    mak_wilds="${mak_wilds} $source_path/default-configs/*-bsd-user.mak"
 fi
 
 for config in $mak_wilds; do
@@ -1451,9 +1410,6 @@ Optional features, enabled with --enable-FEATURE and
 disabled with --disable-FEATURE, default is enabled if available:
 
   system          all system emulation targets
-  user            supported user emulation targets
-  linux-user      all linux usermode emulation targets
-  bsd-user        all BSD usermode emulation targets
   guest-agent     build the QEMU Guest Agent
   guest-agent-msi build guest agent Windows MSI installation package
   pie             Position Independent Executables
@@ -1906,22 +1862,6 @@ fi
 
 ##########################################
 # NPTL probe
-
-if test "$linux_user" = "yes"; then
-  cat > $TMPC <<EOF
-#include <sched.h>
-#include <linux/futex.h>
-int main(void) {
-#if !defined(CLONE_SETTLS) || !defined(FUTEX_WAIT)
-#error bork
-#endif
-  return 0;
-}
-EOF
-  if ! compile_object ; then
-    feature_not_found "nptl" "Install glibc and linux kernel headers."
-  fi
-fi
 
 #########################################
 # zlib check
@@ -4997,49 +4937,6 @@ if test "$cpu" = "s390x" ; then
   roms="$roms s390-ccw"
 fi
 
-# Probe for the need for relocating the user-only binary.
-if ( [ "$linux_user" = yes ] || [ "$bsd_user" = yes ] ) && [ "$pie" = no ]; then
-  textseg_addr=
-  case "$cpu" in
-    arm | i386 | ppc* | s390* | sparc* | x86_64 | x32)
-      # ??? Rationale for choosing this address
-      textseg_addr=0x60000000
-      ;;
-    mips)
-      # A 256M aligned address, high in the address space, with enough
-      # room for the code_gen_buffer above it before the stack.
-      textseg_addr=0x60000000
-      ;;
-  esac
-  if [ -n "$textseg_addr" ]; then
-    cat > $TMPC <<EOF
-    int main(void) { return 0; }
-EOF
-    textseg_ldflags="-Wl,-Ttext-segment=$textseg_addr"
-    if ! compile_prog "" "$textseg_ldflags"; then
-      # In case ld does not support -Ttext-segment, edit the default linker
-      # script via sed to set the .text start addr.  This is needed on FreeBSD
-      # at least.
-      if ! $ld --verbose >/dev/null 2>&1; then
-        error_exit \
-            "We need to link the QEMU user mode binaries at a" \
-            "specific text address. Unfortunately your linker" \
-            "doesn't support either the -Ttext-segment option or" \
-            "printing the default linker script with --verbose." \
-            "If you don't want the user mode binaries, pass the" \
-            "--disable-user option to configure."
-      fi
-
-      $ld --verbose | sed \
-        -e '1,/==================================================/d' \
-        -e '/==================================================/,$d' \
-        -e "s/[.] = [0-9a-fx]* [+] SIZEOF_HEADERS/. = $textseg_addr + SIZEOF_HEADERS/" \
-        -e "s/__executable_start = [0-9a-fx]*/__executable_start = $textseg_addr/" > config-host.ld
-      textseg_ldflags="-Wl,-T../config-host.ld"
-    fi
-  fi
-fi
-
 # Check that the C++ compiler exists and works with the C compiler.
 # All the QEMU_CXXFLAGS are based on QEMU_CFLAGS. Keep this at the end to don't miss any other that could be added.
 if has $cxx; then
@@ -5983,14 +5880,6 @@ target_bsd_user="no"
 case "$target" in
   ${target_name}-softmmu)
     target_softmmu="yes"
-    ;;
-  ${target_name}-linux-user)
-    target_user_only="yes"
-    target_linux_user="yes"
-    ;;
-  ${target_name}-bsd-user)
-    target_user_only="yes"
-    target_bsd_user="yes"
     ;;
   *)
     error_exit "Target '$target' not recognised"

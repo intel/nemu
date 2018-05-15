@@ -15,11 +15,6 @@ QEMU_CFLAGS += -iquote .. -iquote $(SRC_PATH)/target/$(TARGET_BASE_ARCH) -DNEED_
 
 QEMU_CFLAGS+=-iquote $(SRC_PATH)/include
 
-ifdef CONFIG_USER_ONLY
-# user emulator name
-QEMU_PROG=qemu-$(TARGET_NAME)
-QEMU_PROG_BUILD = $(QEMU_PROG)
-else
 # system emulator name
 QEMU_PROG=qemu-system-$(TARGET_NAME)$(EXESUF)
 ifneq (,$(findstring -mwindows,$(SDL_LIBS)))
@@ -31,7 +26,6 @@ QEMU_PROG_BUILD = $(QEMU_PROGW)
 else
 QEMU_PROG_BUILD = $(QEMU_PROG)
 endif
-endif
 
 PROGS=$(QEMU_PROG) $(QEMU_PROGW)
 STPFILES=
@@ -42,11 +36,7 @@ config-target.h-timestamp: config-target.mak
 ifdef CONFIG_TRACE_SYSTEMTAP
 stap: $(QEMU_PROG).stp-installed $(QEMU_PROG).stp $(QEMU_PROG)-simpletrace.stp
 
-ifdef CONFIG_USER_ONLY
-TARGET_TYPE=user
-else
 TARGET_TYPE=system
-endif
 
 tracetool-y = $(SRC_PATH)/scripts/tracetool.py
 tracetool-y += $(shell find $(SRC_PATH)/scripts/tracetool -name "*.py")
@@ -101,33 +91,6 @@ obj-y += fpu/softfloat.o
 obj-y += target/$(TARGET_BASE_ARCH)/
 obj-y += disas.o
 obj-$(call notempty,$(TARGET_XML_FILES)) += gdbstub-xml.o
-
-#########################################################
-# Linux user emulator target
-
-ifdef CONFIG_LINUX_USER
-
-QEMU_CFLAGS+=-I$(SRC_PATH)/linux-user/$(TARGET_ABI_DIR) \
-             -I$(SRC_PATH)/linux-user/host/$(ARCH) \
-             -I$(SRC_PATH)/linux-user
-
-obj-y += linux-user/
-obj-y += gdbstub.o thunk.o
-
-endif #CONFIG_LINUX_USER
-
-#########################################################
-# BSD user emulator target
-
-ifdef CONFIG_BSD_USER
-
-QEMU_CFLAGS+=-I$(SRC_PATH)/bsd-user -I$(SRC_PATH)/bsd-user/$(TARGET_ABI_DIR) \
-			 -I$(SRC_PATH)/bsd-user/$(HOST_VARIANT_DIR)
-
-obj-y += bsd-user/
-obj-y += gdbstub.o
-
-endif #CONFIG_BSD_USER
 
 #########################################################
 # System emulator target

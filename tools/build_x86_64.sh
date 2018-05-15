@@ -15,7 +15,6 @@ $SRCDIR/configure \
  --disable-libusb \
  --disable-libxml2 \
  --disable-linux-aio \
- --disable-linux-user \
  --disable-lzo \
  --disable-modules \
  --disable-netmap \
@@ -32,7 +31,6 @@ $SRCDIR/configure \
  --disable-tools \
  --disable-tpm \
  --disable-usb-redir \
- --disable-user \
  --disable-vde \
  --disable-virtfs \
  --disable-vnc \
