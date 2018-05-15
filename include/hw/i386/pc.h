@@ -44,7 +44,6 @@ struct PCMachineState {
 
     /* Configuration options: */
     uint64_t max_ram_below_4g;
-    OnOffAuto vmport;
     OnOffAuto smm;
 
     AcpiNVDIMMState acpi_nvdimm_state;
@@ -74,7 +73,6 @@ struct PCMachineState {
 #define PC_MACHINE_ACPI_DEVICE_PROP "acpi-device"
 #define PC_MACHINE_MEMHP_REGION_SIZE "hotplug-memory-region-size"
 #define PC_MACHINE_MAX_RAM_BELOW_4G "max-ram-below-4g"
-#define PC_MACHINE_VMPORT           "vmport"
 #define PC_MACHINE_SMM              "smm"
 #define PC_MACHINE_NVDIMM           "nvdimm"
 #define PC_MACHINE_SMBUS            "smbus"
@@ -176,19 +174,6 @@ typedef struct GSIState {
 
 void gsi_handler(void *opaque, int n, int level);
 
-/* vmport.c */
-#define TYPE_VMPORT "vmport"
-typedef uint32_t (VMPortReadFunc)(void *opaque, uint32_t address);
-
-static inline void vmport_init(ISABus *bus)
-{
-    isa_create_simple(bus, TYPE_VMPORT);
-}
-
-void vmport_register(unsigned char command, VMPortReadFunc *func, void *opaque);
-void vmmouse_get_data(uint32_t *data);
-void vmmouse_set_data(const uint32_t *data);
-
 /* pc.c */
 extern int fd_bootchk;
 
@@ -225,7 +210,6 @@ DeviceState *pc_vga_init(ISABus *isa_bus, PCIBus *pci_bus);
 void pc_basic_device_init(ISABus *isa_bus, qemu_irq *gsi,
                           ISADevice **rtc_state,
                           bool create_fdctrl,
-                          bool no_vmport,
                           bool has_pit,
                           uint32_t hpet_irqs);
 void pc_cmos_init(PCMachineState *pcms,

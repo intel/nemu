@@ -1490,12 +1490,12 @@ static const MemoryRegionOps ioportF0_io_ops = {
     },
 };
 
-static void pc_superio_init(ISABus *isa_bus, bool create_fdctrl, bool no_vmport)
+static void pc_superio_init(ISABus *isa_bus, bool create_fdctrl)
 {
     int i;
     DriveInfo *fd[MAX_FD];
     qemu_irq *a20_line;
-    ISADevice *i8042, *port92, *vmmouse;
+    ISADevice *i8042, *port92;
 
     serial_hds_isa_init(isa_bus, 0, MAX_SERIAL_PORTS);
     parallel_hds_isa_init(isa_bus, MAX_PARALLEL_PORTS);
@@ -1509,17 +1509,6 @@ static void pc_superio_init(ISABus *isa_bus, bool create_fdctrl, bool no_vmport)
     }
 
     i8042 = isa_create_simple(isa_bus, "i8042");
-    if (!no_vmport) {
-        vmport_init(isa_bus);
-        vmmouse = isa_try_create(isa_bus, "vmmouse");
-    } else {
-        vmmouse = NULL;
-    }
-    if (vmmouse) {
-        DeviceState *dev = DEVICE(vmmouse);
-        qdev_prop_set_ptr(dev, "ps2_mouse", i8042);
-        qdev_init_nofail(dev);
-    }
     port92 = isa_create_simple(isa_bus, "port92");
 
     a20_line = qemu_allocate_irqs(handle_a20_line_change, first_cpu, 2);
@@ -1531,7 +1520,6 @@ static void pc_superio_init(ISABus *isa_bus, bool create_fdctrl, bool no_vmport)
 void pc_basic_device_init(ISABus *isa_bus, qemu_irq *gsi,
                           ISADevice **rtc_state,
                           bool create_fdctrl,
-                          bool no_vmport,
                           bool has_pit,
                           uint32_t hpet_irqs)
 {
@@ -1600,7 +1588,7 @@ void pc_basic_device_init(ISABus *isa_bus, qemu_irq *gsi,
     i8257_dma_init(isa_bus, 0);
 
     /* Super I/O */
-    pc_superio_init(isa_bus, create_fdctrl, no_vmport);
+    pc_superio_init(isa_bus, create_fdctrl);
 }
 
 void ioapic_init_gsi(GSIState *gsi_state, const char *parent_name)
@@ -2072,23 +2060,6 @@ static void pc_machine_set_max_ram_below_4g(Object *obj, Visitor *v,
     pcms->max_ram_below_4g = value;
 }
 
-static void pc_machine_get_vmport(Object *obj, Visitor *v, const char *name,
-                                  void *opaque, Error **errp)
-{
-    PCMachineState *pcms = PC_MACHINE(obj);
-    OnOffAuto vmport = pcms->vmport;
-
-    visit_type_OnOffAuto(v, name, &vmport, errp);
-}
-
-static void pc_machine_set_vmport(Object *obj, Visitor *v, const char *name,
-                                  void *opaque, Error **errp)
-{
-    PCMachineState *pcms = PC_MACHINE(obj);
-
-    visit_type_OnOffAuto(v, name, &pcms->vmport, errp);
-}
-
 bool pc_machine_is_smm_enabled(PCMachineState *pcms)
 {
     bool smm_available = false;
@@ -2193,7 +2164,6 @@ static void pc_machine_initfn(Object *obj)
 
     pcms->max_ram_below_4g = 0; /* use default */
     pcms->smm = ON_OFF_AUTO_AUTO;
-    pcms->vmport = ON_OFF_AUTO_AUTO;
     /* nvdimm is disabled on default. */
     pcms->acpi_nvdimm_state.is_enabled = false;
     /* acpi build is enabled by default if machine supports it */
@@ -2348,12 +2318,6 @@ static void pc_machine_class_init(ObjectClass *oc, void *data)
         NULL, NULL, &error_abort);
     object_class_property_set_description(oc, PC_MACHINE_SMM,
         "Enable SMM (pc & q35)", &error_abort);
-
-    object_class_property_add(oc, PC_MACHINE_VMPORT, "OnOffAuto",
-        pc_machine_get_vmport, pc_machine_set_vmport,
-        NULL, NULL, &error_abort);
-    object_class_property_set_description(oc, PC_MACHINE_VMPORT,
-        "Enable vmport (pc & q35)", &error_abort);
 
     object_class_property_add_bool(oc, PC_MACHINE_NVDIMM,
         pc_machine_get_nvdimm, pc_machine_set_nvdimm, &error_abort);

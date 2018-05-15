@@ -226,14 +226,9 @@ static void pc_init1(MachineState *machine,
 
     pc_vga_init(isa_bus, pcmc->pci_enabled ? pci_bus : NULL);
 
-    assert(pcms->vmport != ON_OFF_AUTO__MAX);
-    if (pcms->vmport == ON_OFF_AUTO_AUTO) {
-        pcms->vmport = xen_enabled() ? ON_OFF_AUTO_OFF : ON_OFF_AUTO_ON;
-    }
-
     /* init basic PC hardware */
     pc_basic_device_init(isa_bus, pcms->gsi, &rtc_state, true,
-                         (pcms->vmport != ON_OFF_AUTO_ON), pcms->pit, 0x4);
+                         pcms->pit, 0x4);
 
     ide_drive_get(hd, ARRAY_SIZE(hd));
     if (pcmc->pci_enabled) {

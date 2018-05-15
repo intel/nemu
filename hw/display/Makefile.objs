@@ -1,6 +1,5 @@
 
 common-obj-$(CONFIG_VGA_PCI) += vga-pci.o
-common-obj-$(CONFIG_VGA_ISA) += vga-isa.o
 
 
 

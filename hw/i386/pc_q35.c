@@ -227,15 +227,9 @@ static void pc_q35_init(MachineState *machine)
 
     pc_register_ferr_irq(pcms->gsi[13]);
 
-    assert(pcms->vmport != ON_OFF_AUTO__MAX);
-    if (pcms->vmport == ON_OFF_AUTO_AUTO) {
-        pcms->vmport = xen_enabled() ? ON_OFF_AUTO_OFF : ON_OFF_AUTO_ON;
-    }
-
     /* init basic PC hardware */
     pc_basic_device_init(isa_bus, pcms->gsi, &rtc_state, !mc->no_floppy,
-                         (pcms->vmport != ON_OFF_AUTO_ON), pcms->pit,
-                         0xff0104);
+                         pcms->pit, 0xff0104);
 
     /* connect pm stuff to lpc */
     ich9_lpc_pm_init(lpc, pc_machine_is_smm_enabled(pcms));

@@ -1,6 +1,4 @@
 
-vgabios_variants := stdvga cirrus vmware qxl isavga virtio
-vgabios_targets  := $(subst -isavga,,$(patsubst %,vgabios-%.bin,$(vgabios_variants)))
 pxerom_variants  := virtio
 pxerom_targets   := 8086100e 808610d3 80861209 10500940 10222000 10ec8139 1af41000 15ad07b0
 
@@ -42,8 +40,6 @@ default:
 	@echo "nothing is build by default"
 	@echo "available build targets:"
 	@echo "  bios           -- update bios.bin (seabios)"
-	@echo "  seavgabios     -- update vgabios binaries (seabios)"
-	@echo "  lgplvgabios    -- update vgabios binaries (lgpl)"
 	@echo "  sgabios        -- update sgabios binaries"
 	@echo "  pxerom         -- update nic roms (bios only)"
 	@echo "  efirom         -- update nic roms (bios+efi, this needs"
@@ -56,14 +52,6 @@ default:
 bios: build-seabios-config-seabios-128k build-seabios-config-seabios-256k
 	cp seabios/builds/seabios-128k/bios.bin ../pc-bios/bios.bin
 	cp seabios/builds/seabios-256k/bios.bin ../pc-bios/bios-256k.bin
-
-seavgabios: $(patsubst %,seavgabios-%,$(vgabios_variants))
-
-seavgabios-isavga: build-seabios-config-vga-isavga
-	cp seabios/builds/vga-isavga/vgabios.bin ../pc-bios/vgabios.bin
-
-seavgabios-%: build-seabios-config-vga-%
-	cp seabios/builds/vga-$*/vgabios.bin ../pc-bios/vgabios-$*.bin
 
 build-seabios-config-%: config.%
 	mkdir -p seabios/builds/$*
@@ -78,17 +66,6 @@ build-seabios-config-%: config.%
 		CROSS_COMPILE=$(x86_64_cross_prefix) \
 		KCONFIG_CONFIG=$(CURDIR)/seabios/builds/$*/.config \
 		OUT=$(CURDIR)/seabios/builds/$*/ all
-
-
-lgplvgabios: $(patsubst %,lgplvgabios-%,$(vgabios_variants))
-
-lgplvgabios-isavga: build-lgplvgabios
-	cp vgabios/VGABIOS-lgpl-latest.bin ../pc-bios/vgabios.bin
-lgplvgabios-%: build-lgplvgabios
-	cp vgabios/VGABIOS-lgpl-latest.$*.bin ../pc-bios/vgabios-$*.bin
-
-build-lgplvgabios:
-	$(MAKE) -C vgabios $(vgabios_targets)
 
 
 .PHONY: sgabios skiboot
@@ -145,8 +122,6 @@ skiboot:
 
 clean:
 	rm -rf seabios/.config seabios/out seabios/builds
-	$(MAKE) -C vgabios clean
-	rm -f vgabios/VGABIOS-lgpl-latest*
 	$(MAKE) -C sgabios clean
 	rm -f sgabios/.depend
 	$(MAKE) -C ipxe/src veryclean
