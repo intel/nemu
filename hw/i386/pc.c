@@ -39,7 +39,6 @@
 #include "hw/smbios/smbios.h"
 #include "hw/loader.h"
 #include "elf.h"
-#include "multiboot.h"
 #include "hw/timer/mc146818rtc.h"
 #include "hw/dma/i8257.h"
 #include "hw/timer/i8254.h"
@@ -836,7 +835,7 @@ struct setup_data {
 static void load_linux(PCMachineState *pcms,
                        FWCfgState *fw_cfg)
 {
-    uint16_t protocol;
+    uint16_t protocol=0;
     int setup_size, kernel_size, initrd_size = 0, cmdline_size;
     int dtb_size, setup_data_offset;
     uint32_t initrd_max;
@@ -871,14 +870,6 @@ static void load_linux(PCMachineState *pcms,
 #endif
     if (ldl_p(header+0x202) == 0x53726448) {
         protocol = lduw_p(header+0x206);
-    } else {
-        /* This looks like a multiboot kernel. If it is, let's stop
-           treating it like a Linux kernel. */
-        if (load_multiboot(fw_cfg, f, kernel_filename, initrd_filename,
-                           kernel_cmdline, kernel_size, header)) {
-            return;
-        }
-        protocol = 0;
     }
 
     if (protocol < 0x200 || !(header[0x211] & 0x01)) {
