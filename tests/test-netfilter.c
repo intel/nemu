@@ -184,12 +184,7 @@ int main(int argc, char **argv)
 {
     int ret;
     char *args;
-    /* TODO: This test will not work without e1000 */
-    const char *devstr = "e1000";
-
-    if (g_str_equal(qtest_get_arch(), "s390x")) {
-        devstr = "virtio-net-ccw";
-    }
+    const char *devstr = "virtio-net";
 
     g_test_init(&argc, &argv, NULL);
     qtest_add_func("/netfilter/addremove_one", add_one_netfilter);

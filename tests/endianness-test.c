@@ -115,7 +115,7 @@ static void test_endianness(gconstpointer data)
 {
     const TestCase *test = data;
 
-    global_qtest = qtest_startf("-M %s%s%s -device pc-testdev",
+    global_qtest = qtest_startf("-M %s%s%s -device q35",
                                 test->machine,
                                 test->superio ? " -device " : "",
                                 test->superio ?: "");
@@ -187,7 +187,7 @@ static void test_endianness_split(gconstpointer data)
 {
     const TestCase *test = data;
 
-    global_qtest = qtest_startf("-M %s%s%s -device pc-testdev",
+    global_qtest = qtest_startf("-M %s%s%s -device q35",
                                 test->machine,
                                 test->superio ? " -device " : "",
                                 test->superio ?: "");
@@ -231,7 +231,7 @@ static void test_endianness_combine(gconstpointer data)
 {
     const TestCase *test = data;
 
-    global_qtest = qtest_startf("-M %s%s%s -device pc-testdev",
+    global_qtest = qtest_startf("-M %s%s%s -device q35",
                                 test->machine,
                                 test->superio ? " -device " : "",
                                 test->superio ?: "");

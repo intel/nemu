@@ -59,11 +59,7 @@
 
 static const char *get_devstr(void)
 {
-    if (g_str_equal(qtest_get_arch(), "s390x")) {
-        return "virtio-net-ccw";
-    }
-
-    return "rtl8139";
+    return "virtio-net";
 }
 
 
