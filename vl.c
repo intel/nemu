@@ -2137,13 +2137,6 @@ static void parse_display(const char *p)
             }
             opts = nextopt;
         }
-    } else if (strstart(p, "vnc", &opts)) {
-        if (*opts == '=') {
-            vnc_parse(opts + 1, &error_fatal);
-        } else {
-            error_report("VNC requires a display argument vnc=<display>");
-            exit(1);
-        }
     } else if (strstart(p, "egl-headless", &opts)) {
         dpy.type = DISPLAY_TYPE_EGL_HEADLESS;
     } else if (strstart(p, "curses", &opts)) {
@@ -3743,9 +3736,6 @@ int main(int argc, char **argv, char **envp)
                                              optarg, true)) {
                     exit(1);
                 }
-                break;
-            case QEMU_OPTION_vnc:
-                vnc_parse(optarg, &error_fatal);
                 break;
             case QEMU_OPTION_no_acpi:
                 acpi_enabled = 0;

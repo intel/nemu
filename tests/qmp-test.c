@@ -226,8 +226,6 @@ static int query_error_class(const char *cmd)
 #ifndef CONFIG_SPICE
         { "query-spice", ERROR_CLASS_COMMAND_NOT_FOUND },
 #endif
-        { "query-vnc", ERROR_CLASS_GENERIC_ERROR },
-        { "query-vnc-servers", ERROR_CLASS_GENERIC_ERROR },
 #ifndef CONFIG_REPLICATION
         { "query-xen-replication-status", ERROR_CLASS_COMMAND_NOT_FOUND },
 #endif

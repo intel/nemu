@@ -23,7 +23,6 @@
 #include "qemu/uuid.h"
 #include "chardev/char.h"
 #include "ui/qemu-spice.h"
-#include "ui/vnc.h"
 #include "sysemu/kvm.h"
 #include "sysemu/arch_init.h"
 #include "hw/qdev.h"
@@ -128,20 +127,6 @@ void qmp_cpu_add(int64_t id, Error **errp)
         error_setg(errp, "Not supported");
     }
 }
-
-/* If VNC support is enabled, the "true" query-vnc command is
-   defined in the VNC subsystem */
-VncInfo *qmp_query_vnc(Error **errp)
-{
-    error_setg(errp, QERR_FEATURE_DISABLED, "vnc");
-    return NULL;
-};
-
-VncInfo2List *qmp_query_vnc_servers(Error **errp)
-{
-    error_setg(errp, QERR_FEATURE_DISABLED, "vnc");
-    return NULL;
-};
 
 #ifndef CONFIG_SPICE
 /*
@@ -301,21 +286,6 @@ void qmp_set_password(const char *protocol, const char *password,
         return;
     }
 
-    if (strcmp(protocol, "vnc") == 0) {
-        if (fail_if_connected || disconnect_if_connected) {
-            /* vnc supports "connected=keep" only */
-            error_setg(errp, QERR_INVALID_PARAMETER, "connected");
-            return;
-        }
-        /* Note that setting an empty password will not disable login through
-         * this interface. */
-        rc = vnc_display_password(NULL, password);
-        if (rc < 0) {
-            error_setg(errp, QERR_SET_PASSWD_FAILED);
-        }
-        return;
-    }
-
     error_setg(errp, QERR_INVALID_PARAMETER, "protocol");
 }
 
@@ -346,36 +316,14 @@ void qmp_expire_password(const char *protocol, const char *whenstr,
         return;
     }
 
-    if (strcmp(protocol, "vnc") == 0) {
-        rc = vnc_display_pw_expire(NULL, when);
-        if (rc != 0) {
-            error_setg(errp, QERR_SET_PASSWD_FAILED);
-        }
-        return;
-    }
-
     error_setg(errp, QERR_INVALID_PARAMETER, "protocol");
-}
-
-void qmp_change_vnc_password(const char *password, Error **errp)
-{
-    error_setg(errp, QERR_FEATURE_DISABLED, "vnc");
-}
-static void qmp_change_vnc(const char *target, bool has_arg, const char *arg,
-                           Error **errp)
-{
-    error_setg(errp, QERR_FEATURE_DISABLED, "vnc");
 }
 
 void qmp_change(const char *device, const char *target,
                 bool has_arg, const char *arg, Error **errp)
 {
-    if (strcmp(device, "vnc") == 0) {
-        qmp_change_vnc(target, has_arg, arg, errp);
-    } else {
         qmp_blockdev_change_medium(true, device, false, NULL, target,
                                    has_arg, arg, false, 0, errp);
-    }
 }
 
 static void qom_list_types_tramp(ObjectClass *klass, void *data)

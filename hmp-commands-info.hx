@@ -421,19 +421,6 @@ STEXI
 Show which guest mouse is receiving events.
 ETEXI
 
-    {
-        .name       = "vnc",
-        .args_type  = "",
-        .params     = "",
-        .help       = "show the vnc server status",
-        .cmd        = hmp_info_vnc,
-    },
-
-STEXI
-@item info vnc
-@findex info vnc
-Show the vnc server status.
-ETEXI
 
 #if defined(CONFIG_SPICE)
     {

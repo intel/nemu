@@ -1,15 +1,6 @@
-vnc-obj-y += vnc.o
-vnc-obj-y += vnc-enc-zlib.o vnc-enc-hextile.o
-vnc-obj-y += vnc-enc-tight.o vnc-palette.o
-vnc-obj-y += vnc-enc-zrle.o
-vnc-obj-y += vnc-auth-vencrypt.o
-vnc-obj-y += vnc-ws.o
-vnc-obj-y += vnc-jobs.o
-
 common-obj-y += keymaps.o console.o cursor.o qemu-pixman.o
 common-obj-y += input.o input-keymap.o input-legacy.o
 common-obj-$(CONFIG_LINUX) += input-linux.o
-common-obj-$(call lnot,$(CONFIG_VNC)) += vnc-stubs.o
 
 x_keymap.o-cflags := $(X11_CFLAGS)
 x_keymap.o-libs := $(X11_LIBS)

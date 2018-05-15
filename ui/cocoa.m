@@ -1397,7 +1397,6 @@ int main (int argc, const char * argv[]) {
                 opt++;
             }
             if (!strcmp(opt, "-h") || !strcmp(opt, "-help") ||
-                !strcmp(opt, "-vnc") ||
                 !strcmp(opt, "-nographic") ||
                 !strcmp(opt, "-version") ||
                 !strcmp(opt, "-curses") ||

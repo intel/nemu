@@ -596,94 +596,6 @@ void hmp_info_blockstats(Monitor *mon, const QDict *qdict)
     qapi_free_BlockStatsList(stats_list);
 }
 
-/* Helper for hmp_info_vnc_clients, _servers */
-static void hmp_info_VncBasicInfo(Monitor *mon, VncBasicInfo *info,
-                                  const char *name)
-{
-    monitor_printf(mon, "  %s: %s:%s (%s%s)\n",
-                   name,
-                   info->host,
-                   info->service,
-                   NetworkAddressFamily_str(info->family),
-                   info->websocket ? " (Websocket)" : "");
-}
-
-/* Helper displaying and auth and crypt info */
-static void hmp_info_vnc_authcrypt(Monitor *mon, const char *indent,
-                                   VncPrimaryAuth auth,
-                                   VncVencryptSubAuth *vencrypt)
-{
-    monitor_printf(mon, "%sAuth: %s (Sub: %s)\n", indent,
-                   VncPrimaryAuth_str(auth),
-                   vencrypt ? VncVencryptSubAuth_str(*vencrypt) : "none");
-}
-
-static void hmp_info_vnc_clients(Monitor *mon, VncClientInfoList *client)
-{
-    while (client) {
-        VncClientInfo *cinfo = client->value;
-
-        hmp_info_VncBasicInfo(mon, qapi_VncClientInfo_base(cinfo), "Client");
-        monitor_printf(mon, "    x509_dname: %s\n",
-                       cinfo->has_x509_dname ?
-                       cinfo->x509_dname : "none");
-        monitor_printf(mon, "    sasl_username: %s\n",
-                       cinfo->has_sasl_username ?
-                       cinfo->sasl_username : "none");
-
-        client = client->next;
-    }
-}
-
-static void hmp_info_vnc_servers(Monitor *mon, VncServerInfo2List *server)
-{
-    while (server) {
-        VncServerInfo2 *sinfo = server->value;
-        hmp_info_VncBasicInfo(mon, qapi_VncServerInfo2_base(sinfo), "Server");
-        hmp_info_vnc_authcrypt(mon, "    ", sinfo->auth,
-                               sinfo->has_vencrypt ? &sinfo->vencrypt : NULL);
-        server = server->next;
-    }
-}
-
-void hmp_info_vnc(Monitor *mon, const QDict *qdict)
-{
-    VncInfo2List *info2l;
-    Error *err = NULL;
-
-    info2l = qmp_query_vnc_servers(&err);
-    if (err) {
-        hmp_handle_error(mon, &err);
-        return;
-    }
-    if (!info2l) {
-        monitor_printf(mon, "None\n");
-        return;
-    }
-
-    while (info2l) {
-        VncInfo2 *info = info2l->value;
-        monitor_printf(mon, "%s:\n", info->id);
-        hmp_info_vnc_servers(mon, info->server);
-        hmp_info_vnc_clients(mon, info->clients);
-        if (!info->server) {
-            /* The server entry displays its auth, we only
-             * need to display in the case of 'reverse' connections
-             * where there's no server.
-             */
-            hmp_info_vnc_authcrypt(mon, "  ", info->auth,
-                               info->has_vencrypt ? &info->vencrypt : NULL);
-        }
-        if (info->has_display) {
-            monitor_printf(mon, "  Display: %s\n", info->display);
-        }
-        info2l = info2l->next;
-    }
-
-    qapi_free_VncInfo2List(info2l);
-
-}
-
 #ifdef CONFIG_SPICE
 void hmp_info_spice(Monitor *mon, const QDict *qdict)
 {
@@ -1721,13 +1633,6 @@ void hmp_eject(Monitor *mon, const QDict *qdict)
     hmp_handle_error(mon, &err);
 }
 
-static void hmp_change_read_arg(void *opaque, const char *password,
-                                void *readline_opaque)
-{
-    qmp_change_vnc_password(password, NULL);
-    monitor_read_command(opaque, 1);
-}
-
 void hmp_change(Monitor *mon, const QDict *qdict)
 {
     const char *device = qdict_get_str(qdict, "device");
@@ -1737,21 +1642,6 @@ void hmp_change(Monitor *mon, const QDict *qdict)
     BlockdevChangeReadOnlyMode read_only_mode = 0;
     Error *err = NULL;
 
-    if (strcmp(device, "vnc") == 0) {
-        if (read_only) {
-            monitor_printf(mon,
-                           "Parameter 'read-only-mode' is invalid for VNC\n");
-            return;
-        }
-        if (strcmp(target, "passwd") == 0 ||
-            strcmp(target, "password") == 0) {
-            if (!arg) {
-                monitor_read_password(mon, hmp_change_read_arg, NULL);
-                return;
-            }
-        }
-        qmp_change("vnc", target, !!arg, arg, &err);
-    } else {
         if (read_only) {
             read_only_mode =
                 qapi_enum_parse(&BlockdevChangeReadOnlyMode_lookup,
@@ -1766,7 +1656,6 @@ void hmp_change(Monitor *mon, const QDict *qdict)
         qmp_blockdev_change_medium(true, device, false, NULL, target,
                                    !!arg, arg, !!read_only, read_only_mode,
                                    &err);
-    }
 
     hmp_handle_error(mon, &err);
 }

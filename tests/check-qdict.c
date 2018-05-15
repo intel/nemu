@@ -591,66 +591,6 @@ static void qdict_join_test(void)
     QDECREF(dict2);
 }
 
-static void qdict_crumple_test_recursive(void)
-{
-    QDict *src, *dst, *rule, *vnc, *acl, *listen;
-    QList *rules;
-
-    src = qdict_new();
-    qdict_put_str(src, "vnc.listen.addr", "127.0.0.1");
-    qdict_put_str(src, "vnc.listen.port", "5901");
-    qdict_put_str(src, "vnc.acl.rules.0.match", "fred");
-    qdict_put_str(src, "vnc.acl.rules.0.policy", "allow");
-    qdict_put_str(src, "vnc.acl.rules.1.match", "bob");
-    qdict_put_str(src, "vnc.acl.rules.1.policy", "deny");
-    qdict_put_str(src, "vnc.acl.default", "deny");
-    qdict_put_str(src, "vnc.acl..name", "acl0");
-    qdict_put_str(src, "vnc.acl.rule..name", "acl0");
-
-    dst = qobject_to(QDict, qdict_crumple(src, &error_abort));
-    g_assert(dst);
-    g_assert_cmpint(qdict_size(dst), ==, 1);
-
-    vnc = qdict_get_qdict(dst, "vnc");
-    g_assert(vnc);
-    g_assert_cmpint(qdict_size(vnc), ==, 3);
-
-    listen = qdict_get_qdict(vnc, "listen");
-    g_assert(listen);
-    g_assert_cmpint(qdict_size(listen), ==, 2);
-    g_assert_cmpstr("127.0.0.1", ==, qdict_get_str(listen, "addr"));
-    g_assert_cmpstr("5901", ==, qdict_get_str(listen, "port"));
-
-    acl = qdict_get_qdict(vnc, "acl");
-    g_assert(acl);
-    g_assert_cmpint(qdict_size(acl), ==, 3);
-
-    rules = qdict_get_qlist(acl, "rules");
-    g_assert(rules);
-    g_assert_cmpint(qlist_size(rules), ==, 2);
-
-    rule = qobject_to(QDict, qlist_pop(rules));
-    g_assert(rule);
-    g_assert_cmpint(qdict_size(rule), ==, 2);
-    g_assert_cmpstr("fred", ==, qdict_get_str(rule, "match"));
-    g_assert_cmpstr("allow", ==, qdict_get_str(rule, "policy"));
-    QDECREF(rule);
-
-    rule = qobject_to(QDict, qlist_pop(rules));
-    g_assert(rule);
-    g_assert_cmpint(qdict_size(rule), ==, 2);
-    g_assert_cmpstr("bob", ==, qdict_get_str(rule, "match"));
-    g_assert_cmpstr("deny", ==, qdict_get_str(rule, "policy"));
-    QDECREF(rule);
-
-    /* With recursive crumpling, we should see all names unescaped */
-    g_assert_cmpstr("acl0", ==, qdict_get_str(vnc, "acl.name"));
-    g_assert_cmpstr("acl0", ==, qdict_get_str(acl, "rule.name"));
-
-    QDECREF(src);
-    QDECREF(dst);
-}
-
 static void qdict_crumple_test_empty(void)
 {
     QDict *src, *dst;
@@ -1000,8 +940,6 @@ int main(int argc, char **argv)
     g_test_add_func("/errors/put_exists", qdict_put_exists_test);
     g_test_add_func("/errors/get_not_exists", qdict_get_not_exists_test);
 
-    g_test_add_func("/public/crumple/recursive",
-                    qdict_crumple_test_recursive);
     g_test_add_func("/public/crumple/empty",
                     qdict_crumple_test_empty);
     g_test_add_func("/public/crumple/bad_inputs",

@@ -1846,7 +1846,7 @@ static DisplayState *get_alloc_displaystate(void)
 
 /*
  * Called by main(), after creating QemuConsoles
- * and before initializing ui (sdl/vnc/...).
+ * and before initializing ui (sdl...).
  */
 DisplayState *init_displaystate(void)
 {
