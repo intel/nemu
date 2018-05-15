@@ -321,8 +321,8 @@ if [ "$PLATFORM" != "aarch64" ]; then
    qemu_args+=" -device vhost-vsock-pci,id=vhost-vsock-pci0,guest-cid=3"         
 else
    qemu_args+=" \
-    -pflash flash0.img \
-    -pflash flash1.img"
+    -drive if=pflash,file=flash0.img,format=raw \
+    -drive if=pflash,file=flash1.img,format=raw"
     qemu_args+=" -device pci-bridge,bus=pcie.0,id=pci-bridge-0,chassis_nr=1,shpc=on "
 
     qemu_args+=" -drive if=none,file=$vmimagetmp,id=hd0 \
