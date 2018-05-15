@@ -78,7 +78,6 @@ check-unit-y += tests/test-iov$(EXESUF)
 gcov-files-test-iov-y = util/iov.c
 check-unit-y += tests/test-aio$(EXESUF)
 gcov-files-test-aio-y = util/async.c util/qemu-timer.o
-gcov-files-test-aio-$(CONFIG_WIN32) += util/aio-win32.c
 gcov-files-test-aio-$(CONFIG_POSIX) += util/aio-posix.c
 check-unit-y += tests/test-aio-multithread$(EXESUF)
 gcov-files-test-aio-multithread-y = $(gcov-files-test-aio-y)
@@ -140,8 +139,6 @@ check-speed-y += tests/benchmark-crypto-hmac$(EXESUF)
 check-unit-y += tests/test-crypto-cipher$(EXESUF)
 check-speed-y += tests/benchmark-crypto-cipher$(EXESUF)
 check-unit-y += tests/test-crypto-secret$(EXESUF)
-check-unit-$(CONFIG_GNUTLS) += tests/test-crypto-tlscredsx509$(EXESUF)
-check-unit-$(CONFIG_GNUTLS) += tests/test-crypto-tlssession$(EXESUF)
 ifneq (,$(findstring qemu-ga,$(TOOLS)))
 check-unit-$(CONFIG_LINUX) += tests/test-qga$(EXESUF)
 endif
@@ -150,11 +147,9 @@ check-unit-y += tests/test-util-sockets$(EXESUF)
 check-unit-y += tests/test-io-task$(EXESUF)
 check-unit-y += tests/test-io-channel-socket$(EXESUF)
 check-unit-y += tests/test-io-channel-file$(EXESUF)
-check-unit-$(CONFIG_GNUTLS) += tests/test-io-channel-tls$(EXESUF)
 check-unit-y += tests/test-io-channel-command$(EXESUF)
 check-unit-y += tests/test-io-channel-buffer$(EXESUF)
 check-unit-y += tests/test-base64$(EXESUF)
-check-unit-$(if $(CONFIG_NETTLE_KDF),y,$(CONFIG_GCRYPT_KDF)) += tests/test-crypto-pbkdf$(EXESUF)
 check-unit-y += tests/test-crypto-ivgen$(EXESUF)
 check-unit-y += tests/test-crypto-afsplit$(EXESUF)
 check-unit-y += tests/test-crypto-xts$(EXESUF)
@@ -232,8 +227,6 @@ check-qtest-x86_64-y += tests/q35-test$(EXESUF)
 check-qtest-x86_64-y += tests/vmgenid-test$(EXESUF)
 gcov-files-x86_64-y += hw/pci-host/q35.c
 check-qtest-x86_64-$(CONFIG_VHOST_USER_NET_TEST_x86_64) += tests/vhost-user-test$(EXESUF)
-check-qtest-x86_64-$(CONFIG_TPM) += tests/tpm-crb-test$(EXESUF)
-check-qtest-x86_64-$(CONFIG_TPM) += tests/tpm-tis-test$(EXESUF)
 check-qtest-x86_64-$(CONFIG_SLIRP) += tests/test-netfilter$(EXESUF)
 check-qtest-x86_64-$(CONFIG_POSIX) += tests/test-filter-mirror$(EXESUF)
 check-qtest-x86_64-$(CONFIG_POSIX) += tests/test-filter-redirector$(EXESUF)
@@ -549,34 +542,19 @@ tests/benchmark-crypto-cipher$(EXESUF): tests/benchmark-crypto-cipher.o $(test-c
 tests/test-crypto-secret$(EXESUF): tests/test-crypto-secret.o $(test-crypto-obj-y)
 tests/test-crypto-xts$(EXESUF): tests/test-crypto-xts.o $(test-crypto-obj-y)
 
-tests/crypto-tls-x509-helpers.o-cflags := $(TASN1_CFLAGS)
-tests/crypto-tls-x509-helpers.o-libs := $(TASN1_LIBS)
 tests/pkix_asn1_tab.o-cflags := $(TASN1_CFLAGS)
 
-tests/test-crypto-tlscredsx509.o-cflags := $(TASN1_CFLAGS)
-tests/test-crypto-tlscredsx509$(EXESUF): tests/test-crypto-tlscredsx509.o \
-	tests/crypto-tls-x509-helpers.o tests/pkix_asn1_tab.o $(test-crypto-obj-y)
-
-tests/test-crypto-tlssession.o-cflags := $(TASN1_CFLAGS)
-tests/test-crypto-tlssession$(EXESUF): tests/test-crypto-tlssession.o \
-	tests/crypto-tls-x509-helpers.o tests/pkix_asn1_tab.o $(test-crypto-obj-y)
 tests/test-util-sockets$(EXESUF): tests/test-util-sockets.o \
 	tests/socket-helpers.o $(test-util-obj-y)
 tests/test-io-task$(EXESUF): tests/test-io-task.o $(test-io-obj-y)
 tests/test-io-channel-socket$(EXESUF): tests/test-io-channel-socket.o \
         tests/io-channel-helpers.o tests/socket-helpers.o $(test-io-obj-y)
-tests/tpm-crb-test$(EXESUF): tests/tpm-crb-test.o tests/tpm-emu.o $(test-io-obj-y)
-tests/tpm-tis-test$(EXESUF): tests/tpm-tis-test.o tests/tpm-emu.o $(test-io-obj-y)
 tests/test-io-channel-file$(EXESUF): tests/test-io-channel-file.o \
         tests/io-channel-helpers.o $(test-io-obj-y)
-tests/test-io-channel-tls$(EXESUF): tests/test-io-channel-tls.o \
-	tests/crypto-tls-x509-helpers.o tests/pkix_asn1_tab.o \
-	tests/io-channel-helpers.o $(test-io-obj-y)
 tests/test-io-channel-command$(EXESUF): tests/test-io-channel-command.o \
         tests/io-channel-helpers.o $(test-io-obj-y)
 tests/test-io-channel-buffer$(EXESUF): tests/test-io-channel-buffer.o \
         tests/io-channel-helpers.o $(test-io-obj-y)
-tests/test-crypto-pbkdf$(EXESUF): tests/test-crypto-pbkdf.o $(test-crypto-obj-y)
 tests/test-crypto-ivgen$(EXESUF): tests/test-crypto-ivgen.o $(test-crypto-obj-y)
 tests/test-crypto-afsplit$(EXESUF): tests/test-crypto-afsplit.o $(test-crypto-obj-y)
 tests/test-crypto-block$(EXESUF): tests/test-crypto-block.o $(test-crypto-obj-y)
