@@ -1,5 +1,4 @@
 common-obj-$(CONFIG_ISA_BUS) += isa-bus.o
-common-obj-$(CONFIG_ISA_BUS) += isa-superio.o smc37c669-superio.o
 common-obj-$(CONFIG_APM) += apm.o
 
 obj-$(CONFIG_LPC_ICH9) += lpc_ich9.o
