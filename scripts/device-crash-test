@@ -93,10 +93,7 @@ ERROR_WHITELIST = [
     {'device':'ide-cd'},                                 # No drive specified
     {'device':'ide-drive', 'expected':True},               # No drive specified
     {'device':'ide-hd', 'expected':True},                  # No drive specified
-    {'device':'ipmi-bmc-extern', 'expected':True},         # IPMI external bmc requires chardev attribute
     {'device':'isa-debugcon', 'expected':True},            # Can't create serial device, empty char device
-    {'device':'isa-ipmi-bt', 'expected':True},             # IPMI device requires a bmc attribute to be set
-    {'device':'isa-ipmi-kcs', 'expected':True},            # IPMI device requires a bmc attribute to be set
     {'device':'isa-parallel', 'expected':True},            # Can't create serial device, empty char device
     {'device':'isa-serial', 'expected':True},              # Can't create serial device, empty char device
     {'device':'ivshmem', 'expected':True},                 # You must specify either 'shm' or 'chardev'

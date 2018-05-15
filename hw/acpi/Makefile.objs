@@ -12,7 +12,6 @@ common-obj-y += acpi_interface.o
 common-obj-y += bios-linker-loader.o
 common-obj-y += aml-build.o
 
-common-obj-$(call lnot,$(CONFIG_IPMI)) += ipmi-stub.o
 else
 common-obj-y += acpi-stub.o
 endif
