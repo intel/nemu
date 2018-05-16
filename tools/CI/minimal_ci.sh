@@ -28,6 +28,7 @@
 SCRIPT_DIR="`dirname "$0"`" 
 CI_SCRIPT="$SCRIPT_DIR/start_qemu.sh"
 CLOUD_INIT_DIR="$SCRIPT_DIR/cloud-init/"
+BUILD_DIR=""
 HYPERVISOR="$HOME/build-x86_64/x86_64-softmmu/qemu-system-x86_64"
 WORKLOADS_DIR="$HOME/workloads"
 EFI_FIRMWARE="$HOME/workloads/OVMF.fd"
@@ -100,6 +101,7 @@ Options:
     -cloudinit  DIR     Cloud init directory
     -hypervisor FILE    Hypervisor to test
     -workloads  DIR     Directory containing the workload
+    -builddir   DIR     Build directory
     -unsafe             Test unsafe images
     -download           Download the workloads. Do not test
     -v                  Verbose mode
@@ -127,6 +129,9 @@ while [ $# -ge 1 ]; do
     -download)
         DOWNLOAD_ONLY="true"
         shift;;
+    -builddir)
+        BUILD_DIR="$2"
+        shift 2 ;;
     -v)
         set -x
         shift ;;
@@ -229,6 +234,26 @@ if [ ! -f $EFI_FIRMWARE ]; then
 fi
 
 IS_AARCH64=`file $HYPERVISOR | grep aarch64`
+if [[ "$BUILD_DIR" == "" ]]; then
+    if [[ "$IS_AARCH64" == "" ]]; then
+        BUILD_DIR="$HOME/build-x86_64/"
+    else
+        BUILD_DIR="$HOME/build-aarch64/"
+    fi
+fi
+
+echo "Running unit tests"
+
+extra_check_args=""
+if [[ "$VERBOSE" == "true" ]]; then
+    extra_check_args="$extra_check_args V=1"
+fi
+
+make -C $BUILD_DIR check -j `nproc` $extra_check_args
+if [ $? -ne 0 ]; then
+   echo "FAILED: Unit tests"
+fi
+
 if [[ "$RUN_UNSAFE" == "false" ]]; then
     echo "Testing safe images"
     if [[ "$IS_AARCH64" == "" ]]; then
