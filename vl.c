@@ -1988,40 +1988,12 @@ static VGAInterfaceInfo vga_interfaces[VGA_TYPE_MAX] = {
     [VGA_STD] = {
         .opt_name = "std",
         .name = "standard VGA",
-        .class_names = { "VGA", "isa-vga" },
-    },
-    [VGA_CIRRUS] = {
-        .opt_name = "cirrus",
-        .name = "Cirrus VGA",
-        .class_names = { "cirrus-vga", "isa-cirrus-vga" },
-    },
-    [VGA_VMWARE] = {
-        .opt_name = "vmware",
-        .name = "VMWare SVGA",
-        .class_names = { "vmware-svga" },
+        .class_names = { "VGA", "virtio" },
     },
     [VGA_VIRTIO] = {
         .opt_name = "virtio",
         .name = "Virtio VGA",
         .class_names = { "virtio-vga" },
-    },
-    [VGA_QXL] = {
-        .opt_name = "qxl",
-        .name = "QXL VGA",
-        .class_names = { "qxl-vga" },
-    },
-    [VGA_TCX] = {
-        .opt_name = "tcx",
-        .name = "TCX framebuffer",
-        .class_names = { "SUNW,tcx" },
-    },
-    [VGA_CG3] = {
-        .opt_name = "cg3",
-        .name = "CG3 framebuffer",
-        .class_names = { "cgthree" },
-    },
-    [VGA_XENFB] = {
-        .opt_name = "xenfb",
     },
 };
 
@@ -4509,10 +4481,10 @@ int main(int argc, char **argv, char **envp)
     if (default_vga) {
         if (machine_class->default_display) {
             vga_model = machine_class->default_display;
-        } else if (vga_interface_available(VGA_CIRRUS)) {
-            vga_model = "cirrus";
         } else if (vga_interface_available(VGA_STD)) {
             vga_model = "std";
+        } else if (vga_interface_available(VGA_VIRTIO)) {
+            vga_model = "virtio";
         }
     }
     if (vga_model) {

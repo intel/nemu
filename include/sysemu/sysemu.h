@@ -98,13 +98,11 @@ void qemu_announce_self(void);
 extern int autostart;
 
 typedef enum {
-    VGA_NONE, VGA_STD, VGA_CIRRUS, VGA_VMWARE, VGA_XENFB, VGA_QXL,
-    VGA_TCX, VGA_CG3, VGA_DEVICE, VGA_VIRTIO,
+    VGA_NONE, VGA_STD, VGA_DEVICE, VGA_VIRTIO,
     VGA_TYPE_MAX,
 } VGAInterfaceType;
 
 extern int vga_interface_type;
-#define xenfb_enabled (vga_interface_type == VGA_XENFB)
 
 extern int graphic_width;
 extern int graphic_height;
