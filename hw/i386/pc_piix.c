@@ -31,7 +31,6 @@
 #include "hw/smbios/smbios.h"
 #include "hw/pci/pci.h"
 #include "hw/pci/pci_ids.h"
-#include "hw/usb.h"
 #include "net/net.h"
 #include "hw/boards.h"
 #include "hw/ide.h"
@@ -241,10 +240,6 @@ static void pc_init1(MachineState *machine,
     }
 
     pc_cmos_init(pcms, idebus[0], idebus[1], rtc_state);
-
-    if (pcmc->pci_enabled && machine_usb(machine)) {
-        pci_create_simple(pci_bus, piix3_devfn + 2, "piix3-usb-uhci");
-    }
 
     if (pcmc->pci_enabled && acpi_enabled) {
         DeviceState *piix4_pm;
@@ -597,10 +592,6 @@ DEFINE_I440FX_MACHINE(v1_4, "pc-i440fx-1.4", pc_compat_1_4,
 #define PC_COMPAT_1_3 \
         PC_CPU_MODEL_IDS("1.3.0") \
         {\
-            .driver   = "usb-tablet",\
-            .property = "usb_version",\
-            .value    = stringify(1),\
-        },{\
             .driver   = "virtio-net-pci",\
             .property = "ctrl_mac_addr",\
             .value    = "off",      \
@@ -625,14 +616,6 @@ DEFINE_I440FX_MACHINE(v1_3, "pc-1.3", pc_compat_1_3,
 #define PC_COMPAT_1_2 \
         PC_CPU_MODEL_IDS("1.2.0") \
         {\
-            .driver   = "nec-usb-xhci",\
-            .property = "msi",\
-            .value    = "off",\
-        },{\
-            .driver   = "nec-usb-xhci",\
-            .property = "msix",\
-            .value    = "off",\
-        },{\
             .driver   = "ivshmem",\
             .property = "use64",\
             .value    = "0",\
@@ -718,10 +701,6 @@ DEFINE_I440FX_MACHINE(v1_1, "pc-1.1", pc_compat_1_2,
             .driver   = "apic-common",\
             .property = "vapic",\
             .value    = "off",\
-        },{\
-            .driver   = TYPE_USB_DEVICE,\
-            .property = "full-path",\
-            .value    = "no",\
         },
 
 static void pc_i440fx_1_0_machine_options(MachineClass *m)
@@ -835,18 +814,6 @@ DEFINE_I440FX_MACHINE(v0_13, "pc-0.13", pc_compat_0_13,
             .driver   = "virtio-serial-pci",\
             .property = "vectors",\
             .value    = stringify(0),\
-        },{\
-            .driver   = "usb-mouse",\
-            .property = "serial",\
-            .value    = "1",\
-        },{\
-            .driver   = "usb-tablet",\
-            .property = "serial",\
-            .value    = "1",\
-        },{\
-            .driver   = "usb-kbd",\
-            .property = "serial",\
-            .value    = "1",\
         },
 
 static void pc_i440fx_0_12_machine_options(MachineClass *m)

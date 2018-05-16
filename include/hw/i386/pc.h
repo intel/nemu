@@ -705,16 +705,6 @@ bool e820_get_entry(int, uint32_t, uint64_t *, uint64_t *);
         .value    = stringify(0x11),\
     },\
     {\
-        .driver   = "nec-usb-xhci",\
-        .property = "superspeed-ports-first",\
-        .value    = "off",\
-    },\
-    {\
-        .driver   = "nec-usb-xhci",\
-        .property = "force-pcie-endcap",\
-        .value    = "on",\
-    },\
-    {\
         .driver   = "pci-serial",\
         .property = "prog_if",\
         .value    = stringify(0),\
@@ -750,11 +740,6 @@ bool e820_get_entry(int, uint32_t, uint64_t *, uint64_t *);
 
 #define PC_COMPAT_1_7 \
     PC_CPU_MODEL_IDS("1.7.0") \
-    {\
-        .driver   = TYPE_USB_DEVICE,\
-        .property = "msos-desc",\
-        .value    = "no",\
-    },\
     {\
         .driver   = "PIIX4_PM",\
         .property = "acpi-pci-hotplug-with-bridge-support",\

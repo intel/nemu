@@ -12,7 +12,6 @@ $SRCDIR/configure \
  --disable-libiscsi \
  --disable-libnfs \
  --disable-libssh2 \
- --disable-libusb \
  --disable-libxml2 \
  --disable-linux-aio \
  --disable-lzo \
@@ -29,7 +28,6 @@ $SRCDIR/configure \
  --disable-tcmalloc \
  --disable-tools \
  --disable-tpm \
- --disable-usb-redir \
  --disable-vde \
  --disable-virtfs \
  --disable-vxhs \

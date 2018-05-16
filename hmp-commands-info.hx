@@ -324,34 +324,6 @@ Show NUMA information.
 ETEXI
 
     {
-        .name       = "usb",
-        .args_type  = "",
-        .params     = "",
-        .help       = "show guest USB devices",
-        .cmd        = hmp_info_usb,
-    },
-
-STEXI
-@item info usb
-@findex info usb
-Show guest USB devices.
-ETEXI
-
-    {
-        .name       = "usbhost",
-        .args_type  = "",
-        .params     = "",
-        .help       = "show host USB devices",
-        .cmd        = hmp_info_usbhost,
-    },
-
-STEXI
-@item info usbhost
-@findex info usbhost
-Show host USB devices.
-ETEXI
-
-    {
         .name       = "profile",
         .args_type  = "",
         .params     = "",

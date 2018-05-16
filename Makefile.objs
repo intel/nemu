@@ -198,7 +198,6 @@ trace-events-subdirs += hw/intc
 trace-events-subdirs += hw/virtio
 trace-events-subdirs += hw/audio
 trace-events-subdirs += hw/misc
-trace-events-subdirs += hw/usb
 trace-events-subdirs += hw/scsi
 trace-events-subdirs += hw/nvram
 trace-events-subdirs += hw/display

@@ -351,8 +351,6 @@ trace_file="trace"
 spice=""
 rbd=""
 smartcard=""
-libusb=""
-usb_redir=""
 opengl=""
 opengl_dmabuf="no"
 cpuid_h="no"
@@ -864,14 +862,6 @@ for opt do
   ;;
   --enable-smartcard) smartcard="yes"
   ;;
-  --disable-libusb) libusb="no"
-  ;;
-  --enable-libusb) libusb="yes"
-  ;;
-  --disable-usb-redir) usb_redir="no"
-  ;;
-  --enable-usb-redir) usb_redir="yes"
-  ;;
   --disable-zlib-test) zlib="no"
   ;;
   --disable-lzo) lzo="no"
@@ -1136,9 +1126,7 @@ disabled with --disable-FEATURE, default is enabled if available:
   libiscsi        iscsi support
   libnfs          nfs support
   smartcard       smartcard support (libcacard)
-  libusb          libusb (for usb passthrough)
   live-block-migration   Block migration in the main migration stream
-  usb-redir       usb network redirection support
   lzo             support of lzo compression library
   snappy          support of snappy compression library
   seccomp         seccomp support
@@ -3110,34 +3098,6 @@ if test "$smartcard" != "no"; then
     fi
 fi
 
-# check for libusb
-if test "$libusb" != "no" ; then
-    if $pkg_config --atleast-version=1.0.13 libusb-1.0; then
-        libusb="yes"
-        libusb_cflags=$($pkg_config --cflags libusb-1.0)
-        libusb_libs=$($pkg_config --libs libusb-1.0)
-    else
-        if test "$libusb" = "yes"; then
-            feature_not_found "libusb" "Install libusb devel >= 1.0.13"
-        fi
-        libusb="no"
-    fi
-fi
-
-# check for usbredirparser for usb network redirection support
-if test "$usb_redir" != "no" ; then
-    if $pkg_config --atleast-version=0.6 libusbredirparser-0.5; then
-        usb_redir="yes"
-        usb_redir_cflags=$($pkg_config --cflags libusbredirparser-0.5)
-        usb_redir_libs=$($pkg_config --libs libusbredirparser-0.5)
-    else
-        if test "$usb_redir" = "yes"; then
-            feature_not_found "usb-redir" "Install usbredir devel"
-        fi
-        usb_redir="no"
-    fi
-fi
-
 ##########################################
 # check if we have VSS SDK headers for win
 
@@ -4322,8 +4282,6 @@ echo "spice support     $spice $(echo_version $spice $spice_protocol_version/$sp
 echo "rbd support       $rbd"
 echo "xfsctl support    $xfs"
 echo "smartcard support $smartcard"
-echo "libusb            $libusb"
-echo "usb net redir     $usb_redir"
 echo "OpenGL support    $opengl"
 echo "OpenGL dmabufs    $opengl_dmabuf"
 echo "libiscsi support  $libiscsi"
@@ -4720,18 +4678,6 @@ if test "$smartcard" = "yes" ; then
   echo "CONFIG_SMARTCARD=y" >> $config_host_mak
   echo "SMARTCARD_CFLAGS=$libcacard_cflags" >> $config_host_mak
   echo "SMARTCARD_LIBS=$libcacard_libs" >> $config_host_mak
-fi
-
-if test "$libusb" = "yes" ; then
-  echo "CONFIG_USB_LIBUSB=y" >> $config_host_mak
-  echo "LIBUSB_CFLAGS=$libusb_cflags" >> $config_host_mak
-  echo "LIBUSB_LIBS=$libusb_libs" >> $config_host_mak
-fi
-
-if test "$usb_redir" = "yes" ; then
-  echo "CONFIG_USB_REDIR=y" >> $config_host_mak
-  echo "USB_REDIR_CFLAGS=$usb_redir_cflags" >> $config_host_mak
-  echo "USB_REDIR_LIBS=$usb_redir_libs" >> $config_host_mak
 fi
 
 if test "$opengl" = "yes" ; then
