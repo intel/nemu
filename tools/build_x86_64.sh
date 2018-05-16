@@ -44,6 +44,7 @@ $SRCDIR/configure \
  --enable-vhost-scsi \
  --enable-vhost-user \
  --enable-vhost-vsock \
+ --enable-virtfs \
  --target-list=x86_64-softmmu \
  --extra-cflags=" -O3 -fno-semantic-interposition -falign-functions=32 -D_FORTIFY_SOURCE=2 -fPIE" \
  --extra-ldflags=" -pie -z noexecstack -z relro -z now" \
