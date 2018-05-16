@@ -30,7 +30,6 @@ enum {
 extern const uint32_t arch_type;
 
 int kvm_available(void);
-int xen_available(void);
 
 CpuDefinitionInfoList *arch_query_cpu_definitions(Error **errp);
 CpuModelExpansionInfo *arch_query_cpu_model_expansion(CpuModelExpansionType type,

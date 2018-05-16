@@ -42,7 +42,6 @@
 #define __KVM_HAVE_MSIX
 #define __KVM_HAVE_MCE
 #define __KVM_HAVE_PIT_STATE2
-#define __KVM_HAVE_XEN_HVM
 #define __KVM_HAVE_VCPU_EVENTS
 #define __KVM_HAVE_DEBUGREGS
 #define __KVM_HAVE_XSAVE

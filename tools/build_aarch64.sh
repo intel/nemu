@@ -33,7 +33,6 @@ $SRCDIR/configure \
  --disable-vde \
  --disable-virtfs \
  --disable-vxhs \
- --disable-xen \
  --enable-attr \
  --enable-cap-ng \
  --enable-fdt \

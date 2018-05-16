@@ -50,7 +50,6 @@
 #include "sysemu/watchdog.h"
 #include "hw/smbios/smbios.h"
 #include "hw/acpi/acpi.h"
-#include "hw/xen/xen.h"
 #include "hw/qdev.h"
 #include "hw/loader.h"
 #include "monitor/qdev.h"
@@ -183,11 +182,6 @@ static NotifierList exit_notifiers =
 
 static NotifierList machine_init_done_notifiers =
     NOTIFIER_LIST_INITIALIZER(machine_init_done_notifiers);
-
-bool xen_allowed;
-uint32_t xen_domid;
-enum xen_mode xen_mode = XEN_EMULATE;
-bool xen_domid_restrict;
 
 static int has_defaults = 1;
 static int default_serial = 1;
@@ -3679,7 +3673,7 @@ int main(int argc, char **argv, char **envp)
                                                      optarg, true);
                 optarg = qemu_opt_get(accel_opts, "accel");
                 if (!optarg || is_help_option(optarg)) {
-                    error_printf("Possible accelerators: kvm, xen, hax, tcg\n");
+                    error_printf("Possible accelerators: kvm, hax, tcg\n");
                     exit(0);
                 }
                 opts = qemu_opts_create(qemu_find_opts("machine"), NULL,
@@ -3858,34 +3852,6 @@ int main(int argc, char **argv, char **envp)
                 break;
             case QEMU_OPTION_nodefaults:
                 has_defaults = 0;
-                break;
-            case QEMU_OPTION_xen_domid:
-                if (!(xen_available())) {
-                    error_report("Option not supported for this target");
-                    exit(1);
-                }
-                xen_domid = atoi(optarg);
-                break;
-            case QEMU_OPTION_xen_create:
-                if (!(xen_available())) {
-                    error_report("Option not supported for this target");
-                    exit(1);
-                }
-                xen_mode = XEN_CREATE;
-                break;
-            case QEMU_OPTION_xen_attach:
-                if (!(xen_available())) {
-                    error_report("Option not supported for this target");
-                    exit(1);
-                }
-                xen_mode = XEN_ATTACH;
-                break;
-            case QEMU_OPTION_xen_domid_restrict:
-                if (!(xen_available())) {
-                    error_report("Option not supported for this target");
-                    exit(1);
-                }
-                xen_domid_restrict = true;
                 break;
             case QEMU_OPTION_trace:
                 g_free(trace_file);
@@ -4410,12 +4376,10 @@ int main(int argc, char **argv, char **envp)
     if (foreach_device_config(DEV_BT, bt_parse))
         exit(1);
 
-    if (!xen_enabled()) {
-        /* On 32-bit hosts, QEMU is limited by virtual address space */
-        if (ram_size > (2047 << 20) && HOST_LONG_BITS == 32) {
-            error_report("at most 2047 MB RAM can be simulated");
-            exit(1);
-        }
+    /* On 32-bit hosts, QEMU is limited by virtual address space */
+    if (ram_size > (2047 << 20) && HOST_LONG_BITS == 32) {
+        error_report("at most 2047 MB RAM can be simulated");
+        exit(1);
     }
 
     blk_mig_init();

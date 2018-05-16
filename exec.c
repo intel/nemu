@@ -27,7 +27,6 @@
 #include "hw/qdev-core.h"
 #include "hw/qdev-properties.h"
 #include "hw/boards.h"
-#include "hw/xen/xen.h"
 #include "sysemu/kvm.h"
 #include "sysemu/sysemu.h"
 #include "qemu/timer.h"
@@ -40,7 +39,6 @@
 #include "sysemu/numa.h"
 #include "sysemu/hw_accel.h"
 #include "exec/address-spaces.h"
-#include "sysemu/xen-mapcache.h"
 #include "trace-root.h"
 
 #ifdef CONFIG_FALLOCATE_PUNCH_HOLE
@@ -580,11 +578,6 @@ MemoryRegion *flatview_translate(FlatView *fv, hwaddr addr, hwaddr *xlat,
     section = flatview_do_translate(fv, addr, xlat, plen, NULL,
                                     is_write, true, &as);
     mr = section.mr;
-
-    if (xen_enabled() && memory_access_is_direct(mr, is_write)) {
-        hwaddr page = ((addr & TARGET_PAGE_MASK) + TARGET_PAGE_SIZE) - addr;
-        *plen = MIN(page, *plen);
-    }
 
     return mr;
 }
@@ -1883,7 +1876,6 @@ static void ram_block_add(RAMBlock *new_block, Error **errp, bool shared)
     RAMBlock *block;
     RAMBlock *last_block = NULL;
     ram_addr_t old_ram_size, new_ram_size;
-    Error *err = NULL;
 
     old_ram_size = last_ram_page();
 
@@ -1891,26 +1883,16 @@ static void ram_block_add(RAMBlock *new_block, Error **errp, bool shared)
     new_block->offset = find_ram_offset(new_block->max_length);
 
     if (!new_block->host) {
-        if (xen_enabled()) {
-            xen_ram_alloc(new_block->offset, new_block->max_length,
-                          new_block->mr, &err);
-            if (err) {
-                error_propagate(errp, err);
-                qemu_mutex_unlock_ramlist();
-                return;
-            }
-        } else {
-            new_block->host = phys_mem_alloc(new_block->max_length,
-                                             &new_block->mr->align, shared);
-            if (!new_block->host) {
-                error_setg_errno(errp, errno,
-                                 "cannot set up guest memory '%s'",
-                                 memory_region_name(new_block->mr));
-                qemu_mutex_unlock_ramlist();
-                return;
-            }
-            memory_try_enable_merging(new_block->host, new_block->max_length);
+        new_block->host = phys_mem_alloc(new_block->max_length,
+                                &new_block->mr->align, shared);
+        if (!new_block->host) {
+            error_setg_errno(errp, errno,
+                            "cannot set up guest memory '%s'",
+                            memory_region_name(new_block->mr));
+            qemu_mutex_unlock_ramlist();
+            return;
         }
+        memory_try_enable_merging(new_block->host, new_block->max_length);
     }
 
     new_ram_size = MAX(old_ram_size,
@@ -1962,11 +1944,6 @@ RAMBlock *qemu_ram_alloc_from_fd(ram_addr_t size, MemoryRegion *mr,
     RAMBlock *new_block;
     Error *local_err = NULL;
     int64_t file_size;
-
-    if (xen_enabled()) {
-        error_setg(errp, "-mem-path not supported with Xen");
-        return NULL;
-    }
 
     if (kvm_enabled() && !kvm_has_sync_mmu()) {
         error_setg(errp,
@@ -2106,8 +2083,6 @@ static void reclaim_ramblock(RAMBlock *block)
 {
     if (block->flags & RAM_PREALLOC) {
         ;
-    } else if (xen_enabled()) {
-        xen_invalidate_map_cache_entry(block->host);
     } else if (block->fd >= 0) {
         qemu_ram_munmap(block->host, block->max_length);
         close(block->fd);
@@ -2150,8 +2125,6 @@ void qemu_ram_remap(ram_addr_t addr, ram_addr_t length)
             vaddr = ramblock_ptr(block, offset);
             if (block->flags & RAM_PREALLOC) {
                 ;
-            } else if (xen_enabled()) {
-                abort();
             } else {
                 flags = MAP_FIXED;
                 if (block->fd >= 0) {
@@ -2200,17 +2173,6 @@ void *qemu_map_ram_ptr(RAMBlock *ram_block, ram_addr_t addr)
         addr -= block->offset;
     }
 
-    if (xen_enabled() && block->host == NULL) {
-        /* We need to check if the requested address is in the RAM
-         * because we don't want to map the entire memory in QEMU.
-         * In that case just map until the end of the page.
-         */
-        if (block->offset == 0) {
-            return xen_map_cache(addr, 0, 0, false);
-        }
-
-        block->host = xen_map_cache(block->offset, block->max_length, 1, false);
-    }
     return ramblock_ptr(block, addr);
 }
 
@@ -2232,18 +2194,6 @@ static void *qemu_ram_ptr_length(RAMBlock *ram_block, ram_addr_t addr,
         addr -= block->offset;
     }
     *size = MIN(*size, block->max_length - addr);
-
-    if (xen_enabled() && block->host == NULL) {
-        /* We need to check if the requested address is in the RAM
-         * because we don't want to map the entire memory in QEMU.
-         * In that case just map the requested area.
-         */
-        if (block->offset == 0) {
-            return xen_map_cache(addr, *size, lock, lock);
-        }
-
-        block->host = xen_map_cache(block->offset, block->max_length, 1, lock);
-    }
 
     return ramblock_ptr(block, addr);
 }
@@ -2280,18 +2230,6 @@ RAMBlock *qemu_ram_block_from_host(void *ptr, bool round_offset,
 {
     RAMBlock *block;
     uint8_t *host = ptr;
-
-    if (xen_enabled()) {
-        ram_addr_t ram_addr;
-        rcu_read_lock();
-        ram_addr = xen_ram_addr_from_mapcache(ptr);
-        block = qemu_get_ram_block(ram_addr);
-        if (block) {
-            *offset = ram_addr - block->offset;
-        }
-        rcu_read_unlock();
-        return block;
-    }
 
     rcu_read_lock();
     block = atomic_rcu_read(&ram_list.mru_block);
@@ -3437,9 +3375,6 @@ void address_space_unmap(AddressSpace *as, void *buffer, hwaddr len,
         assert(mr != NULL);
         if (is_write) {
             invalidate_and_set_dirty(mr, addr1, access_len);
-        }
-        if (xen_enabled()) {
-            xen_invalidate_map_cache_entry(buffer);
         }
         memory_region_unref(mr);
         return;

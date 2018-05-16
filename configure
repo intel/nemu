@@ -194,18 +194,6 @@ supported_kvm_target() {
     return 1
 }
 
-supported_xen_target() {
-    test "$xen" = "yes" || return 1
-    glob "$1" "*-softmmu" || return 1
-    # Only i386 and x86_64 provide the xenpv machine.
-    case "${1%-softmmu}" in
-        x86_64)
-            return 0
-        ;;
-    esac
-    return 1
-}
-
 supported_hvf_target() {
     test "$hvf" = "yes" || return 1
     glob "$1" "*-softmmu" || return 1
@@ -239,7 +227,6 @@ supported_target() {
     esac
     test "$tcg" = "yes" && return 0
     supported_kvm_target "$1" && return 0
-    supported_xen_target "$1" && return 0
     supported_hax_target "$1" && return 0
     supported_hvf_target "$1" && return 0
     supported_whpx_target "$1" && return 0
@@ -306,10 +293,6 @@ mpath=""
 sparse="no"
 vde=""
 xkbcommon=""
-xen=""
-xen_ctrl_version=""
-xen_pv_domain_build="no"
-xen_pci_passthrough=""
 linux_aio=""
 cap_ng=""
 attr=""
@@ -755,18 +738,6 @@ for opt do
   ;;
   --enable-netmap) netmap="yes"
   ;;
-  --disable-xen) xen="no"
-  ;;
-  --enable-xen) xen="yes"
-  ;;
-  --disable-xen-pci-passthrough) xen_pci_passthrough="no"
-  ;;
-  --enable-xen-pci-passthrough) xen_pci_passthrough="yes"
-  ;;
-  --disable-xen-pv-domain-build) xen_pv_domain_build="no"
-  ;;
-  --enable-xen-pv-domain-build) xen_pv_domain_build="yes"
-  ;;
   --disable-kvm) kvm="no"
   ;;
   --enable-kvm) kvm="yes"
@@ -1129,8 +1100,6 @@ Advanced options (experts only):
   --tls-priority           default TLS protocol/cipher priority string
   --enable-gprof           QEMU profiling with gprof
   --enable-profiler        profiler support
-  --enable-xen-pv-domain-build
-                           xen pv domain builder
   --enable-debug-stack-usage
                            track the maximum stack usage of stacks created by qemu_alloc_stack
 
@@ -1148,8 +1117,6 @@ disabled with --disable-FEATURE, default is enabled if available:
   --with-sdlabi     select preferred SDL ABI 1.2 or 2.0
   virtfs          VirtFS
   mpath           Multipath persistent reservation passthrough
-  xen             xen backend driver support
-  xen-pci-passthrough
   membarrier      membarrier system call (for Linux 4.14+ or Windows)
   fdt             fdt device tree
   kvm             KVM acceleration support
@@ -1675,321 +1642,6 @@ if test "$seccomp" != "no" ; then
         fi
         seccomp="no"
     fi
-fi
-##########################################
-# xen probe
-
-if test "$xen" != "no" ; then
-  # Check whether Xen library path is specified via --extra-ldflags to avoid
-  # overriding this setting with pkg-config output. If not, try pkg-config
-  # to obtain all needed flags.
-
-  if ! echo $EXTRA_LDFLAGS | grep tools/libxc > /dev/null && \
-     $pkg_config --exists xencontrol ; then
-    xen_ctrl_version="$(printf '%d%02d%02d' \
-      $($pkg_config --modversion xencontrol | sed 's/\./ /g') )"
-    xen=yes
-    xen_pc="xencontrol xenstore xenguest xenforeignmemory xengnttab"
-    xen_pc="$xen_pc xenevtchn xendevicemodel"
-    QEMU_CFLAGS="$QEMU_CFLAGS $($pkg_config --cflags $xen_pc)"
-    libs_softmmu="$($pkg_config --libs $xen_pc) $libs_softmmu"
-    LDFLAGS="$($pkg_config --libs $xen_pc) $LDFLAGS"
-  else
-
-    xen_libs="-lxenstore -lxenctrl -lxenguest"
-    xen_stable_libs="-lxenforeignmemory -lxengnttab -lxenevtchn"
-
-    # First we test whether Xen headers and libraries are available.
-    # If no, we are done and there is no Xen support.
-    # If yes, more tests are run to detect the Xen version.
-
-    # Xen (any)
-    cat > $TMPC <<EOF
-#include <xenctrl.h>
-int main(void) {
-  return 0;
-}
-EOF
-    if ! compile_prog "" "$xen_libs" ; then
-      # Xen not found
-      if test "$xen" = "yes" ; then
-        feature_not_found "xen" "Install xen devel"
-      fi
-      xen=no
-
-    # Xen unstable
-    elif
-        cat > $TMPC <<EOF &&
-#undef XC_WANT_COMPAT_MAP_FOREIGN_API
-#include <xenforeignmemory.h>
-int main(void) {
-  xenforeignmemory_handle *xfmem;
-
-  xfmem = xenforeignmemory_open(0, 0);
-  xenforeignmemory_map2(xfmem, 0, 0, 0, 0, 0, 0, 0);
-
-  return 0;
-}
-EOF
-        compile_prog "" "$xen_libs -lxendevicemodel $xen_stable_libs"
-      then
-      xen_stable_libs="-lxendevicemodel $xen_stable_libs"
-      xen_ctrl_version=41000
-      xen=yes
-    elif
-        cat > $TMPC <<EOF &&
-#undef XC_WANT_COMPAT_DEVICEMODEL_API
-#define __XEN_TOOLS__
-#include <xendevicemodel.h>
-int main(void) {
-  xendevicemodel_handle *xd;
-
-  xd = xendevicemodel_open(0, 0);
-  xendevicemodel_close(xd);
-
-  return 0;
-}
-EOF
-        compile_prog "" "$xen_libs -lxendevicemodel $xen_stable_libs"
-      then
-      xen_stable_libs="-lxendevicemodel $xen_stable_libs"
-      xen_ctrl_version=40900
-      xen=yes
-    elif
-        cat > $TMPC <<EOF &&
-/*
- * If we have stable libs the we don't want the libxc compat
- * layers, regardless of what CFLAGS we may have been given.
- *
- * Also, check if xengnttab_grant_copy_segment_t is defined and
- * grant copy operation is implemented.
- */
-#undef XC_WANT_COMPAT_EVTCHN_API
-#undef XC_WANT_COMPAT_GNTTAB_API
-#undef XC_WANT_COMPAT_MAP_FOREIGN_API
-#include <xenctrl.h>
-#include <xenstore.h>
-#include <xenevtchn.h>
-#include <xengnttab.h>
-#include <xenforeignmemory.h>
-#include <stdint.h>
-#include <xen/hvm/hvm_info_table.h>
-#if !defined(HVM_MAX_VCPUS)
-# error HVM_MAX_VCPUS not defined
-#endif
-int main(void) {
-  xc_interface *xc = NULL;
-  xenforeignmemory_handle *xfmem;
-  xenevtchn_handle *xe;
-  xengnttab_handle *xg;
-  xen_domain_handle_t handle;
-  xengnttab_grant_copy_segment_t* seg = NULL;
-
-  xs_daemon_open();
-
-  xc = xc_interface_open(0, 0, 0);
-  xc_hvm_set_mem_type(0, 0, HVMMEM_ram_ro, 0, 0);
-  xc_domain_add_to_physmap(0, 0, XENMAPSPACE_gmfn, 0, 0);
-  xc_hvm_inject_msi(xc, 0, 0xf0000000, 0x00000000);
-  xc_hvm_create_ioreq_server(xc, 0, HVM_IOREQSRV_BUFIOREQ_ATOMIC, NULL);
-  xc_domain_create(xc, 0, handle, 0, NULL, NULL);
-
-  xfmem = xenforeignmemory_open(0, 0);
-  xenforeignmemory_map(xfmem, 0, 0, 0, 0, 0);
-
-  xe = xenevtchn_open(0, 0);
-  xenevtchn_fd(xe);
-
-  xg = xengnttab_open(0, 0);
-  xengnttab_grant_copy(xg, 0, seg);
-
-  return 0;
-}
-EOF
-        compile_prog "" "$xen_libs $xen_stable_libs"
-      then
-      xen_ctrl_version=40800
-      xen=yes
-    elif
-        cat > $TMPC <<EOF &&
-/*
- * If we have stable libs the we don't want the libxc compat
- * layers, regardless of what CFLAGS we may have been given.
- */
-#undef XC_WANT_COMPAT_EVTCHN_API
-#undef XC_WANT_COMPAT_GNTTAB_API
-#undef XC_WANT_COMPAT_MAP_FOREIGN_API
-#include <xenctrl.h>
-#include <xenstore.h>
-#include <xenevtchn.h>
-#include <xengnttab.h>
-#include <xenforeignmemory.h>
-#include <stdint.h>
-#include <xen/hvm/hvm_info_table.h>
-#if !defined(HVM_MAX_VCPUS)
-# error HVM_MAX_VCPUS not defined
-#endif
-int main(void) {
-  xc_interface *xc = NULL;
-  xenforeignmemory_handle *xfmem;
-  xenevtchn_handle *xe;
-  xengnttab_handle *xg;
-  xen_domain_handle_t handle;
-
-  xs_daemon_open();
-
-  xc = xc_interface_open(0, 0, 0);
-  xc_hvm_set_mem_type(0, 0, HVMMEM_ram_ro, 0, 0);
-  xc_domain_add_to_physmap(0, 0, XENMAPSPACE_gmfn, 0, 0);
-  xc_hvm_inject_msi(xc, 0, 0xf0000000, 0x00000000);
-  xc_hvm_create_ioreq_server(xc, 0, HVM_IOREQSRV_BUFIOREQ_ATOMIC, NULL);
-  xc_domain_create(xc, 0, handle, 0, NULL, NULL);
-
-  xfmem = xenforeignmemory_open(0, 0);
-  xenforeignmemory_map(xfmem, 0, 0, 0, 0, 0);
-
-  xe = xenevtchn_open(0, 0);
-  xenevtchn_fd(xe);
-
-  xg = xengnttab_open(0, 0);
-  xengnttab_map_grant_ref(xg, 0, 0, 0);
-
-  return 0;
-}
-EOF
-        compile_prog "" "$xen_libs $xen_stable_libs"
-      then
-      xen_ctrl_version=40701
-      xen=yes
-    elif
-        cat > $TMPC <<EOF &&
-#include <xenctrl.h>
-#include <stdint.h>
-int main(void) {
-  xc_interface *xc = NULL;
-  xen_domain_handle_t handle;
-  xc_domain_create(xc, 0, handle, 0, NULL, NULL);
-  return 0;
-}
-EOF
-        compile_prog "" "$xen_libs"
-      then
-      xen_ctrl_version=40700
-      xen=yes
-
-    # Xen 4.6
-    elif
-        cat > $TMPC <<EOF &&
-#include <xenctrl.h>
-#include <xenstore.h>
-#include <stdint.h>
-#include <xen/hvm/hvm_info_table.h>
-#if !defined(HVM_MAX_VCPUS)
-# error HVM_MAX_VCPUS not defined
-#endif
-int main(void) {
-  xc_interface *xc;
-  xs_daemon_open();
-  xc = xc_interface_open(0, 0, 0);
-  xc_hvm_set_mem_type(0, 0, HVMMEM_ram_ro, 0, 0);
-  xc_gnttab_open(NULL, 0);
-  xc_domain_add_to_physmap(0, 0, XENMAPSPACE_gmfn, 0, 0);
-  xc_hvm_inject_msi(xc, 0, 0xf0000000, 0x00000000);
-  xc_hvm_create_ioreq_server(xc, 0, HVM_IOREQSRV_BUFIOREQ_ATOMIC, NULL);
-  xc_reserved_device_memory_map(xc, 0, 0, 0, 0, NULL, 0);
-  return 0;
-}
-EOF
-        compile_prog "" "$xen_libs"
-      then
-      xen_ctrl_version=40600
-      xen=yes
-
-    # Xen 4.5
-    elif
-        cat > $TMPC <<EOF &&
-#include <xenctrl.h>
-#include <xenstore.h>
-#include <stdint.h>
-#include <xen/hvm/hvm_info_table.h>
-#if !defined(HVM_MAX_VCPUS)
-# error HVM_MAX_VCPUS not defined
-#endif
-int main(void) {
-  xc_interface *xc;
-  xs_daemon_open();
-  xc = xc_interface_open(0, 0, 0);
-  xc_hvm_set_mem_type(0, 0, HVMMEM_ram_ro, 0, 0);
-  xc_gnttab_open(NULL, 0);
-  xc_domain_add_to_physmap(0, 0, XENMAPSPACE_gmfn, 0, 0);
-  xc_hvm_inject_msi(xc, 0, 0xf0000000, 0x00000000);
-  xc_hvm_create_ioreq_server(xc, 0, 0, NULL);
-  return 0;
-}
-EOF
-        compile_prog "" "$xen_libs"
-      then
-      xen_ctrl_version=40500
-      xen=yes
-
-    elif
-        cat > $TMPC <<EOF &&
-#include <xenctrl.h>
-#include <xenstore.h>
-#include <stdint.h>
-#include <xen/hvm/hvm_info_table.h>
-#if !defined(HVM_MAX_VCPUS)
-# error HVM_MAX_VCPUS not defined
-#endif
-int main(void) {
-  xc_interface *xc;
-  xs_daemon_open();
-  xc = xc_interface_open(0, 0, 0);
-  xc_hvm_set_mem_type(0, 0, HVMMEM_ram_ro, 0, 0);
-  xc_gnttab_open(NULL, 0);
-  xc_domain_add_to_physmap(0, 0, XENMAPSPACE_gmfn, 0, 0);
-  xc_hvm_inject_msi(xc, 0, 0xf0000000, 0x00000000);
-  return 0;
-}
-EOF
-        compile_prog "" "$xen_libs"
-      then
-      xen_ctrl_version=40200
-      xen=yes
-
-    else
-      if test "$xen" = "yes" ; then
-        feature_not_found "xen (unsupported version)" \
-                          "Install a supported xen (xen 4.2 or newer)"
-      fi
-      xen=no
-    fi
-
-    if test "$xen" = yes; then
-      if test $xen_ctrl_version -ge 40701  ; then
-        libs_softmmu="$xen_stable_libs $libs_softmmu"
-      fi
-      libs_softmmu="$xen_libs $libs_softmmu"
-    fi
-  fi
-fi
-
-if test "$xen_pci_passthrough" != "no"; then
-  if test "$xen" = "yes" && test "$linux" = "yes"; then
-    xen_pci_passthrough=yes
-  else
-    if test "$xen_pci_passthrough" = "yes"; then
-      error_exit "User requested feature Xen PCI Passthrough" \
-          " but this feature requires /sys from Linux"
-    fi
-    xen_pci_passthrough=no
-  fi
-fi
-
-if test "$xen_pv_domain_build" = "yes" &&
-   test "$xen" != "yes"; then
-    error_exit "User requested Xen PV domain builder support" \
-	       "which requires Xen support."
 fi
 
 ##########################################
@@ -4636,11 +4288,6 @@ echo "Multipath support $mpath"
 if test -n "$sparc_cpu"; then
     echo "Target Sparc Arch $sparc_cpu"
 fi
-echo "xen support       $xen"
-if test "$xen" = "yes" ; then
-  echo "xen ctrl version  $xen_ctrl_version"
-  echo "pv dom build      $xen_pv_domain_build"
-fi
 echo "PIE               $pie"
 echo "vde support       $vde"
 echo "netmap support    $netmap"
@@ -5000,13 +4647,6 @@ if test "$virglrenderer" = "yes" ; then
   echo "CONFIG_VIRGL=y" >> $config_host_mak
   echo "VIRGL_CFLAGS=$virgl_cflags" >> $config_host_mak
   echo "VIRGL_LIBS=$virgl_libs" >> $config_host_mak
-fi
-if test "$xen" = "yes" ; then
-  echo "CONFIG_XEN_BACKEND=y" >> $config_host_mak
-  echo "CONFIG_XEN_CTRL_INTERFACE_VERSION=$xen_ctrl_version" >> $config_host_mak
-  if test "$xen_pv_domain_build" = "yes" ; then
-    echo "CONFIG_XEN_PV_DOMAIN_BUILD=y" >> $config_host_mak
-  fi
 fi
 if test "$linux_aio" = "yes" ; then
   echo "CONFIG_LINUX_AIO=y" >> $config_host_mak
@@ -5491,12 +5131,6 @@ if [ "$HOST_VARIANT_DIR" != "" ]; then
     echo "HOST_VARIANT_DIR=$HOST_VARIANT_DIR" >> $config_target_mak
 fi
 
-if supported_xen_target $target; then
-    echo "CONFIG_XEN=y" >> $config_target_mak
-    if test "$xen_pci_passthrough" = yes; then
-        echo "CONFIG_XEN_PCI_PASSTHROUGH=y" >> "$config_target_mak"
-    fi
-fi
 if supported_kvm_target $target; then
     echo "CONFIG_KVM=y" >> $config_target_mak
     if test "$vhost_net" = "yes" ; then

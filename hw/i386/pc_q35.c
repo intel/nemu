@@ -35,7 +35,6 @@
 #include "hw/i2c/smbus.h"
 #include "hw/boards.h"
 #include "hw/timer/mc146818rtc.h"
-#include "hw/xen/xen.h"
 #include "sysemu/kvm.h"
 #include "kvm_i386.h"
 #include "hw/kvm/clock.h"
@@ -121,10 +120,6 @@ static void pc_q35_init(MachineState *machine)
         pcms->below_4g_mem_size = machine->ram_size;
     }
 
-    if (xen_enabled()) {
-        xen_hvm_init(pcms, &ram_memory);
-    }
-
     pc_cpus_init(pcms);
 
     kvmclock_create();
@@ -150,10 +145,8 @@ static void pc_q35_init(MachineState *machine)
     }
 
     /* allocate ram and load rom/bios */
-    if (!xen_enabled()) {
-        pc_memory_init(pcms, get_system_memory(),
-                       rom_memory, &ram_memory);
-    }
+    pc_memory_init(pcms, get_system_memory(),
+                   rom_memory, &ram_memory);
 
     /* irq lines */
     gsi_state = g_malloc0(sizeof(*gsi_state));
@@ -210,8 +203,6 @@ static void pc_q35_init(MachineState *machine)
 
     if (kvm_pic_in_kernel()) {
         i8259 = kvm_i8259_init(isa_bus);
-    } else if (xen_enabled()) {
-        i8259 = xen_interrupt_controller_init();
     } else {
         i8259 = i8259_init(isa_bus, pc_allocate_cpu_irq());
     }

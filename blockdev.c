@@ -80,7 +80,6 @@ static const char *const if_name[IF_COUNT] = {
     [IF_MTD] = "mtd",
     [IF_SD] = "sd",
     [IF_VIRTIO] = "virtio",
-    [IF_XEN] = "xen",
 };
 
 static int if_max_devs[IF_COUNT] = {
@@ -1120,7 +1119,6 @@ DriveInfo *drive_new(QemuOpts *all_opts, BlockInterfaceType block_default_type)
     switch(type) {
     case IF_IDE:
     case IF_SCSI:
-    case IF_XEN:
     case IF_NONE:
         dinfo->media_cd = media == MEDIA_CDROM;
         break;

@@ -47,7 +47,6 @@
 #include "hw/i386/topology.h"
 #include "exec/address-spaces.h"
 #include "hw/hw.h"
-#include "hw/xen/xen.h"
 #include "hw/i386/apic_internal.h"
 
 #include "disas/capstone.h"
@@ -3827,8 +3826,6 @@ APICCommonClass *apic_get_class(void)
     /* TODO: in-kernel irqchip for hvf */
     if (kvm_apic_in_kernel()) {
         apic_type = "kvm-apic";
-    } else if (xen_enabled()) {
-        apic_type = "xen-apic";
     }
 
     return APIC_COMMON_CLASS(object_class_by_name(apic_type));

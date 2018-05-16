@@ -51,7 +51,6 @@
 #include "sysemu/kvm.h"
 #include "sysemu/qtest.h"
 #include "kvm_i386.h"
-#include "hw/xen/xen.h"
 #include "ui/qemu-spice.h"
 #include "exec/memory.h"
 #include "exec/address-spaces.h"
@@ -1207,7 +1206,7 @@ void pc_machine_done(Notifier *notifier, void *data)
         fw_cfg_modify_i16(pcms->fw_cfg, FW_CFG_NB_CPUS, pcms->boot_cpus);
     }
 
-    if (pcms->apic_id_limit > 255 && !xen_enabled()) {
+    if (pcms->apic_id_limit > 255) {
         IntelIOMMUState *iommu = INTEL_IOMMU_DEVICE(x86_iommu_get_default());
 
         if (!iommu || !iommu->x86_iommu.intr_supported ||
@@ -1271,27 +1270,6 @@ void pc_acpi_init(const char *default_dsdt)
         }
         g_free(filename);
     }
-}
-
-void xen_load_linux(PCMachineState *pcms)
-{
-    int i;
-    FWCfgState *fw_cfg;
-
-    assert(MACHINE(pcms)->kernel_filename != NULL);
-
-    fw_cfg = fw_cfg_init_io(FW_CFG_IO_BASE);
-    fw_cfg_add_i16(fw_cfg, FW_CFG_NB_CPUS, pcms->boot_cpus);
-    rom_set_fw(fw_cfg);
-
-    load_linux(pcms, fw_cfg);
-    for (i = 0; i < nb_option_roms; i++) {
-        assert(!strcmp(option_rom[i].name, "linuxboot.bin") ||
-               !strcmp(option_rom[i].name, "linuxboot_dma.bin") ||
-               !strcmp(option_rom[i].name, "multiboot.bin"));
-        rom_add_option(option_rom[i].name, option_rom[i].bootindex);
-    }
-    pcms->fw_cfg = fw_cfg;
 }
 
 void pc_memory_init(PCMachineState *pcms,
@@ -1572,7 +1550,7 @@ void pc_basic_device_init(ISABus *isa_bus, qemu_irq *gsi,
 
     qemu_register_boot_set(pc_boot_set, *rtc_state);
 
-    if (!xen_enabled() && has_pit) {
+    if (has_pit) {
         if (kvm_pit_in_kernel()) {
             pit = kvm_pit_init(isa_bus, 0x40);
         } else {

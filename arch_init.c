@@ -82,11 +82,6 @@ int kvm_available(void)
     return 1;
 }
 
-int xen_available(void)
-{
-    return 0;
-}
-
 
 TargetInfo *qmp_query_target(Error **errp)
 {

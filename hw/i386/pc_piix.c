@@ -41,7 +41,6 @@
 #include "hw/sysbus.h"
 #include "sysemu/arch_init.h"
 #include "hw/i2c/smbus.h"
-#include "hw/xen/xen.h"
 #include "exec/memory.h"
 #include "exec/address-spaces.h"
 #include "hw/acpi/acpi.h"
@@ -114,34 +113,30 @@ static void pc_init1(MachineState *machine,
      *    qemu -M pc,max-ram-below-4g=2G -m 4G     -> 2048M low, 2048M high
      *    qemu -M pc,max-ram-below-4g=4G -m 3968M  -> 3968M low (=4G-128M)
      */
-    if (xen_enabled()) {
-        xen_hvm_init(pcms, &ram_memory);
-    } else {
-        if (!pcms->max_ram_below_4g) {
-            pcms->max_ram_below_4g = 0xe0000000; /* default: 3.5G */
-        }
-        lowmem = pcms->max_ram_below_4g;
-        if (machine->ram_size >= pcms->max_ram_below_4g) {
-            if (pcmc->gigabyte_align) {
-                if (lowmem > 0xc0000000) {
-                    lowmem = 0xc0000000;
-                }
-                if (lowmem & ((1ULL << 30) - 1)) {
-                    warn_report("Large machine and max_ram_below_4g "
-                                "(%" PRIu64 ") not a multiple of 1G; "
-                                "possible bad performance.",
-                                pcms->max_ram_below_4g);
-                }
+     if (!pcms->max_ram_below_4g) {
+         pcms->max_ram_below_4g = 0xe0000000; /* default: 3.5G */
+     }
+     lowmem = pcms->max_ram_below_4g;
+     if (machine->ram_size >= pcms->max_ram_below_4g) {
+         if (pcmc->gigabyte_align) {
+             if (lowmem > 0xc0000000) {
+                 lowmem = 0xc0000000;
+             }
+             if (lowmem & ((1ULL << 30) - 1)) {
+                 warn_report("Large machine and max_ram_below_4g "
+                             "(%" PRIu64 ") not a multiple of 1G; "
+                             "possible bad performance.",
+                             pcms->max_ram_below_4g);
             }
         }
+    }
 
-        if (machine->ram_size >= lowmem) {
-            pcms->above_4g_mem_size = machine->ram_size - lowmem;
-            pcms->below_4g_mem_size = lowmem;
-        } else {
-            pcms->above_4g_mem_size = 0;
-            pcms->below_4g_mem_size = machine->ram_size;
-        }
+    if (machine->ram_size >= lowmem) {
+        pcms->above_4g_mem_size = machine->ram_size - lowmem;
+        pcms->below_4g_mem_size = lowmem;
+    } else {
+        pcms->above_4g_mem_size = 0;
+        pcms->below_4g_mem_size = machine->ram_size;
     }
 
     pc_cpus_init(pcms);
@@ -171,13 +166,8 @@ static void pc_init1(MachineState *machine,
     }
 
     /* allocate ram and load rom/bios */
-    if (!xen_enabled()) {
-        pc_memory_init(pcms, system_memory,
-                       rom_memory, &ram_memory);
-    } else if (machine->kernel_filename != NULL) {
-        /* For xen HVM direct kernel boot, load linux here */
-        xen_load_linux(pcms);
-    }
+    pc_memory_init(pcms, system_memory,
+                   rom_memory, &ram_memory);
 
     gsi_state = g_malloc0(sizeof(*gsi_state));
     if (kvm_ioapic_in_kernel()) {
@@ -208,8 +198,6 @@ static void pc_init1(MachineState *machine,
 
     if (kvm_pic_in_kernel()) {
         i8259 = kvm_i8259_init(isa_bus);
-    } else if (xen_enabled()) {
-        i8259 = xen_interrupt_controller_init();
     } else {
         i8259 = i8259_init(isa_bus, pc_allocate_cpu_irq());
     }
@@ -233,11 +221,7 @@ static void pc_init1(MachineState *machine,
     ide_drive_get(hd, ARRAY_SIZE(hd));
     if (pcmc->pci_enabled) {
         PCIDevice *dev;
-        if (xen_enabled()) {
-            dev = pci_piix3_xen_ide_init(pci_bus, hd, piix3_devfn + 1);
-        } else {
-            dev = pci_piix3_ide_init(pci_bus, hd, piix3_devfn + 1);
-        }
+        dev = pci_piix3_ide_init(pci_bus, hd, piix3_devfn + 1);
         idebus[0] = qdev_get_child_bus(&dev->qdev, "ide.0");
         idebus[1] = qdev_get_child_bus(&dev->qdev, "ide.1");
     } else {

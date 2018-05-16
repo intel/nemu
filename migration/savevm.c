@@ -28,7 +28,6 @@
 
 #include "qemu/osdep.h"
 #include "hw/boards.h"
-#include "hw/xen/xen.h"
 #include "net/net.h"
 #include "migration.h"
 #include "migration/snapshot.h"
@@ -1321,43 +1320,6 @@ done:
     return ret;
 }
 
-static int qemu_save_device_state(QEMUFile *f)
-{
-    SaveStateEntry *se;
-
-    qemu_put_be32(f, QEMU_VM_FILE_MAGIC);
-    qemu_put_be32(f, QEMU_VM_FILE_VERSION);
-
-    cpu_synchronize_all_states();
-
-    QTAILQ_FOREACH(se, &savevm_state.handlers, entry) {
-        int ret;
-
-        if (se->is_ram) {
-            continue;
-        }
-        if ((!se->ops || !se->ops->save_state) && !se->vmsd) {
-            continue;
-        }
-        if (se->vmsd && !vmstate_save_needed(se->vmsd, se->opaque)) {
-            continue;
-        }
-
-        save_section_header(f, se, QEMU_VM_SECTION_FULL);
-
-        ret = vmstate_save(f, se, NULL);
-        if (ret) {
-            return ret;
-        }
-
-        save_section_footer(f, se);
-    }
-
-    qemu_put_byte(f, QEMU_VM_EOF);
-
-    return qemu_file_get_error(f);
-}
-
 static SaveStateEntry *find_se(const char *idstr, int instance_id)
 {
     SaveStateEntry *se;
@@ -1958,12 +1920,6 @@ qemu_loadvm_section_start_full(QEMUFile *f, MigrationIncomingState *mis)
     se->load_version_id = version_id;
     se->load_section_id = section_id;
 
-    /* Validate if it is a device's state */
-    if (xen_enabled() && se->is_ram) {
-        error_report("loadvm: %s RAM loading not allowed on Xen", idstr);
-        return -EINVAL;
-    }
-
     ret = vmstate_load(f, se);
     if (ret < 0) {
         error_report("error while loading state for instance 0x%x of"
@@ -2326,87 +2282,6 @@ int save_snapshot(const char *name, Error **errp)
         vm_start();
     }
     return ret;
-}
-
-void qmp_xen_save_devices_state(const char *filename, bool has_live, bool live,
-                                Error **errp)
-{
-    QEMUFile *f;
-    QIOChannelFile *ioc;
-    int saved_vm_running;
-    int ret;
-
-    if (!has_live) {
-        /* live default to true so old version of Xen tool stack can have a
-         * successfull live migration */
-        live = true;
-    }
-
-    saved_vm_running = runstate_is_running();
-    vm_stop(RUN_STATE_SAVE_VM);
-    global_state_store_running();
-
-    ioc = qio_channel_file_new_path(filename, O_WRONLY | O_CREAT, 0660, errp);
-    if (!ioc) {
-        goto the_end;
-    }
-    qio_channel_set_name(QIO_CHANNEL(ioc), "migration-xen-save-state");
-    f = qemu_fopen_channel_output(QIO_CHANNEL(ioc));
-    object_unref(OBJECT(ioc));
-    ret = qemu_save_device_state(f);
-    if (ret < 0 || qemu_fclose(f) < 0) {
-        error_setg(errp, QERR_IO_ERROR);
-    } else {
-        /* libxl calls the QMP command "stop" before calling
-         * "xen-save-devices-state" and in case of migration failure, libxl
-         * would call "cont".
-         * So call bdrv_inactivate_all (release locks) here to let the other
-         * side of the migration take controle of the images.
-         */
-        if (live && !saved_vm_running) {
-            ret = bdrv_inactivate_all();
-            if (ret) {
-                error_setg(errp, "%s: bdrv_inactivate_all() failed (%d)",
-                           __func__, ret);
-            }
-        }
-    }
-
- the_end:
-    if (saved_vm_running) {
-        vm_start();
-    }
-}
-
-void qmp_xen_load_devices_state(const char *filename, Error **errp)
-{
-    QEMUFile *f;
-    QIOChannelFile *ioc;
-    int ret;
-
-    /* Guest must be paused before loading the device state; the RAM state
-     * will already have been loaded by xc
-     */
-    if (runstate_is_running()) {
-        error_setg(errp, "Cannot update device state while vm is running");
-        return;
-    }
-    vm_stop(RUN_STATE_RESTORE_VM);
-
-    ioc = qio_channel_file_new_path(filename, O_RDONLY | O_BINARY, 0, errp);
-    if (!ioc) {
-        return;
-    }
-    qio_channel_set_name(QIO_CHANNEL(ioc), "migration-xen-load-state");
-    f = qemu_fopen_channel_input(QIO_CHANNEL(ioc));
-    object_unref(OBJECT(ioc));
-
-    ret = qemu_loadvm_state(f);
-    qemu_fclose(f);
-    if (ret < 0) {
-        error_setg(errp, QERR_IO_ERROR);
-    }
-    migration_incoming_state_destroy();
 }
 
 int load_snapshot(const char *name, Error **errp)

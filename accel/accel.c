@@ -30,7 +30,6 @@
 #include "sysemu/sysemu.h"
 #include "sysemu/kvm.h"
 #include "sysemu/qtest.h"
-#include "hw/xen/xen.h"
 #include "qom/object.h"
 #include "qemu/error-report.h"
 #include "qemu/option.h"

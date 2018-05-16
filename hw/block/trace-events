@@ -103,10 +103,3 @@ nvme_ub_db_wr_invalid_cq(uint32_t qid) "completion queue doorbell write for none
 nvme_ub_db_wr_invalid_cqhead(uint32_t qid, uint16_t new_head) "completion queue doorbell write value beyond queue size, cqid=%"PRIu32", new_head=%"PRIu16", ignoring"
 nvme_ub_db_wr_invalid_sq(uint32_t qid) "submission queue doorbell write for nonexistent queue, sqid=%"PRIu32", ignoring"
 nvme_ub_db_wr_invalid_sqtail(uint32_t qid, uint16_t new_tail) "submission queue doorbell write value beyond queue size, sqid=%"PRIu32", new_head=%"PRIu16", ignoring"
-
-# hw/block/xen_disk.c
-xen_disk_alloc(char *name) "%s"
-xen_disk_init(char *name) "%s"
-xen_disk_connect(char *name) "%s"
-xen_disk_disconnect(char *name) "%s"
-xen_disk_free(char *name) "%s"

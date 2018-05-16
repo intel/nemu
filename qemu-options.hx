@@ -31,7 +31,7 @@ DEF("machine", HAS_ARG, QEMU_OPTION_machine, \
     "-machine [type=]name[,prop[=value][,...]]\n"
     "                selects emulated machine ('-machine help' for list)\n"
     "                property accel=accel1[:accel2[:...]] selects accelerator\n"
-    "                supported accelerators are kvm, xen, hax, hvf, whpx or tcg (default: tcg)\n"
+    "                supported accelerators are kvm, hax, hvf, whpx or tcg (default: tcg)\n"
     "                kernel_irqchip=on|off|split controls accelerated irqchip support (default=off)\n"
     "                kvm_shadow_mem=size of KVM shadow MMU in bytes\n"
     "                dump-guest-core=on|off include guest memory in a core dump (default=on)\n"
@@ -66,7 +66,7 @@ Supported machine properties are:
 @table @option
 @item accel=@var{accels1}[:@var{accels2}[:...]]
 This is used to enable an accelerator. Depending on the target architecture,
-kvm, xen, hax, hvf, whpx or tcg can be available. By default, tcg is used. If there is
+kvm, hax, hvf, whpx or tcg can be available. By default, tcg is used. If there is
 more than one accelerator specified, the next one is used if the previous one
 fails to initialize.
 @item kernel_irqchip=on|off
@@ -124,13 +124,13 @@ ETEXI
 
 DEF("accel", HAS_ARG, QEMU_OPTION_accel,
     "-accel [accel=]accelerator[,thread=single|multi]\n"
-    "                select accelerator (kvm, xen, hax, hvf, whpx or tcg; use 'help' for a list)\n"
+    "                select accelerator (kvm, hax, hvf, whpx or tcg; use 'help' for a list)\n"
     "                thread=single|multi (enable multi-threaded TCG)", QEMU_ARCH_ALL)
 STEXI
 @item -accel @var{name}[,prop=@var{value}[,...]]
 @findex -accel
 This is used to enable an accelerator. Depending on the target architecture,
-kvm, xen, hax, hvf, whpx or tcg can be available. By default, tcg is used. If there is
+kvm, hax, hvf, whpx or tcg can be available. By default, tcg is used. If there is
 more than one accelerator specified, the next one is used if the previous one
 fails to initialize.
 @table @option
@@ -1496,7 +1496,7 @@ Rotate graphical output some deg left (only PXA LCD).
 ETEXI
 
 DEF("vga", HAS_ARG, QEMU_OPTION_vga,
-    "-vga [std|cirrus|vmware|qxl|xenfb|tcx|cg3|virtio|none]\n"
+    "-vga [std|cirrus|vmware|qxl|tcx|cg3|virtio|none]\n"
     "                select video card type\n", QEMU_ARCH_ALL)
 STEXI
 @item -vga @var{type}
@@ -3418,37 +3418,6 @@ Enable HAX (Hardware-based Acceleration eXecution) support. This option
 is only available if HAX support is enabled when compiling. HAX is only
 applicable to MAC and Windows platform, and thus does not conflict with
 KVM.
-ETEXI
-
-DEF("xen-domid", HAS_ARG, QEMU_OPTION_xen_domid,
-    "-xen-domid id   specify xen guest domain id\n", QEMU_ARCH_ALL)
-DEF("xen-create", 0, QEMU_OPTION_xen_create,
-    "-xen-create     create domain using xen hypercalls, bypassing xend\n"
-    "                warning: should not be used when xend is in use\n",
-    QEMU_ARCH_ALL)
-DEF("xen-attach", 0, QEMU_OPTION_xen_attach,
-    "-xen-attach     attach to existing xen domain\n"
-    "                xend will use this when starting QEMU\n",
-    QEMU_ARCH_ALL)
-DEF("xen-domid-restrict", 0, QEMU_OPTION_xen_domid_restrict,
-    "-xen-domid-restrict     restrict set of available xen operations\n"
-    "                        to specified domain id. (Does not affect\n"
-    "                        xenpv machine type).\n",
-    QEMU_ARCH_ALL)
-STEXI
-@item -xen-domid @var{id}
-@findex -xen-domid
-Specify xen guest domain @var{id} (XEN only).
-@item -xen-create
-@findex -xen-create
-Create domain using xen hypercalls, bypassing xend.
-Warning: should not be used when xend is in use (XEN only).
-@item -xen-attach
-@findex -xen-attach
-Attach to existing xen domain.
-xend will use this when starting QEMU (XEN only).
-@findex -xen-domid-restrict
-Restrict set of available xen operations to specified domain id (XEN only).
 ETEXI
 
 DEF("no-reboot", 0, QEMU_OPTION_no_reboot, \

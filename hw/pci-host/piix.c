@@ -31,7 +31,6 @@
 #include "hw/sysbus.h"
 #include "qapi/error.h"
 #include "qemu/range.h"
-#include "hw/xen/xen.h"
 #include "hw/pci-host/pam.h"
 #include "sysemu/sysemu.h"
 #include "hw/i386/ioapic.h"
@@ -56,7 +55,6 @@ typedef struct I440FXState {
 
 #define PIIX_NUM_PIC_IRQS       16      /* i8259 * 2 */
 #define PIIX_NUM_PIRQS          4ULL    /* PIRQ[A-D] */
-#define XEN_PIIX_NUM_PIRQS      128ULL
 #define PIIX_PIRQC              0x60
 
 typedef struct PIIX3State {
@@ -123,8 +121,6 @@ struct PCII440FXState {
 
 static void piix3_set_irq(void *opaque, int pirq, int level);
 static PCIINTxRoute piix3_route_intx_pin_to_irq(void *opaque, int pci_intx);
-static void piix3_write_config_xen(PCIDevice *dev,
-                               uint32_t address, uint32_t val, int len);
 
 /* return the global irq number corresponding to a given device irq
    pin. We could also use the bus number to have a more precise
@@ -411,20 +407,12 @@ PCIBus *i440fx_init(const char *host_type, const char *pci_type,
      * the IOAPIC: the four pins of each PCI device on the bus are also
      * connected to the IOAPIC directly.
      * These additional routes can be discovered through ACPI. */
-    if (xen_enabled()) {
-        PCIDevice *pci_dev = pci_create_simple_multifunction(b,
-                             -1, true, "PIIX3-xen");
-        piix3 = PIIX3_PCI_DEVICE(pci_dev);
-        pci_bus_irqs(b, xen_piix3_set_irq, xen_pci_slot_get_pirq,
-                piix3, XEN_PIIX_NUM_PIRQS);
-    } else {
-        PCIDevice *pci_dev = pci_create_simple_multifunction(b,
-                             -1, true, "PIIX3");
-        piix3 = PIIX3_PCI_DEVICE(pci_dev);
-        pci_bus_irqs(b, piix3_set_irq, pci_slot_get_pirq, piix3,
-                PIIX_NUM_PIRQS);
-        pci_bus_set_route_irq_fn(b, piix3_route_intx_pin_to_irq);
-    }
+    PCIDevice *pci_dev = pci_create_simple_multifunction(b,
+                        -1, true, "PIIX3");
+    piix3 = PIIX3_PCI_DEVICE(pci_dev);
+    pci_bus_irqs(b, piix3_set_irq, pci_slot_get_pirq, piix3,
+            PIIX_NUM_PIRQS);
+    pci_bus_set_route_irq_fn(b, piix3_route_intx_pin_to_irq);
     piix3->pic = pic;
     *isa_bus = ISA_BUS(qdev_get_child_bus(DEVICE(piix3), "isa.0"));
 
@@ -535,13 +523,6 @@ static void piix3_write_config(PCIDevice *dev,
             piix3_set_irq_pic(piix3, pic_irq);
         }
     }
-}
-
-static void piix3_write_config_xen(PCIDevice *dev,
-                               uint32_t address, uint32_t val, int len)
-{
-    xen_piix_pci_write_config_client(address, val, len);
-    piix3_write_config(dev, address, val, len);
 }
 
 static void piix3_reset(void *opaque)
@@ -742,19 +723,6 @@ static const TypeInfo piix3_info = {
     .class_init    = piix3_class_init,
 };
 
-static void piix3_xen_class_init(ObjectClass *klass, void *data)
-{
-    PCIDeviceClass *k = PCI_DEVICE_CLASS(klass);
-
-    k->config_write = piix3_write_config_xen;
-};
-
-static const TypeInfo piix3_xen_info = {
-    .name          = "PIIX3-xen",
-    .parent        = TYPE_PIIX3_PCI_DEVICE,
-    .class_init    = piix3_xen_class_init,
-};
-
 static void i440fx_class_init(ObjectClass *klass, void *data)
 {
     DeviceClass *dc = DEVICE_CLASS(klass);
@@ -918,7 +886,6 @@ static void i440fx_register_types(void)
     type_register_static(&igd_passthrough_i440fx_info);
     type_register_static(&piix3_pci_type_info);
     type_register_static(&piix3_info);
-    type_register_static(&piix3_xen_info);
     type_register_static(&i440fx_pcihost_info);
 }
 
