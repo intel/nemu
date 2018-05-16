@@ -361,12 +361,6 @@ static void pc_compat_0_13(MachineState *machine)
     pc_compat_1_2(machine);
 }
 
-static void pc_init_isa(MachineState *machine)
-{
-    pc_init1(machine, TYPE_I440FX_PCI_HOST_BRIDGE, TYPE_I440FX_PCI_DEVICE);
-}
-
-
 #define DEFINE_I440FX_MACHINE(suffix, name, compatfn, optionfn) \
     static void pc_init_##suffix(MachineState *machine) \
     { \
@@ -1064,24 +1058,5 @@ void igd_passthrough_isa_bridge_create(PCIBus *bus, uint16_t gpu_dev_id)
     pci_config_set_revision(bridge_dev->config, pch_rev_id);
 }
 
-static void isapc_machine_options(MachineClass *m)
-{
-    PCMachineClass *pcmc = PC_MACHINE_CLASS(m);
-    m->desc = "ISA-only PC";
-    m->max_cpus = 1;
-    m->option_rom_has_mr = true;
-    m->rom_file_has_mr = false;
-    pcmc->pci_enabled = false;
-    pcmc->has_acpi_build = false;
-    pcmc->smbios_defaults = false;
-    pcmc->gigabyte_align = false;
-    pcmc->smbios_legacy_mode = true;
-    pcmc->has_reserved_memory = false;
-    pcmc->default_nic_model = "none";
-    m->default_cpu_type = X86_CPU_TYPE_NAME("486");
-}
-
-DEFINE_PC_MACHINE(isapc, "isapc", pc_init_isa,
-                  isapc_machine_options);
 
 

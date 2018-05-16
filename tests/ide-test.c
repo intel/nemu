@@ -782,11 +782,6 @@ static void test_pci_retry_flush(void)
     test_retry_flush("pc");
 }
 
-static void test_isa_retry_flush(void)
-{
-    test_retry_flush("isapc");
-}
-
 typedef struct Read10CDB {
     uint8_t opcode;
     uint8_t flags;
@@ -1045,7 +1040,6 @@ int main(int argc, char **argv)
     qtest_add_func("/ide/flush/nodev", test_flush_nodev);
     qtest_add_func("/ide/flush/empty_drive", test_flush_empty_drive);
     qtest_add_func("/ide/flush/retry_pci", test_pci_retry_flush);
-    qtest_add_func("/ide/flush/retry_isa", test_isa_retry_flush);
 
     qtest_add_func("/ide/cdrom/pio", test_cdrom_pio);
     qtest_add_func("/ide/cdrom/pio_large", test_cdrom_pio_large);
