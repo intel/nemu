@@ -270,7 +270,6 @@ sanitizers="no"
 fortify_source=""
 strip_opt="yes"
 bigendian="no"
-mingw32="no"
 gcov="no"
 gcov_tool="gcov"
 EXESUF=""
@@ -759,9 +758,6 @@ for opt do
   ;;
   --enable-vhost-crypto)
       vhost_crypto="yes"
-      if test "$mingw32" = "yes"; then
-          error_exit "vhost-crypto isn't available on win32"
-      fi
   ;;
   --disable-vhost-scsi) vhost_scsi="no"
   ;;
@@ -880,9 +876,6 @@ for opt do
   ;;
   --enable-vhost-user)
       vhost_user="yes"
-      if test "$mingw32" = "yes"; then
-          error_exit "vhost-user isn't available on win32"
-      fi
   ;;
   --with-git=*) git="$optarg"
   ;;
@@ -899,11 +892,7 @@ for opt do
 done
 
 if test "$vhost_user" = ""; then
-    if test "$mingw32" = "yes"; then
-        vhost_user="no"
-    else
         vhost_user="yes"
-    fi
 fi
 
 case "$cpu" in
@@ -1104,7 +1093,7 @@ fi
 # by default.  Only enable by default for git builds
 if test -z "$werror" ; then
     if test -d "$source_path/.git" -a \
-        \( "$linux" = "yes" -o "$mingw32" = "yes" \) ; then
+        \( "$linux" = "yes"  \) ; then
         werror="yes"
     else
         werror="no"
@@ -1415,37 +1404,6 @@ else
 fi
 
 ##########################################
-# MinGW / Mingw-w64 localtime_r/gmtime_r check
-
-if test "$mingw32" = "yes"; then
-    # Some versions of MinGW / Mingw-w64 lack localtime_r
-    # and gmtime_r entirely.
-    #
-    # Some versions of Mingw-w64 define a macro for
-    # localtime_r/gmtime_r.
-    #
-    # Some versions of Mingw-w64 will define functions
-    # for localtime_r/gmtime_r, but only if you have
-    # _POSIX_THREAD_SAFE_FUNCTIONS defined. For fun
-    # though, unistd.h and pthread.h both define
-    # that for you.
-    #
-    # So this #undef localtime_r and #include <unistd.h>
-    # are not in fact redundant.
-cat > $TMPC << EOF
-#include <unistd.h>
-#include <time.h>
-#undef localtime_r
-int main(void) { localtime_r(NULL, NULL); return 0; }
-EOF
-    if compile_prog "" "" ; then
-        localtime_r="yes"
-    else
-        localtime_r="no"
-    fi
-fi
-
-##########################################
 # pkg-config probe
 
 if ! has "$pkg_config_exe"; then
@@ -1717,11 +1675,7 @@ fi
 
 # glib support probe
 
-if test "$mingw32" = yes; then
-    glib_req_ver=2.30
-else
     glib_req_ver=2.22
-fi
 glib_modules=gthread-2.0
 if test "$modules" = yes; then
     glib_modules="$glib_modules gmodule-export-2.0"
@@ -1729,10 +1683,6 @@ fi
 
 # This workaround is required due to a bug in pkg-config file for glib as it
 # doesn't define GLIB_STATIC_COMPILATION for pkg-config --static
-
-if test "$static" = yes -a "$mingw32" = yes; then
-    QEMU_CFLAGS="-DGLIB_STATIC_COMPILATION $QEMU_CFLAGS"
-fi
 
 for i in $glib_modules; do
     if $pkg_config --atleast-version=$glib_req_ver $i; then
@@ -1902,7 +1852,7 @@ else
   done
 fi
 
-if test "$mingw32" != yes -a "$pthread" = no; then
+if test "$pthread" = no; then
   error_exit "pthread check failed" \
       "Make sure to have the pthread libs and headers installed."
 fi
@@ -2019,11 +1969,8 @@ else
 fi
 
 # TPM emulator is for all posix systems
-if test "$mingw32" != "yes"; then
   tpm_emulator=$tpm
-else
-  tpm_emulator=no
-fi
+
 ##########################################
 # attr probe
 
@@ -2729,10 +2676,7 @@ elif compile_prog "" "$pthread_lib -lrt" ; then
   libs_qga="$libs_qga -lrt"
 fi
 
-if test "$darwin" != "yes" -a "$mingw32" != "yes" -a "$solaris" != yes -a \
-        "$haiku" != "yes" ; then
     libs_softmmu="-lutil $libs_softmmu"
-fi
 
 ##########################################
 # spice probe
@@ -2774,81 +2718,7 @@ if test "$smartcard" != "no"; then
     fi
 fi
 
-##########################################
-# check if we have VSS SDK headers for win
 
-if test "$mingw32" = "yes" -a "$guest_agent" != "no" -a "$vss_win32_sdk" != "no" ; then
-  case "$vss_win32_sdk" in
-    "")   vss_win32_include="-isystem $source_path" ;;
-    *\ *) # The SDK is installed in "Program Files" by default, but we cannot
-          # handle path with spaces. So we symlink the headers into ".sdk/vss".
-          vss_win32_include="-isystem $source_path/.sdk/vss"
-	  symlink "$vss_win32_sdk/inc" "$source_path/.sdk/vss/inc"
-	  ;;
-    *)    vss_win32_include="-isystem $vss_win32_sdk"
-  esac
-  cat > $TMPC << EOF
-#define __MIDL_user_allocate_free_DEFINED__
-#include <inc/win2003/vss.h>
-int main(void) { return VSS_CTX_BACKUP; }
-EOF
-  if compile_prog "$vss_win32_include" "" ; then
-    guest_agent_with_vss="yes"
-    QEMU_CFLAGS="$QEMU_CFLAGS $vss_win32_include"
-    libs_qga="-lole32 -loleaut32 -lshlwapi -lstdc++ -Wl,--enable-stdcall-fixup $libs_qga"
-    qga_vss_provider="qga/vss-win32/qga-vss.dll qga/vss-win32/qga-vss.tlb"
-  else
-    if test "$vss_win32_sdk" != "" ; then
-      echo "ERROR: Please download and install Microsoft VSS SDK:"
-      echo "ERROR:   http://www.microsoft.com/en-us/download/details.aspx?id=23490"
-      echo "ERROR: On POSIX-systems, you can extract the SDK headers by:"
-      echo "ERROR:   scripts/extract-vsssdk-headers setup.exe"
-      echo "ERROR: The headers are extracted in the directory \`inc'."
-      feature_not_found "VSS support"
-    fi
-    guest_agent_with_vss="no"
-  fi
-fi
-
-##########################################
-# lookup Windows platform SDK (if not specified)
-# The SDK is needed only to build .tlb (type library) file of guest agent
-# VSS provider from the source. It is usually unnecessary because the
-# pre-compiled .tlb file is included.
-
-if test "$mingw32" = "yes" -a "$guest_agent" != "no" -a "$guest_agent_with_vss" = "yes" ; then
-  if test -z "$win_sdk"; then
-    programfiles="$PROGRAMFILES"
-    test -n "$PROGRAMW6432" && programfiles="$PROGRAMW6432"
-    if test -n "$programfiles"; then
-      win_sdk=$(ls -d "$programfiles/Microsoft SDKs/Windows/v"* | tail -1) 2>/dev/null
-    else
-      feature_not_found "Windows SDK"
-    fi
-  elif test "$win_sdk" = "no"; then
-    win_sdk=""
-  fi
-fi
-
-##########################################
-# check if mingw environment provides a recent ntddscsi.h
-if test "$mingw32" = "yes" -a "$guest_agent" != "no"; then
-  cat > $TMPC << EOF
-#include <windows.h>
-#include <ntddscsi.h>
-int main(void) {
-#if !defined(IOCTL_SCSI_GET_ADDRESS)
-#error Missing required ioctl definitions
-#endif
-  SCSI_ADDRESS addr = { .Lun = 0, .TargetId = 0, .PathId = 0 };
-  return addr.Lun;
-}
-EOF
-  if compile_prog "" "" ; then
-    guest_agent_ntddscsi=yes
-    libs_qga="-lsetupapi $libs_qga"
-  fi
-fi
 
 ##########################################
 # virgl renderer probe
@@ -3384,9 +3254,7 @@ fi
 # check for usable membarrier system call
 if test "$membarrier" = "yes"; then
     have_membarrier=no
-    if test "$mingw32" = "yes" ; then
-        have_membarrier=yes
-    elif test "$linux" = "yes" ; then
+    if test "$linux" = "yes" ; then
         cat > $TMPC << EOF
     #include <linux/membarrier.h>
     #include <sys/syscall.h>
@@ -3677,15 +3545,6 @@ else
     POD2MAN="pod2man"
 fi
 
-# Use ASLR, no-SEH and DEP if available
-if test "$mingw32" = "yes" ; then
-    for flag in --dynamicbase --no-seh --nxcompat; do
-        if ld_has $flag ; then
-            LDFLAGS="-Wl,$flag $LDFLAGS"
-        fi
-    done
-fi
-
 qemu_confdir=$sysconfdir$confsuffix
 qemu_moddir=$libdir$confsuffix
 qemu_datadir=$datadir$confsuffix
@@ -3744,7 +3603,7 @@ fi
 # Probe for guest agent support/options
 
 if [ "$guest_agent" != "no" ]; then
-  if [ "$linux" = "yes" -o "$bsd" = "yes" -o "$solaris" = "yes" -o "$mingw32" = "yes" ] ; then
+  if [ "$linux" = "yes" ] ; then
       tools="qemu-ga $tools"
       guest_agent=yes
   elif [ "$guest_agent" != yes ]; then
@@ -3752,63 +3611,6 @@ if [ "$guest_agent" != "no" ]; then
   else
       error_exit "Guest agent is not supported on this platform"
   fi
-fi
-
-# Guest agent Window MSI  package
-
-if test "$guest_agent" != yes; then
-  if test "$guest_agent_msi" = yes; then
-    error_exit "MSI guest agent package requires guest agent enabled"
-  fi
-  guest_agent_msi=no
-elif test "$mingw32" != "yes"; then
-  if test "$guest_agent_msi" = "yes"; then
-    error_exit "MSI guest agent package is available only for MinGW Windows cross-compilation"
-  fi
-  guest_agent_msi=no
-elif ! has wixl; then
-  if test "$guest_agent_msi" = "yes"; then
-    error_exit "MSI guest agent package requires wixl tool installed ( usually from msitools package )"
-  fi
-  guest_agent_msi=no
-else
-  # we support qemu-ga, mingw32, and wixl: default to MSI enabled if it wasn't
-  # disabled explicitly
-  if test "$guest_agent_msi" != "no"; then
-    guest_agent_msi=yes
-  fi
-fi
-
-if test "$guest_agent_msi" = "yes"; then
-  if test "$guest_agent_with_vss" = "yes"; then
-    QEMU_GA_MSI_WITH_VSS="-D InstallVss"
-  fi
-
-  if test "$QEMU_GA_MANUFACTURER" = ""; then
-    QEMU_GA_MANUFACTURER=QEMU
-  fi
-
-  if test "$QEMU_GA_DISTRO" = ""; then
-    QEMU_GA_DISTRO=Linux
-  fi
-
-  if test "$QEMU_GA_VERSION" = ""; then
-      QEMU_GA_VERSION=$(cat $source_path/VERSION)
-  fi
-
-  QEMU_GA_MSI_MINGW_DLL_PATH="-D Mingw_dlls=$($pkg_config --variable=prefix glib-2.0)/bin"
-
-  case "$cpu" in
-  x86_64)
-    QEMU_GA_MSI_ARCH="-a x64 -D Arch=64"
-    ;;
-  i386)
-    QEMU_GA_MSI_ARCH="-D Arch=32"
-    ;;
-  *)
-    error_exit "CPU $cpu not supported for building installation package"
-    ;;
-  esac
 fi
 
 # Mac OS X ships with a broken assembler
@@ -3877,14 +3679,9 @@ echo "module directory  $(eval echo $qemu_moddir)"
 echo "libexec directory $(eval echo $libexecdir)"
 echo "include directory $(eval echo $includedir)"
 echo "config directory  $(eval echo $sysconfdir)"
-if test "$mingw32" = "no" ; then
 echo "local state directory   $(eval echo $local_statedir)"
 echo "Manual directory  $(eval echo $mandir)"
 echo "ELF interp prefix $interp_prefix"
-else
-echo "local state directory   queried at runtime"
-echo "Windows SDK       $win_sdk"
-fi
 echo "Source path       $source_path"
 echo "GIT binary        $git"
 echo "GIT submodules    $git_submodules"
@@ -3914,7 +3711,6 @@ echo "static build      $static"
 echo "TLS priority      $tls_priority"
 echo "libtasn1          $tasn1"
 echo "virgl support     $virglrenderer"
-echo "mingw32 support   $mingw32"
 echo "Block whitelist (rw) $block_drv_rw_whitelist"
 echo "Block whitelist (ro) $block_drv_ro_whitelist"
 echo "VirtFS support    $virtfs"
@@ -4026,9 +3822,7 @@ echo "qemu_datadir=$qemu_datadir" >> $config_host_mak
 echo "qemu_firmwarepath=$firmwarepath" >> $config_host_mak
 echo "qemu_docdir=$qemu_docdir" >> $config_host_mak
 echo "qemu_moddir=$qemu_moddir" >> $config_host_mak
-if test "$mingw32" = "no" ; then
   echo "qemu_localstatedir=$local_statedir" >> $config_host_mak
-fi
 echo "qemu_helperdir=$libexecdir" >> $config_host_mak
 echo "qemu_localedir=$qemu_localedir" >> $config_host_mak
 echo "libs_softmmu=$libs_softmmu" >> $config_host_mak
@@ -4044,37 +3838,7 @@ fi
 if test "$bigendian" = "yes" ; then
   echo "HOST_WORDS_BIGENDIAN=y" >> $config_host_mak
 fi
-if test "$mingw32" = "yes" ; then
-  echo "CONFIG_WIN32=y" >> $config_host_mak
-  rc_version=$(cat $source_path/VERSION)
-  version_major=${rc_version%%.*}
-  rc_version=${rc_version#*.}
-  version_minor=${rc_version%%.*}
-  rc_version=${rc_version#*.}
-  version_subminor=${rc_version%%.*}
-  version_micro=0
-  echo "CONFIG_FILEVERSION=$version_major,$version_minor,$version_subminor,$version_micro" >> $config_host_mak
-  echo "CONFIG_PRODUCTVERSION=$version_major,$version_minor,$version_subminor,$version_micro" >> $config_host_mak
-  if test "$guest_agent_with_vss" = "yes" ; then
-    echo "CONFIG_QGA_VSS=y" >> $config_host_mak
-    echo "QGA_VSS_PROVIDER=$qga_vss_provider" >> $config_host_mak
-    echo "WIN_SDK=\"$win_sdk\"" >> $config_host_mak
-  fi
-  if test "$guest_agent_ntddscsi" = "yes" ; then
-    echo "CONFIG_QGA_NTDDDISK=y" >> $config_host_mak
-  fi
-  if test "$guest_agent_msi" = "yes"; then
-    echo "QEMU_GA_MSI_ENABLED=yes" >> $config_host_mak
-    echo "QEMU_GA_MSI_MINGW_DLL_PATH=${QEMU_GA_MSI_MINGW_DLL_PATH}" >> $config_host_mak
-    echo "QEMU_GA_MSI_WITH_VSS=${QEMU_GA_MSI_WITH_VSS}" >> $config_host_mak
-    echo "QEMU_GA_MSI_ARCH=${QEMU_GA_MSI_ARCH}" >> $config_host_mak
-    echo "QEMU_GA_MANUFACTURER=${QEMU_GA_MANUFACTURER}" >> $config_host_mak
-    echo "QEMU_GA_DISTRO=${QEMU_GA_DISTRO}" >> $config_host_mak
-    echo "QEMU_GA_VERSION=${QEMU_GA_VERSION}" >> $config_host_mak
-  fi
-else
   echo "CONFIG_POSIX=y" >> $config_host_mak
-fi
 
 if test "$linux" = "yes" ; then
   echo "CONFIG_LINUX=y" >> $config_host_mak

@@ -939,23 +939,6 @@ docs/interop/qemu-qmp-ref.dvi docs/interop/qemu-qmp-ref.html \
 	docs/interop/qemu-qmp-ref.texi docs/interop/qemu-qmp-qapi.texi
 
 
-ifdef CONFIG_WIN32
-
-INSTALLER = qemu-setup-$(VERSION)$(EXESUF)
-
-nsisflags = -V2 -NOCD
-
-ifneq ($(wildcard $(SRC_PATH)/dll),)
-ifeq ($(ARCH),x86_64)
-# 64 bit executables
-DLL_PATH = $(SRC_PATH)/dll/w64
-nsisflags += -DW64
-else
-# 32 bit executables
-DLL_PATH = $(SRC_PATH)/dll/w32
-endif
-endif
-
 .PHONY: installer
 installer: $(INSTALLER)
 
@@ -993,7 +976,6 @@ endif # SIGNCODE
 ifdef SIGNCODE
 	$(SIGNCODE) $(INSTALLER)
 endif # SIGNCODE
-endif # CONFIG_WIN
 
 # Add a dependency on the generated files, so that they are always
 # rebuilt before other object files
@@ -1048,13 +1030,5 @@ endif
 	@echo  '  html info pdf txt'
 	@echo  '                  - Build documentation in specified format'
 	@echo  ''
-ifdef CONFIG_WIN32
-	@echo  'Windows targets:'
-	@echo  '  installer       - Build NSIS-based installer for QEMU'
-ifdef QEMU_GA_MSI_ENABLED
-	@echo  '  msi             - Build MSI-based installer for qemu-ga'
-endif
-	@echo  ''
-endif
 	@echo  '  $(MAKE) [targets]      (quiet build, default)'
 	@echo  '  $(MAKE) V=1 [targets]  (verbose build)'

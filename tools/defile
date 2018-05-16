@@ -18,6 +18,7 @@
 #undef CONFIG_BSD
 #undef CONFIG_TCG
 #undef CONFIG_CAPSTONE
+#undef CONFIG_WIN32
 #undef _WIN32
 #undef __sun__
 #undef __s390__
