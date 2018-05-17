@@ -106,8 +106,6 @@ common-obj-y += audio/
 common-obj-m += audio/
 common-obj-y += hw/
 
-common-obj-y += replay/
-
 common-obj-y += ui/
 common-obj-m += ui/
 

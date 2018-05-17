@@ -98,7 +98,6 @@
 #include "qom/object_interfaces.h"
 #include "exec/semihost.h"
 #include "crypto/init.h"
-#include "sysemu/replay.h"
 #include "qapi/qapi-events-run-state.h"
 #include "qapi/qapi-visit-block-core.h"
 #include "qapi/qapi-commands-block-core.h"
@@ -821,7 +820,6 @@ static void configure_rtc(QemuOpts *opts)
             rtc_utc = 0;
             error_setg(&blocker, QERR_REPLAY_NOT_SUPPORTED,
                       "-rtc base=localtime");
-            replay_add_blocker(blocker);
         } else {
             configure_rtc_date_offset(value, 0);
         }
@@ -1157,7 +1155,6 @@ static void smp_parse(QemuOpts *opts)
     if (smp_cpus > 1) {
         Error *blocker = NULL;
         error_setg(&blocker, QERR_REPLAY_NOT_SUPPORTED, "smp");
-        replay_add_blocker(blocker);
     }
 }
 
@@ -1463,20 +1460,22 @@ static ShutdownCause qemu_reset_requested(void)
 {
     ShutdownCause r = reset_requested;
 
-    if (r && replay_checkpoint(CHECKPOINT_RESET_REQUESTED)) {
+    if (r) {
         reset_requested = SHUTDOWN_CAUSE_NONE;
         return r;
     }
+
     return SHUTDOWN_CAUSE_NONE;
 }
 
 static int qemu_suspend_requested(void)
 {
     int r = suspend_requested;
-    if (r && replay_checkpoint(CHECKPOINT_SUSPEND_REQUESTED)) {
+    if (r) {
         suspend_requested = 0;
         return r;
     }
+
     return false;
 }
 
@@ -1631,7 +1630,6 @@ void qemu_system_killed(int signal, pid_t pid)
 void qemu_system_shutdown_request(ShutdownCause reason)
 {
     trace_qemu_system_shutdown_request(reason);
-    replay_shutdown_request(reason);
     shutdown_requested = reason;
     qemu_notify_event();
 }
@@ -2495,8 +2493,7 @@ static bool object_create_initial(const char *type)
         g_str_equal(type, "filter-dump") ||
         g_str_equal(type, "filter-mirror") ||
         g_str_equal(type, "filter-redirector") ||
-        g_str_equal(type, "filter-rewriter") ||
-        g_str_equal(type, "filter-replay")) {
+        g_str_equal(type, "filter-rewriter")) {
         return false;
     }
 
@@ -3998,7 +3995,7 @@ int main(int argc, char **argv, char **envp)
         qapi_free_BlockdevOptions(bdo->bdo);
         g_free(bdo);
     }
-    if (snapshot || replay_mode != REPLAY_MODE_NONE) {
+    if (snapshot) {
         qemu_opts_foreach(qemu_find_opts("drive"), drive_enable_snapshot,
                           NULL, NULL);
     }
@@ -4052,10 +4049,6 @@ int main(int argc, char **argv, char **envp)
             exit (i == 1 ? 1 : 0);
     }
 
-    /* This checkpoint is required by replay to separate prior clock
-       reading from the other reads, because timer polling functions query
-       clock values from the log. */
-    replay_checkpoint(CHECKPOINT_INIT);
     qdev_machine_init();
 
     current_machine->ram_size = ram_size;
@@ -4145,17 +4138,9 @@ int main(int argc, char **argv, char **envp)
         exit(1);
     }
 
-    replay_start();
-
-    /* This checkpoint is required by replay to separate prior clock
-       reading from the other reads, because timer polling functions query
-       clock values from the log. */
-    replay_checkpoint(CHECKPOINT_RESET);
     qemu_system_reset(SHUTDOWN_CAUSE_NONE);
     register_global_state();
-    if (replay_mode != REPLAY_MODE_NONE) {
-        replay_vmstate_init();
-    } else if (loadvm) {
+    if (loadvm) {
         Error *local_err = NULL;
         if (load_snapshot(loadvm, &local_err) < 0) {
             error_report_err(local_err);

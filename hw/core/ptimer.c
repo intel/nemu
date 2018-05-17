@@ -10,7 +10,6 @@
 #include "qemu/timer.h"
 #include "hw/ptimer.h"
 #include "qemu/host-utils.h"
-#include "sysemu/replay.h"
 #include "sysemu/qtest.h"
 #include "block/aio.h"
 #include "sysemu/cpus.h"
@@ -36,7 +35,7 @@ struct ptimer_state
 static void ptimer_trigger(ptimer_state *s)
 {
     if (s->bh) {
-        replay_bh_schedule_event(s->bh);
+        qemu_bh_schedule(s->bh);
     }
 }
 

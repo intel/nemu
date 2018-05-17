@@ -47,7 +47,6 @@
 #include "qemu/bitmap.h"
 #include "qemu/seqlock.h"
 #include "hw/nmi.h"
-#include "sysemu/replay.h"
 #include "hw/boards.h"
 
 
@@ -385,8 +384,7 @@ static void icount_warp_rt(void)
 
     seqlock_write_begin(&timers_state.vm_clock_seqlock);
     if (runstate_is_running()) {
-        int64_t clock = REPLAY_CLOCK(REPLAY_CLOCK_VIRTUAL_RT,
-                                     cpu_get_clock_locked());
+        int64_t clock = cpu_get_clock_locked();
         int64_t warp_delta;
 
         warp_delta = clock - timers_state.vm_clock_warp_start;
@@ -451,11 +449,6 @@ void qemu_start_warp_timer(void)
      * do not fire, so computing the deadline does not make sense.
      */
     if (!runstate_is_running()) {
-        return;
-    }
-
-    /* warp clock deterministically in record/replay mode */
-    if (!replay_checkpoint(CHECKPOINT_CLOCK_WARP_START)) {
         return;
     }
 
@@ -808,7 +801,6 @@ static int do_vm_stop(RunState state, bool send_stop)
     }
 
     bdrv_drain_all();
-    replay_disable_events();
     ret = bdrv_flush_all();
 
     return ret;
@@ -1117,11 +1109,6 @@ void pause_all_vcpus(void)
         }
     }
 
-    /* We need to drop the replay_lock so any vCPU threads woken up
-     * can finish their replay tasks
-     */
-    replay_mutex_unlock();
-
     while (!all_vcpus_paused()) {
         qemu_cond_wait(&qemu_pause_cond, &qemu_global_mutex);
         CPU_FOREACH(cpu) {
@@ -1130,7 +1117,6 @@ void pause_all_vcpus(void)
     }
 
     qemu_mutex_unlock_iothread();
-    replay_mutex_lock();
     qemu_mutex_lock_iothread();
 }
 
@@ -1262,7 +1248,6 @@ int vm_prepare_start(void)
         qapi_event_send_stop(&error_abort);
         res = -1;
     } else {
-        replay_enable_events();
         cpu_enable_ticks();
         runstate_set(RUN_STATE_RUNNING);
         vm_state_notify(1, RUN_STATE_RUNNING);

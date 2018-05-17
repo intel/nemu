@@ -29,7 +29,6 @@
 #include "qemu/sockets.h"	// struct in_addr needed for libslirp.h
 #include "sysemu/qtest.h"
 #include "sysemu/cpus.h"
-#include "sysemu/replay.h"
 #include "slirp/libslirp.h"
 #include "qemu/main-loop.h"
 #include "block/aio.h"
@@ -244,11 +243,9 @@ static int os_host_main_loop_wait(int64_t timeout)
         spin_counter++;
     }
     qemu_mutex_unlock_iothread();
-    replay_mutex_unlock();
 
     ret = qemu_poll_ns((GPollFD *)gpollfds->data, gpollfds->len, timeout);
 
-    replay_mutex_lock();
     qemu_mutex_lock_iothread();
 
     glib_pollfds_poll();

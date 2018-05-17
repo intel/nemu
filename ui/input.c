@@ -7,7 +7,6 @@
 #include "trace.h"
 #include "ui/input.h"
 #include "ui/console.h"
-#include "sysemu/replay.h"
 
 struct QemuInputHandlerState {
     DeviceState       *dev;
@@ -371,8 +370,6 @@ void qemu_input_event_send(QemuConsole *src, InputEvent *evt)
     if (!runstate_is_running() && !runstate_check(RUN_STATE_SUSPENDED)) {
         return;
     }
-
-    replay_input_event(src, evt);
 }
 
 void qemu_input_event_sync_impl(void)
@@ -397,8 +394,6 @@ void qemu_input_event_sync(void)
     if (!runstate_is_running() && !runstate_check(RUN_STATE_SUSPENDED)) {
         return;
     }
-
-    replay_input_sync_event();
 }
 
 static InputEvent *qemu_input_event_new_key(KeyValue *key, bool down)

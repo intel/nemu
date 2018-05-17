@@ -32,7 +32,6 @@
 #include "qapi/error.h"
 #include "qapi/qapi-commands-char.h"
 #include "qapi/qmp/qerror.h"
-#include "sysemu/replay.h"
 #include "qemu/help_option.h"
 #include "qemu/option.h"
 
@@ -137,18 +136,7 @@ int qemu_chr_write(Chardev *s, const uint8_t *buf, int len, bool write_all)
     int offset = 0;
     int res;
 
-    if (qemu_chr_replay(s) && replay_mode == REPLAY_MODE_PLAY) {
-        replay_char_write_event_load(&res, &offset);
-        assert(offset <= len);
-        qemu_chr_write_buffer(s, buf, offset, &offset, true);
-        return res;
-    }
-
     res = qemu_chr_write_buffer(s, buf, len, &offset, write_all);
-
-    if (qemu_chr_replay(s) && replay_mode == REPLAY_MODE_RECORD) {
-        replay_char_write_event_save(res, offset);
-    }
 
     if (res < 0) {
         return res;
@@ -178,14 +166,7 @@ void qemu_chr_be_write_impl(Chardev *s, uint8_t *buf, int len)
 
 void qemu_chr_be_write(Chardev *s, uint8_t *buf, int len)
 {
-    if (qemu_chr_replay(s)) {
-        if (replay_mode == REPLAY_MODE_PLAY) {
-            return;
-        }
-        replay_chr_be_write(s, buf, len);
-    } else {
-        qemu_chr_be_write_impl(s, buf, len);
-    }
+    qemu_chr_be_write_impl(s, buf, len);
 }
 
 void qemu_chr_be_update_read_handlers(Chardev *s,
@@ -683,7 +664,7 @@ out:
     return chr;
 }
 
-Chardev *qemu_chr_new_noreplay(const char *label, const char *filename)
+Chardev *qemu_chr_new(const char *label, const char *filename)
 {
     const char *p;
     Chardev *chr;
@@ -706,23 +687,6 @@ Chardev *qemu_chr_new_noreplay(const char *label, const char *filename)
         monitor_init(chr, MONITOR_USE_READLINE);
     }
     qemu_opts_del(opts);
-    return chr;
-}
-
-Chardev *qemu_chr_new(const char *label, const char *filename)
-{
-    Chardev *chr;
-    chr = qemu_chr_new_noreplay(label, filename);
-    if (chr) {
-        if (replay_mode != REPLAY_MODE_NONE) {
-            qemu_chr_set_feature(chr, QEMU_CHAR_FEATURE_REPLAY);
-        }
-        if (qemu_chr_replay(chr) && CHARDEV_GET_CLASS(chr)->chr_ioctl) {
-            error_report("Replay: ioctl is not supported "
-                         "for serial devices yet");
-        }
-        replay_register_char_driver(chr);
-    }
     return chr;
 }
 
@@ -985,12 +949,6 @@ ChardevReturn *qmp_chardev_change(const char *id, ChardevBackend *backend,
         return NULL;
     }
 
-    if (qemu_chr_replay(chr)) {
-        error_setg(errp,
-            "Chardev '%s' cannot be changed in record/replay mode", id);
-        return NULL;
-    }
-
     be = chr->be;
     if (!be) {
         /* easy case */
@@ -1059,11 +1017,6 @@ void qmp_chardev_remove(const char *id, Error **errp)
     }
     if (qemu_chr_is_busy(chr)) {
         error_setg(errp, "Chardev '%s' is busy", id);
-        return;
-    }
-    if (qemu_chr_replay(chr)) {
-        error_setg(errp,
-            "Chardev '%s' cannot be unplugged in record/replay mode", id);
         return;
     }
     object_unparent(OBJECT(chr));

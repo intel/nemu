@@ -1541,7 +1541,7 @@ int gdbserver_start(const char *device)
             act.sa_handler = gdb_sigterm_handler;
             sigaction(SIGINT, &act, NULL);
         }
-        chr = qemu_chr_new_noreplay("gdb", device);
+        chr = qemu_chr_new("gdb", device);
         if (!chr)
             return -1;
     }
