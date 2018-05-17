@@ -242,8 +242,6 @@ struct CPUWatchpoint {
 struct KVMState;
 struct kvm_run;
 
-struct hax_vcpu_state;
-
 #define TB_JMP_CACHE_BITS 12
 #define TB_JMP_CACHE_SIZE (1 << TB_JMP_CACHE_BITS)
 
@@ -395,7 +393,6 @@ struct CPUState {
     uint32_t can_do_io;
     int32_t exception_index;
 
-    /* shared by kvm and hax */
     bool vcpu_dirty;
 
     /* Used to keep track of an outstanding cpu throttle thread for migration
@@ -413,8 +410,6 @@ struct CPUState {
         uint32_t u32;
         icount_decr_u16 u16;
     } icount_decr;
-
-    struct hax_vcpu_state *hax_vcpu;
 
     /* The pending_tlb_flush flag is set and cleared atomically to
      * avoid potential races. The aim of the flag is to avoid

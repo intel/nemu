@@ -8,7 +8,6 @@ $SRCDIR/configure \
  --cross-prefix=aarch64-linux-gnu- \
  --disable-guest-agent \
  --disable-guest-agent-msi \
- --disable-hax \
  --disable-libiscsi \
  --disable-libnfs \
  --disable-libssh2 \
