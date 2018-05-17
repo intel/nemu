@@ -1297,7 +1297,6 @@ struct X86CPU {
     bool check_cpuid;
     bool enforce_cpuid;
     bool expose_kvm;
-    bool expose_tcg;
     bool migratable;
     bool max_features; /* Enable all supported features automatically */
     uint32_t apic_id;
@@ -1638,8 +1637,6 @@ static inline target_long lshift(target_long x, int n)
 #define ST(n)  (env->fpregs[(env->fpstt + (n)) & 7].d)
 #define ST1    ST(1)
 
-/* translate.c */
-void tcg_x86_init(void);
 
 #include "exec/cpu-all.h"
 #include "svm.h"
@@ -1683,9 +1680,6 @@ uint32_t cpu_cc_compute_all(CPUX86State *env1, int op);
 static inline uint32_t cpu_compute_eflags(CPUX86State *env)
 {
     uint32_t eflags = env->eflags;
-    if (tcg_enabled()) {
-        eflags |= cpu_cc_compute_all(env, CC_OP) | (env->df & DF_MASK);
-    }
     return eflags;
 }
 
@@ -1737,17 +1731,11 @@ void update_mxcsr_status(CPUX86State *env);
 static inline void cpu_set_mxcsr(CPUX86State *env, uint32_t mxcsr)
 {
     env->mxcsr = mxcsr;
-    if (tcg_enabled()) {
-        update_mxcsr_status(env);
-    }
 }
 
 static inline void cpu_set_fpuc(CPUX86State *env, uint16_t fpuc)
 {
      env->fpuc = fpuc;
-     if (tcg_enabled()) {
-        update_fp_status(env);
-     }
 }
 
 /* mem_helper.c */

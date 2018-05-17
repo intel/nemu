@@ -2046,7 +2046,7 @@ bool pc_machine_is_smm_enabled(PCMachineState *pcms)
         return false;
     }
 
-    if (tcg_enabled() || qtest_enabled()) {
+    if (qtest_enabled()) {
         smm_available = true;
     } else if (kvm_enabled()) {
         smm_available = kvm_has_smm();

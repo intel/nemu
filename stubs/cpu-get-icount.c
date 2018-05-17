@@ -4,9 +4,9 @@
 #include "sysemu/cpus.h"
 #include "qemu/main-loop.h"
 
-int use_icount;
+int __attribute__((weak)) use_icount;
 
-int64_t cpu_get_icount(void)
+int64_t __attribute__((weak)) cpu_get_icount(void)
 {
     abort();
 }

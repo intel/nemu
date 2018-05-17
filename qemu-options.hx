@@ -3413,51 +3413,6 @@ many timer interrupts were not processed by the Windows guest and will
 re-inject them.
 ETEXI
 
-DEF("icount", HAS_ARG, QEMU_OPTION_icount, \
-    "-icount [shift=N|auto][,align=on|off][,sleep=on|off,rr=record|replay,rrfile=<filename>,rrsnapshot=<snapshot>]\n" \
-    "                enable virtual instruction counter with 2^N clock ticks per\n" \
-    "                instruction, enable aligning the host and virtual clocks\n" \
-    "                or disable real time cpu sleeping\n", QEMU_ARCH_ALL)
-STEXI
-@item -icount [shift=@var{N}|auto][,rr=record|replay,rrfile=@var{filename},rrsnapshot=@var{snapshot}]
-@findex -icount
-Enable virtual instruction counter.  The virtual cpu will execute one
-instruction every 2^@var{N} ns of virtual time.  If @code{auto} is specified
-then the virtual cpu speed will be automatically adjusted to keep virtual
-time within a few seconds of real time.
-
-When the virtual cpu is sleeping, the virtual time will advance at default
-speed unless @option{sleep=on|off} is specified.
-With @option{sleep=on|off}, the virtual time will jump to the next timer deadline
-instantly whenever the virtual cpu goes to sleep mode and will not advance
-if no timer is enabled. This behavior give deterministic execution times from
-the guest point of view.
-
-Note that while this option can give deterministic behavior, it does not
-provide cycle accurate emulation.  Modern CPUs contain superscalar out of
-order cores with complex cache hierarchies.  The number of instructions
-executed often has little or no correlation with actual performance.
-
-@option{align=on} will activate the delay algorithm which will try
-to synchronise the host clock and the virtual clock. The goal is to
-have a guest running at the real frequency imposed by the shift option.
-Whenever the guest clock is behind the host clock and if
-@option{align=on} is specified then we print a message to the user
-to inform about the delay.
-Currently this option does not work when @option{shift} is @code{auto}.
-Note: The sync algorithm will work for those shift values for which
-the guest clock runs ahead of the host clock. Typically this happens
-when the shift value is high (how high depends on the host machine).
-
-When @option{rr} option is specified deterministic record/replay is enabled.
-Replay log is written into @var{filename} file in record mode and
-read from this file in replay mode.
-
-Option rrsnapshot is used to create new vm snapshot named @var{snapshot}
-at the start of execution recording. In replay mode this option is used
-to load the initial VM state.
-ETEXI
-
 DEF("watchdog", HAS_ARG, QEMU_OPTION_watchdog, \
     "-watchdog model\n" \
     "                enable virtual hardware watchdog [default=none]\n",
@@ -3559,14 +3514,6 @@ STEXI
 @item -show-cursor
 @findex -show-cursor
 Show cursor.
-ETEXI
-
-DEF("tb-size", HAS_ARG, QEMU_OPTION_tb_size, \
-    "-tb-size n      set TB size\n", QEMU_ARCH_ALL)
-STEXI
-@item -tb-size @var{n}
-@findex -tb-size
-Set TB size.
 ETEXI
 
 DEF("incoming", HAS_ARG, QEMU_OPTION_incoming, \

@@ -1524,7 +1524,7 @@ void memory_region_init_ram_shared_nomigrate(MemoryRegion *mr,
     mr->terminates = true;
     mr->destructor = memory_region_destructor_ram;
     mr->ram_block = qemu_ram_alloc(size, share, mr, errp);
-    mr->dirty_log_mask = tcg_enabled() ? (1 << DIRTY_MEMORY_CODE) : 0;
+    mr->dirty_log_mask = 0;
 }
 
 void memory_region_init_resizeable_ram(MemoryRegion *mr,
@@ -1543,7 +1543,7 @@ void memory_region_init_resizeable_ram(MemoryRegion *mr,
     mr->destructor = memory_region_destructor_ram;
     mr->ram_block = qemu_ram_alloc_resizeable(size, max_size, resized,
                                               mr, errp);
-    mr->dirty_log_mask = tcg_enabled() ? (1 << DIRTY_MEMORY_CODE) : 0;
+    mr->dirty_log_mask = 0;
 }
 
 void memory_region_init_ram_from_file(MemoryRegion *mr,
@@ -1561,7 +1561,7 @@ void memory_region_init_ram_from_file(MemoryRegion *mr,
     mr->destructor = memory_region_destructor_ram;
     mr->align = align;
     mr->ram_block = qemu_ram_alloc_from_file(size, mr, share, path, errp);
-    mr->dirty_log_mask = tcg_enabled() ? (1 << DIRTY_MEMORY_CODE) : 0;
+    mr->dirty_log_mask = 0;
 }
 
 void memory_region_init_ram_from_fd(MemoryRegion *mr,
@@ -1577,7 +1577,7 @@ void memory_region_init_ram_from_fd(MemoryRegion *mr,
     mr->terminates = true;
     mr->destructor = memory_region_destructor_ram;
     mr->ram_block = qemu_ram_alloc_from_fd(size, mr, share, fd, errp);
-    mr->dirty_log_mask = tcg_enabled() ? (1 << DIRTY_MEMORY_CODE) : 0;
+    mr->dirty_log_mask = 0;
 }
 
 void memory_region_init_ram_ptr(MemoryRegion *mr,
@@ -1590,7 +1590,7 @@ void memory_region_init_ram_ptr(MemoryRegion *mr,
     mr->ram = true;
     mr->terminates = true;
     mr->destructor = memory_region_destructor_ram;
-    mr->dirty_log_mask = tcg_enabled() ? (1 << DIRTY_MEMORY_CODE) : 0;
+    mr->dirty_log_mask = 0;
 
     /* qemu_ram_alloc_from_ptr cannot fail with ptr != NULL.  */
     assert(ptr != NULL);
@@ -1633,7 +1633,7 @@ void memory_region_init_rom_nomigrate(MemoryRegion *mr,
     mr->terminates = true;
     mr->destructor = memory_region_destructor_ram;
     mr->ram_block = qemu_ram_alloc(size, false, mr, errp);
-    mr->dirty_log_mask = tcg_enabled() ? (1 << DIRTY_MEMORY_CODE) : 0;
+    mr->dirty_log_mask = 0;
 }
 
 void memory_region_init_rom_device_nomigrate(MemoryRegion *mr,

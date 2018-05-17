@@ -205,7 +205,6 @@ typedef struct CPUClass {
 
     void (*disas_set_info)(CPUState *cpu, disassemble_info *info);
     vaddr (*adjust_watchpoint_address)(CPUState *cpu, vaddr addr, int len);
-    void (*tcg_initialize)(void);
 
     /* Keep non-pointer data at the end to minimize holes.  */
     int gdb_num_core_regs;
@@ -439,15 +438,6 @@ static inline void cpu_tb_jmp_cache_clear(CPUState *cpu)
         atomic_set(&cpu->tb_jmp_cache[i], NULL);
     }
 }
-
-/**
- * qemu_tcg_mttcg_enabled:
- * Check whether we are running MultiThread TCG or not.
- *
- * Returns: %true if we are in MTTCG mode %false otherwise.
- */
-extern bool mttcg_enabled;
-#define qemu_tcg_mttcg_enabled() (mttcg_enabled)
 
 /**
  * cpu_paging_enabled:

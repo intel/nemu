@@ -138,6 +138,40 @@ static inline void tb_invalidate_phys_addr(AddressSpace *as, hwaddr addr)
 {
 }
 
+static inline void tb_invalidate_phys_page_fast(tb_page_addr_t start, int len)
+{
+}
+
+static inline void tb_invalidate_phys_page_range(tb_page_addr_t start,
+               tb_page_addr_t end,
+                      int is_cpu_write_access)
+{
+}
+
+static inline void tb_invalidate_phys_range(tb_page_addr_t start,
+               tb_page_addr_t end)
+{
+}
+
+static inline void tb_check_watchpoint(CPUState *cpu)
+{
+}
+
+static inline void flush_icache_range(uintptr_t start, uintptr_t stop)
+{
+}
+
+static inline void tb_flush(CPUState *cpu)
+{
+}
+
+static inline void tb_lock(void)
+{
+}
+
+static inline void tb_unlock(void)
+{
+}
 #define CODE_GEN_ALIGN           16 /* must be >= of the size of a icache line */
 
 /* Estimated block size for TB allocation.  */
@@ -235,7 +269,6 @@ static inline uint32_t curr_cflags(void)
 }
 
 void tb_remove(TranslationBlock *tb);
-void tb_flush(CPUState *cpu);
 void tb_phys_invalidate(TranslationBlock *tb, tb_page_addr_t page_addr);
 TranslationBlock *tb_htable_lookup(CPUState *cpu, target_ulong pc,
                                    target_ulong cs_base, uint32_t flags,
@@ -243,13 +276,8 @@ TranslationBlock *tb_htable_lookup(CPUState *cpu, target_ulong pc,
 void tb_set_jmp_target(TranslationBlock *tb, int n, uintptr_t addr);
 
 /* GETPC is the true target of the return instruction that we'll execute.  */
-#if defined(CONFIG_TCG_INTERPRETER)
-extern uintptr_t tci_tb_ptr;
-# define GETPC() tci_tb_ptr
-#else
 # define GETPC() \
     ((uintptr_t)__builtin_extract_return_addr(__builtin_return_address(0)))
-#endif
 
 /* The true return address will often point to a host insn that is part of
    the next translated guest insn.  Adjust the address backward to point to
@@ -259,11 +287,6 @@ extern uintptr_t tci_tb_ptr;
    is also the case that there are no host isas that contain a call insn
    smaller than 4 bytes, so we don't worry about special-casing this.  */
 #define GETPC_ADJ   2
-
-void tb_lock(void);
-void tb_unlock(void);
-void tb_lock_reset(void);
-
 
 struct MemoryRegion *iotlb_to_region(CPUState *cpu,
                                      hwaddr index, MemTxAttrs attrs);

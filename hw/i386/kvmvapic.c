@@ -18,7 +18,6 @@
 #include "sysemu/kvm.h"
 #include "hw/i386/apic_internal.h"
 #include "hw/sysbus.h"
-#include "tcg/tcg.h"
 
 #define VAPIC_IO_PORT           0x7e
 

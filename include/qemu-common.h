@@ -63,10 +63,6 @@ int qemu_openpty_raw(int *aslave, char *pty_name);
 #define qemu_sendto(sockfd, buf, len, flags, destaddr, addrlen) \
     sendto(sockfd, buf, len, flags, destaddr, addrlen)
 
-extern bool tcg_allowed;
-void tcg_exec_init(unsigned long tb_size);
-#define tcg_enabled() 0
-
 void cpu_exec_init_all(void);
 void cpu_exec_step_atomic(CPUState *cpu);
 

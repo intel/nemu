@@ -162,7 +162,6 @@ GENERATED_FILES += qapi/qapi-events-ui.h qapi/qapi-events-ui.c
 GENERATED_FILES += qapi/qapi-introspect.c qapi/qapi-introspect.h
 GENERATED_FILES += qapi/qapi-doc.texi
 
-GENERATED_FILES += trace/generated-tcg-tracers.h
 
 GENERATED_FILES += trace/generated-helpers-wrappers.h
 GENERATED_FILES += trace/generated-helpers.h

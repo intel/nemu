@@ -23,7 +23,6 @@
 #include "cpu.h"
 #include "exec/exec-all.h"
 #include "exec/target_page.h"
-#include "tcg.h"
 #include "hw/qdev-core.h"
 #include "hw/qdev-properties.h"
 #include "hw/boards.h"
@@ -47,7 +46,6 @@
 
 #include "qemu/rcu_queue.h"
 #include "qemu/main-loop.h"
-#include "translate-all.h"
 #include "sysemu/replay.h"
 
 #include "exec/memory-internal.h"
@@ -197,7 +195,6 @@ typedef struct subpage_t {
 
 static void io_mem_init(void);
 static void memory_map_init(void);
-static void tcg_commit(MemoryListener *listener);
 
 static MemoryRegion io_mem_watch;
 
@@ -212,7 +209,6 @@ struct CPUAddressSpace {
     CPUState *cpu;
     AddressSpace *as;
     struct AddressSpaceDispatch *memory_dispatch;
-    MemoryListener tcg_as_listener;
 };
 
 struct DirtyBitmapSnapshot {
@@ -627,9 +623,7 @@ static int cpu_common_pre_load(void *opaque)
 
 static bool cpu_common_exception_index_needed(void *opaque)
 {
-    CPUState *cpu = opaque;
-
-    return tcg_enabled() && cpu->exception_index != -1;
+    return false;
 }
 
 static const VMStateDescription vmstate_cpu_common_exception_index = {
@@ -723,10 +717,6 @@ void cpu_address_space_init(CPUState *cpu, int asidx,
     newas = &cpu->cpu_ases[asidx];
     newas->cpu = cpu;
     newas->as = as;
-    if (tcg_enabled()) {
-        newas->tcg_as_listener.commit = tcg_commit;
-        memory_listener_register(&newas->tcg_as_listener, as);
-    }
 }
 
 AddressSpace *cpu_get_address_space(CPUState *cpu, int asidx)
@@ -774,14 +764,8 @@ void cpu_exec_initfn(CPUState *cpu)
 void cpu_exec_realizefn(CPUState *cpu, Error **errp)
 {
     CPUClass *cc = CPU_GET_CLASS(cpu);
-    static bool tcg_target_initialized;
 
     cpu_list_add(cpu);
-
-    if (tcg_enabled() && !tcg_target_initialized) {
-        tcg_target_initialized = true;
-        cc->tcg_initialize();
-    }
 
     if (qdev_get_vmsd(DEVICE(cpu)) == NULL) {
         vmstate_register(NULL, cpu->cpu_index, &vmstate_cpu_common, cpu);
@@ -1061,26 +1045,6 @@ found:
     return block;
 }
 
-static void tlb_reset_dirty_range_all(ram_addr_t start, ram_addr_t length)
-{
-    CPUState *cpu;
-    ram_addr_t start1;
-    RAMBlock *block;
-    ram_addr_t end;
-
-    end = TARGET_PAGE_ALIGN(start + length);
-    start &= TARGET_PAGE_MASK;
-
-    rcu_read_lock();
-    block = qemu_get_ram_block(start);
-    assert(block == qemu_get_ram_block(end - 1));
-    start1 = (uintptr_t)ramblock_ptr(block, start - block->offset);
-    CPU_FOREACH(cpu) {
-        tlb_reset_dirty(cpu, start1, length);
-    }
-    rcu_read_unlock();
-}
-
 /* Note: start and end must be within the same ram block.  */
 bool cpu_physical_memory_test_and_clear_dirty(ram_addr_t start,
                                               ram_addr_t length,
@@ -1112,10 +1076,6 @@ bool cpu_physical_memory_test_and_clear_dirty(ram_addr_t start,
     }
 
     rcu_read_unlock();
-
-    if (dirty && tcg_enabled()) {
-        tlb_reset_dirty_range_all(start, length);
-    }
 
     return dirty;
 }
@@ -1160,10 +1120,6 @@ DirtyBitmapSnapshot *cpu_physical_memory_snapshot_and_clear_dirty
     }
 
     rcu_read_unlock();
-
-    if (tcg_enabled()) {
-        tlb_reset_dirty_range_all(start, length);
-    }
 
     return snap;
 }
@@ -2306,13 +2262,6 @@ void memory_notdirty_write_prepare(NotDirtyInfo *ndi,
     ndi->mem_vaddr = mem_vaddr;
     ndi->size = size;
     ndi->locked = false;
-
-    assert(tcg_enabled());
-    if (!cpu_physical_memory_get_dirty_flag(ram_addr, DIRTY_MEMORY_CODE)) {
-        ndi->locked = true;
-        tb_lock();
-        tb_invalidate_phys_page_fast(ram_addr, size);
-    }
 }
 
 /* Called within RCU critical section. */
@@ -2327,11 +2276,6 @@ void memory_notdirty_write_complete(NotDirtyInfo *ndi)
      */
     cpu_physical_memory_set_dirty_range(ndi->ram_addr, ndi->size,
                                         DIRTY_CLIENTS_NOCODE);
-    /* we remove the notdirty callback only if the code has been
-       flushed */
-    if (!cpu_physical_memory_is_clean(ndi->ram_addr)) {
-        tlb_set_dirty(ndi->cpu, ndi->mem_vaddr);
-    }
 }
 
 /* Called within RCU critical section.  */
@@ -2342,7 +2286,6 @@ static void notdirty_mem_write(void *opaque, hwaddr ram_addr,
 
     memory_notdirty_write_prepare(&ndi, current_cpu, current_cpu->mem_io_vaddr,
                          ram_addr, size);
-
     switch (size) {
     case 1:
         stb_p(qemu_map_ram_ptr(NULL, ram_addr), val);
@@ -2371,137 +2314,6 @@ static bool notdirty_mem_accepts(void *opaque, hwaddr addr,
 static const MemoryRegionOps notdirty_mem_ops = {
     .write = notdirty_mem_write,
     .valid.accepts = notdirty_mem_accepts,
-    .endianness = DEVICE_NATIVE_ENDIAN,
-    .valid = {
-        .min_access_size = 1,
-        .max_access_size = 8,
-        .unaligned = false,
-    },
-    .impl = {
-        .min_access_size = 1,
-        .max_access_size = 8,
-        .unaligned = false,
-    },
-};
-
-/* Generate a debug exception if a watchpoint has been hit.  */
-static void check_watchpoint(int offset, int len, MemTxAttrs attrs, int flags)
-{
-    CPUState *cpu = current_cpu;
-    CPUClass *cc = CPU_GET_CLASS(cpu);
-    target_ulong vaddr;
-    CPUWatchpoint *wp;
-
-    assert(tcg_enabled());
-    if (cpu->watchpoint_hit) {
-        /* We re-entered the check after replacing the TB. Now raise
-         * the debug interrupt so that is will trigger after the
-         * current instruction. */
-        cpu_interrupt(cpu, CPU_INTERRUPT_DEBUG);
-        return;
-    }
-    vaddr = (cpu->mem_io_vaddr & TARGET_PAGE_MASK) + offset;
-    vaddr = cc->adjust_watchpoint_address(cpu, vaddr, len);
-    QTAILQ_FOREACH(wp, &cpu->watchpoints, entry) {
-        if (cpu_watchpoint_address_matches(wp, vaddr, len)
-            && (wp->flags & flags)) {
-            if (flags == BP_MEM_READ) {
-                wp->flags |= BP_WATCHPOINT_HIT_READ;
-            } else {
-                wp->flags |= BP_WATCHPOINT_HIT_WRITE;
-            }
-            wp->hitaddr = vaddr;
-            wp->hitattrs = attrs;
-            if (!cpu->watchpoint_hit) {
-                if (wp->flags & BP_CPU &&
-                    !cc->debug_check_watchpoint(cpu, wp)) {
-                    wp->flags &= ~BP_WATCHPOINT_HIT;
-                    continue;
-                }
-                cpu->watchpoint_hit = wp;
-
-                /* Both tb_lock and iothread_mutex will be reset when
-                 * cpu_loop_exit or cpu_loop_exit_noexc longjmp
-                 * back into the cpu_exec main loop.
-                 */
-                tb_lock();
-                tb_check_watchpoint(cpu);
-                if (wp->flags & BP_STOP_BEFORE_ACCESS) {
-                    cpu->exception_index = EXCP_DEBUG;
-                    cpu_loop_exit(cpu);
-                } else {
-                    /* Force execution of one insn next time.  */
-                    cpu->cflags_next_tb = 1 | curr_cflags();
-                    cpu_loop_exit_noexc(cpu);
-                }
-            }
-        } else {
-            wp->flags &= ~BP_WATCHPOINT_HIT;
-        }
-    }
-}
-
-/* Watchpoint access routines.  Watchpoints are inserted using TLB tricks,
-   so these check for a hit then pass through to the normal out-of-line
-   phys routines.  */
-static MemTxResult watch_mem_read(void *opaque, hwaddr addr, uint64_t *pdata,
-                                  unsigned size, MemTxAttrs attrs)
-{
-    MemTxResult res;
-    uint64_t data;
-    int asidx = cpu_asidx_from_attrs(current_cpu, attrs);
-    AddressSpace *as = current_cpu->cpu_ases[asidx].as;
-
-    check_watchpoint(addr & ~TARGET_PAGE_MASK, size, attrs, BP_MEM_READ);
-    switch (size) {
-    case 1:
-        data = address_space_ldub(as, addr, attrs, &res);
-        break;
-    case 2:
-        data = address_space_lduw(as, addr, attrs, &res);
-        break;
-    case 4:
-        data = address_space_ldl(as, addr, attrs, &res);
-        break;
-    case 8:
-        data = address_space_ldq(as, addr, attrs, &res);
-        break;
-    default: abort();
-    }
-    *pdata = data;
-    return res;
-}
-
-static MemTxResult watch_mem_write(void *opaque, hwaddr addr,
-                                   uint64_t val, unsigned size,
-                                   MemTxAttrs attrs)
-{
-    MemTxResult res;
-    int asidx = cpu_asidx_from_attrs(current_cpu, attrs);
-    AddressSpace *as = current_cpu->cpu_ases[asidx].as;
-
-    check_watchpoint(addr & ~TARGET_PAGE_MASK, size, attrs, BP_MEM_WRITE);
-    switch (size) {
-    case 1:
-        address_space_stb(as, addr, val, attrs, &res);
-        break;
-    case 2:
-        address_space_stw(as, addr, val, attrs, &res);
-        break;
-    case 4:
-        address_space_stl(as, addr, val, attrs, &res);
-        break;
-    case 8:
-        address_space_stq(as, addr, val, attrs, &res);
-        break;
-    default: abort();
-    }
-    return res;
-}
-
-static const MemoryRegionOps watch_mem_ops = {
-    .read_with_attrs = watch_mem_read,
-    .write_with_attrs = watch_mem_write,
     .endianness = DEVICE_NATIVE_ENDIAN,
     .valid = {
         .min_access_size = 1,
@@ -2716,9 +2528,6 @@ static void io_mem_init(void)
     memory_region_init_io(&io_mem_notdirty, NULL, &notdirty_mem_ops, NULL,
                           NULL, UINT64_MAX);
     memory_region_clear_global_locking(&io_mem_notdirty);
-
-    memory_region_init_io(&io_mem_watch, NULL, &watch_mem_ops, NULL,
-                          NULL, UINT64_MAX);
 }
 
 AddressSpaceDispatch *address_space_dispatch_new(FlatView *fv)
@@ -2744,24 +2553,6 @@ void address_space_dispatch_free(AddressSpaceDispatch *d)
 {
     phys_sections_free(&d->map);
     g_free(d);
-}
-
-static void tcg_commit(MemoryListener *listener)
-{
-    CPUAddressSpace *cpuas;
-    AddressSpaceDispatch *d;
-
-    /* since each CPU stores ram addresses in its TLB cache, we must
-       reset the modified entries */
-    cpuas = container_of(listener, CPUAddressSpace, tcg_as_listener);
-    cpu_reloading_memory_map();
-    /* The CPU and TLB are protected by the iothread lock.
-     * We reload the dispatch pointer now because cpu_reloading_memory_map()
-     * may have split the RCU critical section.
-     */
-    d = address_space_to_dispatch(cpuas->as);
-    atomic_rcu_set(&cpuas->memory_dispatch, d);
-    tlb_flush(cpuas->cpu);
 }
 
 static void memory_map_init(void)
@@ -2803,13 +2594,6 @@ static void invalidate_and_set_dirty(MemoryRegion *mr, hwaddr addr,
     if (dirty_log_mask) {
         dirty_log_mask =
             cpu_physical_memory_range_includes_clean(addr, length, dirty_log_mask);
-    }
-    if (dirty_log_mask & (1 << DIRTY_MEMORY_CODE)) {
-        assert(tcg_enabled());
-        tb_lock();
-        tb_invalidate_phys_range(addr, addr + length);
-        tb_unlock();
-        dirty_log_mask &= ~(1 << DIRTY_MEMORY_CODE);
     }
     cpu_physical_memory_set_dirty_range(addr, length, dirty_log_mask);
 }
@@ -3144,10 +2928,6 @@ void cpu_flush_icache_range(hwaddr start, int len)
      * so there is no need to flush anything. For KVM / Xen we need to flush
      * the host's instruction cache at least.
      */
-    if (tcg_enabled()) {
-        return;
-    }
-
     cpu_physical_memory_write_rom_internal(&address_space_memory,
                                            start, NULL, len, FLUSH_CACHE);
 }

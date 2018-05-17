@@ -23,7 +23,6 @@ $SRCDIR/configure \
  --disable-smartcard \
  --disable-snappy \
  --disable-spice \
- --disable-tcg \
  --disable-tcmalloc \
  --disable-tools \
  --disable-tpm \

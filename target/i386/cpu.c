@@ -221,60 +221,6 @@ static void x86_cpu_vendor_words2str(char *dst, uint32_t vendor1,
           CPUID_PAT | CPUID_FXSR | CPUID_MMX | CPUID_SSE | CPUID_SSE2 | \
           CPUID_PAE | CPUID_SEP | CPUID_APIC)
 
-#define TCG_FEATURES (CPUID_FP87 | CPUID_PSE | CPUID_TSC | CPUID_MSR | \
-          CPUID_PAE | CPUID_MCE | CPUID_CX8 | CPUID_APIC | CPUID_SEP | \
-          CPUID_MTRR | CPUID_PGE | CPUID_MCA | CPUID_CMOV | CPUID_PAT | \
-          CPUID_PSE36 | CPUID_CLFLUSH | CPUID_ACPI | CPUID_MMX | \
-          CPUID_FXSR | CPUID_SSE | CPUID_SSE2 | CPUID_SS | CPUID_DE)
-          /* partly implemented:
-          CPUID_MTRR, CPUID_MCA, CPUID_CLFLUSH (needed for Win64) */
-          /* missing:
-          CPUID_VME, CPUID_DTS, CPUID_SS, CPUID_HT, CPUID_TM, CPUID_PBE */
-#define TCG_EXT_FEATURES (CPUID_EXT_SSE3 | CPUID_EXT_PCLMULQDQ | \
-          CPUID_EXT_MONITOR | CPUID_EXT_SSSE3 | CPUID_EXT_CX16 | \
-          CPUID_EXT_SSE41 | CPUID_EXT_SSE42 | CPUID_EXT_POPCNT | \
-          CPUID_EXT_XSAVE | /* CPUID_EXT_OSXSAVE is dynamic */   \
-          CPUID_EXT_MOVBE | CPUID_EXT_AES | CPUID_EXT_HYPERVISOR)
-          /* missing:
-          CPUID_EXT_DTES64, CPUID_EXT_DSCPL, CPUID_EXT_VMX, CPUID_EXT_SMX,
-          CPUID_EXT_EST, CPUID_EXT_TM2, CPUID_EXT_CID, CPUID_EXT_FMA,
-          CPUID_EXT_XTPR, CPUID_EXT_PDCM, CPUID_EXT_PCID, CPUID_EXT_DCA,
-          CPUID_EXT_X2APIC, CPUID_EXT_TSC_DEADLINE_TIMER, CPUID_EXT_AVX,
-          CPUID_EXT_F16C, CPUID_EXT_RDRAND */
-
-#ifdef TARGET_X86_64
-#define TCG_EXT2_X86_64_FEATURES (CPUID_EXT2_SYSCALL | CPUID_EXT2_LM)
-#else
-#define TCG_EXT2_X86_64_FEATURES 0
-#endif
-
-#define TCG_EXT2_FEATURES ((TCG_FEATURES & CPUID_EXT2_AMD_ALIASES) | \
-          CPUID_EXT2_NX | CPUID_EXT2_MMXEXT | CPUID_EXT2_RDTSCP | \
-          CPUID_EXT2_3DNOW | CPUID_EXT2_3DNOWEXT | CPUID_EXT2_PDPE1GB | \
-          TCG_EXT2_X86_64_FEATURES)
-#define TCG_EXT3_FEATURES (CPUID_EXT3_LAHF_LM | CPUID_EXT3_SVM | \
-          CPUID_EXT3_CR8LEG | CPUID_EXT3_ABM | CPUID_EXT3_SSE4A)
-#define TCG_EXT4_FEATURES 0
-#define TCG_SVM_FEATURES 0
-#define TCG_KVM_FEATURES 0
-#define TCG_7_0_EBX_FEATURES (CPUID_7_0_EBX_SMEP | CPUID_7_0_EBX_SMAP | \
-          CPUID_7_0_EBX_BMI1 | CPUID_7_0_EBX_BMI2 | CPUID_7_0_EBX_ADX | \
-          CPUID_7_0_EBX_PCOMMIT | CPUID_7_0_EBX_CLFLUSHOPT |            \
-          CPUID_7_0_EBX_CLWB | CPUID_7_0_EBX_MPX | CPUID_7_0_EBX_FSGSBASE | \
-          CPUID_7_0_EBX_ERMS)
-          /* missing:
-          CPUID_7_0_EBX_HLE, CPUID_7_0_EBX_AVX2,
-          CPUID_7_0_EBX_INVPCID, CPUID_7_0_EBX_RTM,
-          CPUID_7_0_EBX_RDSEED */
-#define TCG_7_0_ECX_FEATURES (CPUID_7_0_ECX_PKU | CPUID_7_0_ECX_OSPKE | \
-          CPUID_7_0_ECX_LA57)
-#define TCG_7_0_EDX_FEATURES 0
-#define TCG_APM_FEATURES 0
-#define TCG_6_EAX_FEATURES CPUID_6_EAX_ARAT
-#define TCG_XSAVE_FEATURES (CPUID_XSAVE_XSAVEOPT | CPUID_XSAVE_XGETBV1)
-          /* missing:
-          CPUID_XSAVE_XSAVEC, CPUID_XSAVE_XSAVES */
-
 typedef struct FeatureWordInfo {
     /* feature flags names are taken from "Intel Processor Identification and
      * the CPUID Instruction" and AMD's "CPUID Specification".
@@ -286,7 +232,6 @@ typedef struct FeatureWordInfo {
     bool cpuid_needs_ecx; /* CPUID instruction uses ECX as input */
     uint32_t cpuid_ecx;   /* Input ECX value for CPUID */
     int cpuid_reg;        /* output register (R_* constant) */
-    uint32_t tcg_features; /* Feature flags supported by TCG */
     uint32_t unmigratable_flags; /* Feature flags known to be unmigratable */
     uint32_t migratable_flags; /* Feature flags known to be migratable */
     /* Features that shouldn't be auto-enabled by "-cpu host" */
@@ -306,7 +251,6 @@ static FeatureWordInfo feature_word_info[FEATURE_WORDS] = {
             "ht" /* Intel htt */, "tm", "ia64", "pbe",
         },
         .cpuid_eax = 1, .cpuid_reg = R_EDX,
-        .tcg_features = TCG_FEATURES,
     },
     [FEAT_1_ECX] = {
         .feat_names = {
@@ -320,7 +264,6 @@ static FeatureWordInfo feature_word_info[FEATURE_WORDS] = {
             "avx", "f16c", "rdrand", "hypervisor",
         },
         .cpuid_eax = 1, .cpuid_reg = R_ECX,
-        .tcg_features = TCG_EXT_FEATURES,
     },
     /* Feature names that are already defined on feature_name[] but
      * are set on CPUID[8000_0001].EDX on AMD CPUs don't have their
@@ -339,7 +282,6 @@ static FeatureWordInfo feature_word_info[FEATURE_WORDS] = {
             NULL, "lm", "3dnowext", "3dnow",
         },
         .cpuid_eax = 0x80000001, .cpuid_reg = R_EDX,
-        .tcg_features = TCG_EXT2_FEATURES,
     },
     [FEAT_8000_0001_ECX] = {
         .feat_names = {
@@ -353,7 +295,6 @@ static FeatureWordInfo feature_word_info[FEATURE_WORDS] = {
             NULL, NULL, NULL, NULL,
         },
         .cpuid_eax = 0x80000001, .cpuid_reg = R_ECX,
-        .tcg_features = TCG_EXT3_FEATURES,
     },
     [FEAT_C000_0001_EDX] = {
         .feat_names = {
@@ -367,7 +308,6 @@ static FeatureWordInfo feature_word_info[FEATURE_WORDS] = {
             NULL, NULL, NULL, NULL,
         },
         .cpuid_eax = 0xC0000001, .cpuid_reg = R_EDX,
-        .tcg_features = TCG_EXT4_FEATURES,
     },
     [FEAT_KVM] = {
         .feat_names = {
@@ -381,7 +321,6 @@ static FeatureWordInfo feature_word_info[FEATURE_WORDS] = {
             NULL, NULL, NULL, NULL,
         },
         .cpuid_eax = KVM_CPUID_FEATURES, .cpuid_reg = R_EAX,
-        .tcg_features = TCG_KVM_FEATURES,
     },
     [FEAT_KVM_HINTS] = {
         .feat_names = {
@@ -395,7 +334,6 @@ static FeatureWordInfo feature_word_info[FEATURE_WORDS] = {
             NULL, NULL, NULL, NULL,
         },
         .cpuid_eax = KVM_CPUID_FEATURES, .cpuid_reg = R_EDX,
-        .tcg_features = TCG_KVM_FEATURES,
         /*
          * KVM hints aren't auto-enabled by -cpu host, they need to be
          * explicitly enabled in the command-line.
@@ -461,7 +399,6 @@ static FeatureWordInfo feature_word_info[FEATURE_WORDS] = {
             NULL, NULL, NULL, NULL,
         },
         .cpuid_eax = 0x8000000A, .cpuid_reg = R_EDX,
-        .tcg_features = TCG_SVM_FEATURES,
     },
     [FEAT_7_0_EBX] = {
         .feat_names = {
@@ -477,7 +414,6 @@ static FeatureWordInfo feature_word_info[FEATURE_WORDS] = {
         .cpuid_eax = 7,
         .cpuid_needs_ecx = true, .cpuid_ecx = 0,
         .cpuid_reg = R_EBX,
-        .tcg_features = TCG_7_0_EBX_FEATURES,
     },
     [FEAT_7_0_ECX] = {
         .feat_names = {
@@ -493,7 +429,6 @@ static FeatureWordInfo feature_word_info[FEATURE_WORDS] = {
         .cpuid_eax = 7,
         .cpuid_needs_ecx = true, .cpuid_ecx = 0,
         .cpuid_reg = R_ECX,
-        .tcg_features = TCG_7_0_ECX_FEATURES,
     },
     [FEAT_7_0_EDX] = {
         .feat_names = {
@@ -509,7 +444,6 @@ static FeatureWordInfo feature_word_info[FEATURE_WORDS] = {
         .cpuid_eax = 7,
         .cpuid_needs_ecx = true, .cpuid_ecx = 0,
         .cpuid_reg = R_EDX,
-        .tcg_features = TCG_7_0_EDX_FEATURES,
     },
     [FEAT_8000_0007_EDX] = {
         .feat_names = {
@@ -524,7 +458,6 @@ static FeatureWordInfo feature_word_info[FEATURE_WORDS] = {
         },
         .cpuid_eax = 0x80000007,
         .cpuid_reg = R_EDX,
-        .tcg_features = TCG_APM_FEATURES,
         .unmigratable_flags = CPUID_APM_INVTSC,
     },
     [FEAT_8000_0008_EBX] = {
@@ -540,7 +473,6 @@ static FeatureWordInfo feature_word_info[FEATURE_WORDS] = {
         },
         .cpuid_eax = 0x80000008,
         .cpuid_reg = R_EBX,
-        .tcg_features = 0,
         .unmigratable_flags = 0,
     },
     [FEAT_XSAVE] = {
@@ -557,7 +489,6 @@ static FeatureWordInfo feature_word_info[FEATURE_WORDS] = {
         .cpuid_eax = 0xd,
         .cpuid_needs_ecx = true, .cpuid_ecx = 1,
         .cpuid_reg = R_EAX,
-        .tcg_features = TCG_XSAVE_FEATURES,
     },
     [FEAT_6_EAX] = {
         .feat_names = {
@@ -571,13 +502,11 @@ static FeatureWordInfo feature_word_info[FEATURE_WORDS] = {
             NULL, NULL, NULL, NULL,
         },
         .cpuid_eax = 6, .cpuid_reg = R_EAX,
-        .tcg_features = TCG_6_EAX_FEATURES,
     },
     [FEAT_XSAVE_COMP_LO] = {
         .cpuid_eax = 0xD,
         .cpuid_needs_ecx = true, .cpuid_ecx = 0,
         .cpuid_reg = R_EAX,
-        .tcg_features = ~0U,
         .migratable_flags = XSTATE_FP_MASK | XSTATE_SSE_MASK |
             XSTATE_YMM_MASK | XSTATE_BNDREGS_MASK | XSTATE_BNDCSR_MASK |
             XSTATE_OPMASK_MASK | XSTATE_ZMM_Hi256_MASK | XSTATE_Hi16_ZMM_MASK |
@@ -587,7 +516,6 @@ static FeatureWordInfo feature_word_info[FEATURE_WORDS] = {
         .cpuid_eax = 0xD,
         .cpuid_needs_ecx = true, .cpuid_ecx = 0,
         .cpuid_reg = R_EDX,
-        .tcg_features = ~0U,
     },
 };
 
@@ -2075,14 +2003,6 @@ static PropValue kvm_default_props[] = {
     { NULL, NULL },
 };
 
-/* TCG-specific defaults that override all CPU models when using TCG
- */
-static PropValue tcg_default_props[] = {
-    { "vme", "off" },
-    { NULL, NULL },
-};
-
-
 void x86_cpu_change_kvm_default(const char *prop, const char *value)
 {
     PropValue *pv;
@@ -2211,9 +2131,6 @@ static void max_x86_cpu_initfn(Object *obj)
         object_property_set_int(OBJECT(cpu), 6, "family", &error_abort);
         object_property_set_int(OBJECT(cpu), 6, "model", &error_abort);
         object_property_set_int(OBJECT(cpu), 3, "stepping", &error_abort);
-        object_property_set_str(OBJECT(cpu),
-                                "QEMU TCG CPU version " QEMU_HW_VERSION,
-                                "model-id", &error_abort);
     }
 
     object_property_set_bool(OBJECT(cpu), true, "pmu", &error_abort);
@@ -2870,8 +2787,6 @@ static uint32_t x86_cpu_get_supported_feature_word(FeatureWord w,
         r = kvm_arch_get_supported_cpuid(kvm_state, wi->cpuid_eax,
                                                     wi->cpuid_ecx,
                                                     wi->cpuid_reg);
-    } else if (tcg_enabled()) {
-        r = wi->tcg_features;
     } else {
         return ~0;
     }
@@ -2935,8 +2850,6 @@ static void x86_cpu_load_def(X86CPU *cpu, X86CPUDefinition *def, Error **errp)
         }
 
         x86_cpu_apply_props(cpu, kvm_default_props);
-    } else if (tcg_enabled()) {
-        x86_cpu_apply_props(cpu, tcg_default_props);
     }
 
     env->features[FEAT_1_ECX] |= CPUID_EXT_HYPERVISOR;
@@ -3221,7 +3134,6 @@ void cpu_x86_cpuid(CPUX86State *env, uint32_t index, uint32_t count,
     CPUState *cs = CPU(cpu);
     uint32_t pkg_offset;
     uint32_t limit;
-    uint32_t signature[3];
 
     /* Calculate & apply limits for different index ranges */
     if (index >= 0xC0000000) {
@@ -3490,18 +3402,10 @@ void cpu_x86_cpuid(CPUX86State *env, uint32_t index, uint32_t count,
          * CPUID code in kvm_arch_init_vcpu() ignores stuff
          * set here, but we restrict to TCG none the less.
          */
-        if (tcg_enabled() && cpu->expose_tcg) {
-            memcpy(signature, "TCGTCGTCGTCG", 12);
-            *eax = 0x40000001;
-            *ebx = signature[0];
-            *ecx = signature[1];
-            *edx = signature[2];
-        } else {
-            *eax = 0;
-            *ebx = 0;
-            *ecx = 0;
-            *edx = 0;
-        }
+        *eax = 0;
+        *ebx = 0;
+        *ecx = 0;
+        *edx = 0;
         break;
     case 0x40000001:
         *eax = 0;
@@ -3845,21 +3749,6 @@ static void x86_cpu_apic_realize(X86CPU *cpu, Error **errp)
                                             0x1000);
         apic_mmio_map_once = true;
      }
-}
-
-static void x86_cpu_machine_done(Notifier *n, void *unused)
-{
-    X86CPU *cpu = container_of(n, X86CPU, machine_done);
-    MemoryRegion *smram =
-        (MemoryRegion *) object_resolve_path("/machine/smram", NULL);
-
-    if (smram) {
-        cpu->smram = g_new(MemoryRegion, 1);
-        memory_region_init_alias(cpu->smram, OBJECT(cpu), "smram",
-                                 smram, 0, 1ull << 32);
-        memory_region_set_enabled(cpu->smram, true);
-        memory_region_add_subregion_overlap(cpu->cpu_as_root, 0, cpu->smram, 1);
-    }
 }
 
 /* Note: Only safe for use on x86(-64) hosts */
@@ -4259,31 +4148,6 @@ static void x86_cpu_realizefn(DeviceState *dev, Error **errp)
     }
 
     mce_init(cpu);
-
-    if (tcg_enabled()) {
-        cpu->cpu_as_mem = g_new(MemoryRegion, 1);
-        cpu->cpu_as_root = g_new(MemoryRegion, 1);
-
-        /* Outer container... */
-        memory_region_init(cpu->cpu_as_root, OBJECT(cpu), "memory", ~0ull);
-        memory_region_set_enabled(cpu->cpu_as_root, true);
-
-        /* ... with two regions inside: normal system memory with low
-         * priority, and...
-         */
-        memory_region_init_alias(cpu->cpu_as_mem, OBJECT(cpu), "memory",
-                                 get_system_memory(), 0, ~0ull);
-        memory_region_add_subregion_overlap(cpu->cpu_as_root, 0, cpu->cpu_as_mem, 0);
-        memory_region_set_enabled(cpu->cpu_as_mem, true);
-
-        cs->num_ases = 2;
-        cpu_address_space_init(cs, 0, "cpu-memory", cs->memory);
-        cpu_address_space_init(cs, 1, "cpu-smm", cpu->cpu_as_root);
-
-        /* ... SMRAM with higher priority, linked from /machine/smram.  */
-        cpu->machine_done.notify = x86_cpu_machine_done;
-        qemu_add_machine_init_done_notifier(&cpu->machine_done);
-    }
 
     qemu_init_vcpu(cs);
 
@@ -4709,7 +4573,6 @@ static Property x86_cpu_properties[] = {
     DEFINE_PROP_BOOL("kvm-no-smi-migration", X86CPU, kvm_no_smi_migration,
                      false),
     DEFINE_PROP_BOOL("vmware-cpuid-freq", X86CPU, vmware_cpuid_freq, true),
-    DEFINE_PROP_BOOL("tcg-cpuid", X86CPU, expose_tcg, true),
 
     /*
      * From "Requirements for Implementing the Microsoft

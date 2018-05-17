@@ -262,32 +262,6 @@ STEXI
 Show memory tree.
 ETEXI
 
-#if defined(CONFIG_TCG)
-    {
-        .name       = "jit",
-        .args_type  = "",
-        .params     = "",
-        .help       = "show dynamic compiler info",
-        .cmd        = hmp_info_jit,
-    },
-#endif
-
-STEXI
-@item info jit
-@findex info jit
-Show dynamic compiler info.
-ETEXI
-
-#if defined(CONFIG_TCG)
-    {
-        .name       = "opcount",
-        .args_type  = "",
-        .params     = "",
-        .help       = "show dynamic compiler opcode counters",
-        .cmd        = hmp_info_opcount,
-    },
-#endif
-
 STEXI
 @item info opcount
 @findex info opcount

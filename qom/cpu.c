@@ -272,11 +272,6 @@ static void cpu_common_reset(CPUState *cpu)
     cpu->crash_occurred = false;
     cpu->cflags_next_tb = -1;
 
-    if (tcg_enabled()) {
-        cpu_tb_jmp_cache_clear(cpu);
-
-        tcg_flush_softmmu_tlb(cpu);
-    }
 }
 
 static bool cpu_common_has_work(CPUState *cs)

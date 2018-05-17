@@ -529,10 +529,6 @@ static void arm_cpu_initfn(Object *obj)
     cpu->dtb_compatible = "qemu,unknown";
     cpu->psci_version = 1; /* By default assume PSCI v0.1 */
     cpu->kvm_target = QEMU_KVM_ARM_TARGET_NONE;
-
-    if (tcg_enabled()) {
-        cpu->psci_version = 2; /* TCG implements PSCI 0.2 */
-    }
 }
 
 static Property arm_cpu_reset_cbar_property =

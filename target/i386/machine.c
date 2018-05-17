@@ -283,20 +283,6 @@ static int cpu_post_load(void *opaque, int version_id)
     for(i = 0; i < 8; i++) {
         env->fptags[i] = (env->fptag_vmstate >> i) & 1;
     }
-    if (tcg_enabled()) {
-        target_ulong dr7;
-        update_fp_status(env);
-        update_mxcsr_status(env);
-
-        cpu_breakpoint_remove_all(cs, BP_CPU);
-        cpu_watchpoint_remove_all(cs, BP_CPU);
-
-        /* Indicate all breakpoints disabled, as they are, then
-           let the helper re-enable them.  */
-        dr7 = env->dr[7];
-        env->dr[7] = dr7 & ~(DR7_GLOBAL_BP_MASK | DR7_LOCAL_BP_MASK);
-        cpu_x86_update_dr7(env, dr7);
-    }
     tlb_flush(cs);
     return 0;
 }

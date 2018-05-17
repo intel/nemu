@@ -451,35 +451,6 @@ static QemuOptsList qemu_mem_opts = {
     },
 };
 
-static QemuOptsList qemu_icount_opts = {
-    .name = "icount",
-    .implied_opt_name = "shift",
-    .merge_lists = true,
-    .head = QTAILQ_HEAD_INITIALIZER(qemu_icount_opts.head),
-    .desc = {
-        {
-            .name = "shift",
-            .type = QEMU_OPT_STRING,
-        }, {
-            .name = "align",
-            .type = QEMU_OPT_BOOL,
-        }, {
-            .name = "sleep",
-            .type = QEMU_OPT_BOOL,
-        }, {
-            .name = "rr",
-            .type = QEMU_OPT_STRING,
-        }, {
-            .name = "rrfile",
-            .type = QEMU_OPT_STRING,
-        }, {
-            .name = "rrsnapshot",
-            .type = QEMU_OPT_STRING,
-        },
-        { /* end of list */ }
-    },
-};
-
 static QemuOptsList qemu_semihosting_config_opts = {
     .name = "semihosting-config",
     .implied_opt_name = "enable",
@@ -2703,7 +2674,7 @@ int main(int argc, char **argv, char **envp)
     const char *boot_once = NULL;
     DisplayState *ds;
     QemuOpts *opts, *machine_opts;
-    QemuOpts *icount_opts = NULL, *accel_opts = NULL;
+    QemuOpts *accel_opts = NULL;
     QemuOptsList *olist;
     int optind;
     const char *optarg;
@@ -2777,7 +2748,6 @@ int main(int argc, char **argv, char **envp)
     qemu_add_opts(&qemu_msg_opts);
     qemu_add_opts(&qemu_name_opts);
     qemu_add_opts(&qemu_numa_opts);
-    qemu_add_opts(&qemu_icount_opts);
     qemu_add_opts(&qemu_semihosting_config_opts);
     qemu_add_opts(&qemu_fw_cfg_opts);
     module_call_init(MODULE_INIT_OPTS);
@@ -3492,21 +3462,6 @@ int main(int argc, char **argv, char **envp)
                 }
                 configure_rtc(opts);
                 break;
-            case QEMU_OPTION_tb_size:
-                error_report("TCG is disabled");
-                exit(1);
-                if (qemu_strtoul(optarg, NULL, 0, &tcg_tb_size) < 0) {
-                    error_report("Invalid argument to -tb-size");
-                    exit(1);
-                }
-                break;
-            case QEMU_OPTION_icount:
-                icount_opts = qemu_opts_parse_noisily(qemu_find_opts("icount"),
-                                                      optarg, true);
-                if (!icount_opts) {
-                    exit(1);
-                }
-                break;
             case QEMU_OPTION_incoming:
                 if (!incoming) {
                     runstate_set(RUN_STATE_INMIGRATE);
@@ -3635,8 +3590,6 @@ int main(int argc, char **argv, char **envp)
      * Best done right after the loop.  Do not insert code here!
      */
     loc_set_none();
-
-    replay_configure(icount_opts);
 
     machine_class = select_machine();
 
@@ -3995,18 +3948,6 @@ int main(int argc, char **argv, char **envp)
     qemu_spice_init();
 
     cpu_ticks_init();
-    if (icount_opts) {
-        if (!tcg_enabled()) {
-            error_report("-icount is not allowed with hardware virtualization");
-            exit(1);
-        }
-        configure_icount(icount_opts, &error_abort);
-        qemu_opts_del(icount_opts);
-    }
-
-    if (tcg_enabled()) {
-        qemu_tcg_configure(accel_opts, &error_fatal);
-    }
 
     if (default_net) {
         QemuOptsList *net = qemu_find_opts("net");
