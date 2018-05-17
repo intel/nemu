@@ -862,24 +862,6 @@
   'data': [ 'none', 'require', 'active', 'completed', 'relaunch' ] }
 
 ##
-# @x-colo-lost-heartbeat:
-#
-# Tell qemu that heartbeat is lost, request it to do takeover procedures.
-# If this command is sent to the PVM, the Primary side will exit COLO mode.
-# If sent to the Secondary, the Secondary side will run failover work,
-# then takes over server operation to become the service VM.
-#
-# Since: 2.8
-#
-# Example:
-#
-# -> { "execute": "x-colo-lost-heartbeat" }
-# <- { "return": {} }
-#
-##
-{ 'command': 'x-colo-lost-heartbeat' }
-
-##
 # @migrate_cancel:
 #
 # Cancel the current executing migration process.

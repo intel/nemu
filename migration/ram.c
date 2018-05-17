@@ -49,7 +49,6 @@
 #include "exec/ram_addr.h"
 #include "exec/target_page.h"
 #include "qemu/rcu_queue.h"
-#include "migration/colo.h"
 #include "migration/block.h"
 
 /***********************************************************/
@@ -2215,10 +2214,8 @@ static int ram_save_setup(QEMUFile *f, void *opaque)
     RAMBlock *block;
 
     /* migration has already setup the bitmap, reuse it. */
-    if (!migration_in_colo_state()) {
-        if (ram_init_all(rsp) != 0) {
-            return -1;
-        }
+    if (ram_init_all(rsp) != 0) {
+        return -1;
     }
     (*rsp)->f = f;
 
@@ -2357,7 +2354,7 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
     while (true) {
         int pages;
 
-        pages = ram_find_and_save_block(rs, !migration_in_colo_state());
+        pages = ram_find_and_save_block(rs, true);
         /* no more blocks to sent */
         if (pages == 0) {
             break;

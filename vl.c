@@ -70,7 +70,6 @@
 #include "hw/audio/soundhw.h"
 #include "audio/audio.h"
 #include "sysemu/cpus.h"
-#include "migration/colo.h"
 #include "migration/postcopy-ram.h"
 #include "sysemu/kvm.h"
 #include "qapi/qobject-input-visitor.h"
@@ -2496,7 +2495,6 @@ static bool object_create_initial(const char *type)
         g_str_equal(type, "filter-dump") ||
         g_str_equal(type, "filter-mirror") ||
         g_str_equal(type, "filter-redirector") ||
-        g_str_equal(type, "colo-compare") ||
         g_str_equal(type, "filter-rewriter") ||
         g_str_equal(type, "filter-replay")) {
         return false;
@@ -3956,8 +3954,6 @@ int main(int argc, char **argv, char **envp)
         qemu_opts_set(net, NULL, "type", "user", &error_abort);
 #endif
     }
-
-    colo_info_init();
 
     if (net_init_clients(&err) < 0) {
         error_report_err(err);

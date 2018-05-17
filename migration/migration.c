@@ -42,7 +42,6 @@
 #include "trace.h"
 #include "exec/target_page.h"
 #include "io/channel-buffer.h"
-#include "migration/colo.h"
 #include "hw/boards.h"
 #include "monitor/monitor.h"
 
@@ -384,18 +383,6 @@ static void process_incoming_migration_co(void *opaque)
             return;
         }
         /* Else if something went wrong then just fall out of the normal exit */
-    }
-
-    /* we get COLO info, and know if we are in COLO mode */
-    if (!ret && migration_incoming_enable_colo()) {
-        mis->migration_incoming_co = qemu_coroutine_self();
-        qemu_thread_create(&mis->colo_incoming_thread, "COLO incoming",
-             colo_process_incoming_thread, mis, QEMU_THREAD_JOINABLE);
-        mis->have_colo_incoming_thread = true;
-        qemu_coroutine_yield();
-
-        /* Wait checkpoint incoming thread exit before free resource */
-        qemu_thread_join(&mis->colo_incoming_thread);
     }
 
     if (ret < 0) {
@@ -979,9 +966,6 @@ static void migrate_params_apply(MigrateSetParameters *params, Error **errp)
 
     if (params->has_x_checkpoint_delay) {
         s->parameters.x_checkpoint_delay = params->x_checkpoint_delay;
-        if (migration_in_colo_state()) {
-            colo_checkpoint_notify(s);
-        }
     }
 
     if (params->has_block_incremental) {
@@ -2316,7 +2300,6 @@ static void migration_iteration_finish(MigrationState *s)
             error_report("%s: critical error: calling COLO code without "
                          "COLO enabled", __func__);
         }
-        migrate_start_colo_process(s);
         /*
          * Fixme: we will run VM in COLO no matter its old running state.
          * After exited COLO, we will keep running.
@@ -2538,7 +2521,6 @@ static Property migration_properties[] = {
     DEFINE_PROP_MIG_CAP("x-compress", MIGRATION_CAPABILITY_COMPRESS),
     DEFINE_PROP_MIG_CAP("x-events", MIGRATION_CAPABILITY_EVENTS),
     DEFINE_PROP_MIG_CAP("x-postcopy-ram", MIGRATION_CAPABILITY_POSTCOPY_RAM),
-    DEFINE_PROP_MIG_CAP("x-colo", MIGRATION_CAPABILITY_X_COLO),
     DEFINE_PROP_MIG_CAP("x-release-ram", MIGRATION_CAPABILITY_RELEASE_RAM),
     DEFINE_PROP_MIG_CAP("x-block", MIGRATION_CAPABILITY_BLOCK),
     DEFINE_PROP_MIG_CAP("x-return-path", MIGRATION_CAPABILITY_RETURN_PATH),
