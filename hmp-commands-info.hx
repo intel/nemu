@@ -311,20 +311,6 @@ Show profiling information.
 ETEXI
 
     {
-        .name       = "capture",
-        .args_type  = "",
-        .params     = "",
-        .help       = "show capture information",
-        .cmd        = hmp_info_capture,
-    },
-
-STEXI
-@item info capture
-@findex info capture
-Show capture information.
-ETEXI
-
-    {
         .name       = "snapshots",
         .args_type  = "",
         .params     = "",

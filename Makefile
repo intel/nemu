@@ -425,8 +425,6 @@ dummy := $(call unnest-vars,, \
                 common-obj-m \
                 ui-obj-y \
                 ui-obj-m \
-                audio-obj-y \
-                audio-obj-m \
                 trace-obj-y)
 
 include $(SRC_PATH)/tests/Makefile.include

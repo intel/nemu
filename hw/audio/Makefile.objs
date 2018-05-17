@@ -1,6 +1,0 @@
-# Sound
-
-common-obj-$(CONFIG_PCSPK) += pcspk.o
-
-
-common-obj-y += soundhw.o

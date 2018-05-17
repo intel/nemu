@@ -760,43 +760,6 @@ info mice
 ETEXI
 
     {
-        .name       = "wavcapture",
-        .args_type  = "path:F,freq:i?,bits:i?,nchannels:i?",
-        .params     = "path [frequency [bits [channels]]]",
-        .help       = "capture audio to a wave file (default frequency=44100 bits=16 channels=2)",
-        .cmd        = hmp_wavcapture,
-    },
-STEXI
-@item wavcapture @var{filename} [@var{frequency} [@var{bits} [@var{channels}]]]
-@findex wavcapture
-Capture audio into @var{filename}. Using sample rate @var{frequency}
-bits per sample @var{bits} and number of channels @var{channels}.
-
-Defaults:
-@itemize @minus
-@item Sample rate = 44100 Hz - CD quality
-@item Bits = 16
-@item Number of channels = 2 - Stereo
-@end itemize
-ETEXI
-
-    {
-        .name       = "stopcapture",
-        .args_type  = "n:i",
-        .params     = "capture index",
-        .help       = "stop capture",
-        .cmd        = hmp_stopcapture,
-    },
-STEXI
-@item stopcapture @var{index}
-@findex stopcapture
-Stop capture with a given @var{index}, index can be obtained with
-@example
-info capture
-@end example
-ETEXI
-
-    {
         .name       = "memsave",
         .args_type  = "val:l,size:i,filename:s",
         .params     = "addr size file",

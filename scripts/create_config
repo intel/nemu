@@ -32,14 +32,6 @@ case $line in
     value=${line#*=}
     echo "#define CONFIG_IASL $value"
     ;;
- CONFIG_AUDIO_DRIVERS=*)
-    drivers=${line#*=}
-    echo "#define CONFIG_AUDIO_DRIVERS \\"
-    for drv in $drivers; do
-      echo "    \"${drv}\",\\"
-    done
-    echo ""
-    ;;
  CONFIG_BDRV_RW_WHITELIST=*)
     echo "#define CONFIG_BDRV_RW_WHITELIST\\"
     for drv in ${line#*=}; do

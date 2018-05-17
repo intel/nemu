@@ -210,14 +210,11 @@ iasl="iasl"
 interp_prefix="/usr/gnemul/qemu-%M"
 static="no"
 cross_prefix=""
-audio_drv_list=""
 block_drv_rw_whitelist=""
 block_drv_ro_whitelist=""
 host_cc="cc"
 libs_softmmu=""
 libs_tools=""
-audio_pt_int=""
-audio_win_int=""
 cc_i386=i386-pc-linux-gnu-gcc
 libs_qga=""
 debug_info="yes"
@@ -513,8 +510,6 @@ HOST_VARIANT_DIR=""
 
 case $targetos in
 Linux)
-  audio_drv_list="oss"
-  audio_possible_drivers="oss alsa pa"
   linux="yes"
   kvm="yes"
   vhost_net="yes"
@@ -652,10 +647,6 @@ for opt do
   --disable-mpath) mpath="no"
   ;;
   --enable-mpath) mpath="yes"
-  ;;
-  --oss-lib=*) oss_lib="$optarg"
-  ;;
-  --audio-drv-list=*) audio_drv_list="$optarg"
   ;;
   --block-drv-rw-whitelist=*|--block-drv-whitelist=*) block_drv_rw_whitelist=$(echo "$optarg" | sed -e 's/,/ /g')
   ;;
@@ -998,8 +989,6 @@ Advanced options (experts only):
   --disable-strip          disable stripping binaries
   --disable-werror         disable compilation abort on warning
   --disable-stack-protector disable compiler-provided stack protection
-  --audio-drv-list=LIST    set audio drivers list:
-                           Available drivers: $audio_possible_drivers
   --block-drv-whitelist=L  Same as --block-drv-rw-whitelist=L
   --block-drv-rw-whitelist=L
                            set block driver read-write whitelist
@@ -1756,71 +1745,6 @@ EOF
   fi
 fi
 
-##########################################
-# Sound support libraries probe
-
-audio_drv_probe()
-{
-    drv=$1
-    hdr=$2
-    lib=$3
-    exp=$4
-    cfl=$5
-        cat > $TMPC << EOF
-#include <$hdr>
-int main(void) { $exp }
-EOF
-    if compile_prog "$cfl" "$lib" ; then
-        :
-    else
-        error_exit "$drv check failed" \
-            "Make sure to have the $drv libs and headers installed."
-    fi
-}
-
-audio_drv_list=$(echo "$audio_drv_list" | sed -e 's/,/ /g')
-for drv in $audio_drv_list; do
-    case $drv in
-    alsa)
-    audio_drv_probe $drv alsa/asoundlib.h -lasound \
-        "return snd_pcm_close((snd_pcm_t *)0);"
-    alsa_libs="-lasound"
-    ;;
-
-    pa)
-    audio_drv_probe $drv pulse/pulseaudio.h "-lpulse" \
-        "pa_context_set_source_output_volume(NULL, 0, NULL, NULL, NULL); return 0;"
-    pulse_libs="-lpulse"
-    audio_pt_int="yes"
-    ;;
-
-    coreaudio)
-      coreaudio_libs="-framework CoreAudio"
-    ;;
-
-    dsound)
-      dsound_libs="-lole32 -ldxguid"
-      audio_win_int="yes"
-    ;;
-
-    oss)
-      oss_libs="$oss_lib"
-    ;;
-
-    wav)
-    # XXX: Probes for CoreAudio, DirectSound
-    ;;
-
-    *)
-    echo "$audio_possible_drivers" | grep -q "\<$drv\>" || {
-        error_exit "Unknown driver '$drv' selected" \
-            "Possible drivers are: $audio_possible_drivers"
-    }
-    ;;
-    esac
-done
-
-##########################################
 # glib support probe
 
 if test "$mingw32" = yes; then
@@ -4021,7 +3945,6 @@ echo "TLS priority      $tls_priority"
 echo "libtasn1          $tasn1"
 echo "virgl support     $virglrenderer"
 echo "mingw32 support   $mingw32"
-echo "Audio drivers     $audio_drv_list"
 echo "Block whitelist (rw) $block_drv_rw_whitelist"
 echo "Block whitelist (ro) $block_drv_ro_whitelist"
 echo "VirtFS support    $virtfs"
@@ -4210,27 +4133,6 @@ if test "$l2tpv3" = "yes" ; then
 fi
 if test "$cap_ng" = "yes" ; then
   echo "CONFIG_LIBCAP=y" >> $config_host_mak
-fi
-echo "CONFIG_AUDIO_DRIVERS=$audio_drv_list" >> $config_host_mak
-for drv in $audio_drv_list; do
-    def=CONFIG_AUDIO_$(echo $drv | LC_ALL=C tr '[a-z]' '[A-Z]')
-    case "$drv" in
-	alsa | oss | pa)
-	    echo "$def=m" >> $config_host_mak ;;
-	*)
-	    echo "$def=y" >> $config_host_mak ;;
-    esac
-done
-echo "ALSA_LIBS=$alsa_libs" >> $config_host_mak
-echo "PULSE_LIBS=$pulse_libs" >> $config_host_mak
-echo "COREAUDIO_LIBS=$coreaudio_libs" >> $config_host_mak
-echo "DSOUND_LIBS=$dsound_libs" >> $config_host_mak
-echo "OSS_LIBS=$oss_libs" >> $config_host_mak
-if test "$audio_pt_int" = "yes" ; then
-  echo "CONFIG_AUDIO_PT_INT=y" >> $config_host_mak
-fi
-if test "$audio_win_int" = "yes" ; then
-  echo "CONFIG_AUDIO_WIN_INT=y" >> $config_host_mak
 fi
 echo "CONFIG_BDRV_RW_WHITELIST=$block_drv_rw_whitelist" >> $config_host_mak
 echo "CONFIG_BDRV_RO_WHITELIST=$block_drv_ro_whitelist" >> $config_host_mak

@@ -420,45 +420,6 @@ de  en-us  fi  fr-be  hr     it  lv  nl-be  pt  sl     tr
 The default is @code{en-us}.
 ETEXI
 
-
-DEF("audio-help", 0, QEMU_OPTION_audio_help,
-    "-audio-help     print list of audio drivers and their options\n",
-    QEMU_ARCH_ALL)
-STEXI
-@item -audio-help
-@findex -audio-help
-Will show the audio subsystem help: list of drivers, tunable
-parameters.
-ETEXI
-
-DEF("soundhw", HAS_ARG, QEMU_OPTION_soundhw,
-    "-soundhw c1,... enable audio support\n"
-    "                and only specified sound cards (comma separated list)\n"
-    "                use '-soundhw help' to get the list of supported cards\n"
-    "                use '-soundhw all' to enable all of them\n", QEMU_ARCH_ALL)
-STEXI
-@item -soundhw @var{card1}[,@var{card2},...] or -soundhw all
-@findex -soundhw
-Enable audio and selected sound hardware. Use 'help' to print all
-available sound hardware.
-
-@example
-qemu-system-i386 -soundhw sb16,adlib disk.img
-qemu-system-i386 -soundhw es1370 disk.img
-qemu-system-i386 -soundhw ac97 disk.img
-qemu-system-i386 -soundhw hda disk.img
-qemu-system-i386 -soundhw all disk.img
-qemu-system-i386 -soundhw help
-@end example
-
-Note that Linux's i810_audio OSS kernel (for AC97) module might
-require manually specifying clocking.
-
-@example
-modprobe i810_audio clocking=48000
-@end example
-ETEXI
-
 DEF("balloon", HAS_ARG, QEMU_OPTION_balloon,
     "-balloon virtio[,addr=str]\n"
     "                enable virtio balloon device (deprecated)\n", QEMU_ARCH_ALL)

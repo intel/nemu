@@ -67,8 +67,6 @@
 #include "migration/global_state.h"
 #include "sysemu/tpm.h"
 #include "sysemu/dma.h"
-#include "hw/audio/soundhw.h"
-#include "audio/audio.h"
 #include "sysemu/cpus.h"
 #include "migration/postcopy-ram.h"
 #include "sysemu/kvm.h"
@@ -2939,13 +2937,6 @@ int main(int argc, char **argv, char **envp)
                     exit(1);
                 break;
 #endif
-            case QEMU_OPTION_audio_help:
-                AUD_help ();
-                exit (0);
-                break;
-            case QEMU_OPTION_soundhw:
-                select_soundhw (optarg);
-                break;
             case QEMU_OPTION_h:
                 help(0);
                 break;
@@ -4007,8 +3998,6 @@ int main(int argc, char **argv, char **envp)
 
     realtime_init();
 
-    soundhw_init();
-
     if (qemu_opts_foreach(qemu_find_opts("fw_cfg"),
                           parse_fw_cfg, fw_cfg_find(), NULL) != 0) {
         exit(1);
@@ -4122,7 +4111,6 @@ int main(int argc, char **argv, char **envp)
     /* vhost-user must be cleaned up before chardevs.  */
     tpm_cleanup();
     net_cleanup();
-    audio_cleanup();
     monitor_cleanup();
     qemu_chr_cleanup();
     user_creatable_cleanup();
