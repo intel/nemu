@@ -173,12 +173,8 @@ static NotifierList machine_init_done_notifiers =
 
 static int has_defaults = 1;
 static int default_serial = 1;
-static int default_parallel = 1;
 static int default_virtcon = 1;
 static int default_monitor = 1;
-static int default_floppy = 1;
-static int default_cdrom = 1;
-static int default_sdcard = 1;
 static int default_vga = 1;
 static int default_net = 1;
 
@@ -186,23 +182,10 @@ static struct {
     const char *driver;
     int *flag;
 } default_list[] = {
-    { .driver = "isa-serial",           .flag = &default_serial    },
-    { .driver = "isa-parallel",         .flag = &default_parallel  },
-    { .driver = "isa-fdc",              .flag = &default_floppy    },
-    { .driver = "floppy",               .flag = &default_floppy    },
-    { .driver = "ide-cd",               .flag = &default_cdrom     },
-    { .driver = "ide-hd",               .flag = &default_cdrom     },
-    { .driver = "ide-drive",            .flag = &default_cdrom     },
-    { .driver = "scsi-cd",              .flag = &default_cdrom     },
-    { .driver = "scsi-hd",              .flag = &default_cdrom     },
+    { .driver = "virtio-serial",        .flag = &default_serial    },
     { .driver = "virtio-serial-pci",    .flag = &default_virtcon   },
     { .driver = "virtio-serial",        .flag = &default_virtcon   },
     { .driver = "VGA",                  .flag = &default_vga       },
-    { .driver = "isa-vga",              .flag = &default_vga       },
-    { .driver = "cirrus-vga",           .flag = &default_vga       },
-    { .driver = "isa-cirrus-vga",       .flag = &default_vga       },
-    { .driver = "vmware-svga",          .flag = &default_vga       },
-    { .driver = "qxl-vga",              .flag = &default_vga       },
     { .driver = "virtio-vga",           .flag = &default_vga       },
 };
 
@@ -1050,29 +1033,6 @@ static int drive_enable_snapshot(void *opaque, QemuOpts *opts, Error **errp)
         qemu_opt_set(opts, "snapshot", "on", &error_abort);
     }
     return 0;
-}
-
-static void default_drive(int enable, int snapshot, BlockInterfaceType type,
-                          int index, const char *optstr)
-{
-    QemuOpts *opts;
-    DriveInfo *dinfo;
-
-    if (!enable || drive_get_by_index(type, index)) {
-        return;
-    }
-
-    opts = drive_add(type, index, NULL, optstr);
-    if (snapshot) {
-        drive_enable_snapshot(NULL, opts, NULL);
-    }
-
-    dinfo = drive_new(opts, type);
-    if (!dinfo) {
-        exit(1);
-    }
-    dinfo->is_default = true;
-
 }
 
 static QemuOptsList qemu_smp_opts = {
@@ -3225,7 +3185,6 @@ int main(int argc, char **argv, char **envp)
                 break;
             case QEMU_OPTION_parallel:
                 add_device_config(DEV_PARALLEL, optarg);
-                default_parallel = 0;
                 if (strncmp(optarg, "mon:", 4) == 0) {
                     default_monitor = 0;
                 }
@@ -3742,21 +3701,11 @@ int main(int argc, char **argv, char **envp)
     if (!has_defaults || machine_class->no_serial) {
         default_serial = 0;
     }
-    if (!has_defaults || machine_class->no_parallel) {
-        default_parallel = 0;
-    }
+
     if (!has_defaults || !machine_class->use_virtcon) {
         default_virtcon = 0;
     }
-    if (!has_defaults || machine_class->no_floppy) {
-        default_floppy = 0;
-    }
-    if (!has_defaults || machine_class->no_cdrom) {
-        default_cdrom = 0;
-    }
-    if (!has_defaults || machine_class->no_sdcard) {
-        default_sdcard = 0;
-    }
+
     if (!has_defaults) {
         default_monitor = 0;
         default_net = 0;
@@ -3774,7 +3723,7 @@ int main(int argc, char **argv, char **envp)
          * usage, -nographic is just a no-op in this case.
          */
         if (nographic
-            && (default_parallel || default_serial
+            && (default_serial
                 || default_monitor || default_virtcon)) {
             error_report("-nographic cannot be used with -daemonize");
             exit(1);
@@ -3782,8 +3731,6 @@ int main(int argc, char **argv, char **envp)
     }
 
     if (nographic) {
-        if (default_parallel)
-            add_device_config(DEV_PARALLEL, "null");
         if (default_serial && default_monitor) {
             add_device_config(DEV_SERIAL, "mon:stdio");
         } else if (default_virtcon && default_monitor) {
@@ -3799,8 +3746,6 @@ int main(int argc, char **argv, char **envp)
     } else {
         if (default_serial)
             add_device_config(DEV_SERIAL, "vc:80Cx24C");
-        if (default_parallel)
-            add_device_config(DEV_PARALLEL, "vc:80Cx24C");
         if (default_monitor)
             monitor_parse("vc:80Cx24C", "readline", false);
         if (default_virtcon)
@@ -4003,11 +3948,6 @@ int main(int argc, char **argv, char **envp)
                           &machine_class->block_default_type, NULL)) {
         exit(1);
     }
-
-    default_drive(default_cdrom, snapshot, machine_class->block_default_type, 2,
-                  CDROM_OPTS);
-    default_drive(default_floppy, snapshot, IF_FLOPPY, 0, FD_OPTS);
-    default_drive(default_sdcard, snapshot, IF_SD, 0, SD_OPTS);
 
     /*
      * Note: qtest_enabled() (which is used in monitor_qapi_event_init())
