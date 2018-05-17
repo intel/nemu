@@ -23,7 +23,6 @@
 #include "cpu.h"
 #include "exec/exec-all.h"
 #include "sysemu/kvm.h"
-#include "sysemu/hvf.h"
 #include "sysemu/cpus.h"
 #include "kvm_i386.h"
 #include "sev_i386.h"
@@ -679,7 +678,7 @@ static uint32_t xsave_area_size(uint64_t mask)
 
 static inline bool accel_uses_host_cpuid(void)
 {
-    return kvm_enabled() || hvf_enabled();
+    return kvm_enabled();
 }
 
 static inline uint64_t x86_cpu_xsave_components(X86CPU *cpu)
@@ -2201,13 +2200,6 @@ static void max_x86_cpu_initfn(Object *obj)
                 kvm_arch_get_supported_cpuid(s, 0x80000000, 0, R_EAX);
             env->cpuid_min_xlevel2 =
                 kvm_arch_get_supported_cpuid(s, 0xC0000000, 0, R_EAX);
-        } else {
-            env->cpuid_min_level =
-                hvf_get_supported_cpuid(0x0, 0, R_EAX);
-            env->cpuid_min_xlevel =
-                hvf_get_supported_cpuid(0x80000000, 0, R_EAX);
-            env->cpuid_min_xlevel2 =
-                hvf_get_supported_cpuid(0xC0000000, 0, R_EAX);
         }
 
         if (lmce_supported()) {
@@ -2244,9 +2236,6 @@ static void host_x86_cpu_class_init(ObjectClass *oc, void *data)
     if (kvm_enabled()) {
         xcc->model_description =
             "KVM processor with all supported host features ";
-    } else if (hvf_enabled()) {
-        xcc->model_description =
-            "HVF processor with all supported host features ";
     }
 }
 
@@ -2881,10 +2870,6 @@ static uint32_t x86_cpu_get_supported_feature_word(FeatureWord w,
         r = kvm_arch_get_supported_cpuid(kvm_state, wi->cpuid_eax,
                                                     wi->cpuid_ecx,
                                                     wi->cpuid_reg);
-    } else if (hvf_enabled()) {
-        r = hvf_get_supported_cpuid(wi->cpuid_eax,
-                                    wi->cpuid_ecx,
-                                    wi->cpuid_reg);
     } else if (tcg_enabled()) {
         r = wi->tcg_features;
     } else {
@@ -2944,7 +2929,6 @@ static void x86_cpu_load_def(X86CPU *cpu, X86CPUDefinition *def, Error **errp)
     }
 
     /* Special cases not set in the X86CPUDefinition structs: */
-    /* TODO: in-kernel irqchip for hvf */
     if (kvm_enabled()) {
         if (!kvm_irqchip_in_kernel()) {
             x86_cpu_change_kvm_default("x2apic", "off");
@@ -3417,11 +3401,6 @@ void cpu_x86_cpuid(CPUX86State *env, uint32_t index, uint32_t count,
             *ebx = kvm_arch_get_supported_cpuid(s, 0xA, count, R_EBX);
             *ecx = kvm_arch_get_supported_cpuid(s, 0xA, count, R_ECX);
             *edx = kvm_arch_get_supported_cpuid(s, 0xA, count, R_EDX);
-        } else if (hvf_enabled() && cpu->enable_pmu) {
-            *eax = hvf_get_supported_cpuid(0xA, count, R_EAX);
-            *ebx = hvf_get_supported_cpuid(0xA, count, R_EBX);
-            *ecx = hvf_get_supported_cpuid(0xA, count, R_ECX);
-            *edx = hvf_get_supported_cpuid(0xA, count, R_EDX);
         } else {
             *eax = 0;
             *ebx = 0;
@@ -3785,9 +3764,6 @@ static void x86_cpu_reset(CPUState *s)
     if (kvm_enabled()) {
         kvm_arch_reset_vcpu(cpu);
     }
-    else if (hvf_enabled()) {
-        hvf_reset_vcpu(s);
-    }
 }
 
 bool cpu_is_bsp(X86CPU *cpu)
@@ -3823,7 +3799,6 @@ APICCommonClass *apic_get_class(void)
 {
     const char *apic_type = "apic";
 
-    /* TODO: in-kernel irqchip for hvf */
     if (kvm_apic_in_kernel()) {
         apic_type = "kvm-apic";
     }

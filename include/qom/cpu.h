@@ -395,7 +395,7 @@ struct CPUState {
     uint32_t can_do_io;
     int32_t exception_index;
 
-    /* shared by kvm, hax and hvf */
+    /* shared by kvm and hax */
     bool vcpu_dirty;
 
     /* Used to keep track of an outstanding cpu throttle thread for migration
@@ -422,7 +422,6 @@ struct CPUState {
      */
     uint16_t pending_tlb_flush;
 
-    int hvf_fd;
 };
 
 QTAILQ_HEAD(CPUTailQ, CPUState);
