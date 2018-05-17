@@ -47,5 +47,5 @@ $SRCDIR/configure \
  --libdir=/usr/lib64/nemu \
  --libexecdir=/usr/libexec/nemu \
  --datadir=/usr/share/nemu
-$MAKEPREFIX make -j 4
+$MAKEPREFIX make -j `nproc`
 popd

@@ -36,6 +36,7 @@ EFI_FIRMWARE_URI="https://download.clearlinux.org/image/OVMF.fd"
 DOWNLOAD_ONLY="false"
 RUN_UNSAFE="false"
 VERBOSE="false"
+CHECK="false"
 
 die(){
    echo "${1}"
@@ -104,6 +105,7 @@ Options:
     -builddir   DIR     Build directory
     -unsafe             Test unsafe images
     -download           Download the workloads. Do not test
+    -check              Enable make check. Default false
     -v                  Verbose mode
     -vv                 -v and verbose tests
     -h , -help		Show this usage information
@@ -129,6 +131,9 @@ while [ $# -ge 1 ]; do
     -download)
         DOWNLOAD_ONLY="true"
         shift;;
+    -check)
+	CHECK="true"
+	shift;;
     -builddir)
         BUILD_DIR="$2"
         shift 2 ;;
@@ -242,16 +247,18 @@ if [[ "$BUILD_DIR" == "" ]]; then
     fi
 fi
 
-echo "Running unit tests"
+if [[ "$CHECK" == "true" ]]; then
+  echo "Running unit tests"
 
-extra_check_args=""
-if [[ "$VERBOSE" == "true" ]]; then
-    extra_check_args="$extra_check_args V=1"
-fi
+  extra_check_args=""
+  if [[ "$VERBOSE" == "true" ]]; then
+      extra_check_args="$extra_check_args V=1"
+  fi
 
-make -C $BUILD_DIR check -j `nproc` $extra_check_args
-if [ $? -ne 0 ]; then
-   echo "FAILED: Unit tests"
+  make -C $BUILD_DIR check -j `nproc` $extra_check_args
+  if [ $? -ne 0 ]; then
+    echo "FAILED: Unit tests"
+  fi
 fi
 
 if [[ "$RUN_UNSAFE" == "false" ]]; then
