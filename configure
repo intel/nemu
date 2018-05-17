@@ -2137,41 +2137,6 @@ if test "$libxml2" != "no" ; then
     fi
 fi
 
-# Check for inotify functions when we are building linux-user
-# emulator.  This is done because older glibc versions don't
-# have syscall stubs for these implemented.  In that case we
-# don't provide them even if kernel supports them.
-#
-inotify=no
-cat > $TMPC << EOF
-#include <sys/inotify.h>
-
-int
-main(void)
-{
-	/* try to start inotify */
-	return inotify_init();
-}
-EOF
-if compile_prog "" "" ; then
-  inotify=yes
-fi
-
-inotify1=no
-cat > $TMPC << EOF
-#include <sys/inotify.h>
-
-int
-main(void)
-{
-    /* try to start inotify */
-    return inotify_init1(0);
-}
-EOF
-if compile_prog "" "" ; then
-  inotify1=yes
-fi
-
 # check if pipe2 is there
 pipe2=no
 cat > $TMPC << EOF
@@ -4398,9 +4363,6 @@ target_name=$(echo $target | cut -d '-' -f 1)
 target_bigendian="no"
 
 target_softmmu="no"
-target_user_only="no"
-target_linux_user="no"
-target_bsd_user="no"
 case "$target" in
   ${target_name}-softmmu)
     target_softmmu="yes"
@@ -4475,26 +4437,12 @@ fi
 if test "$target_softmmu" = "yes" ; then
   echo "CONFIG_SOFTMMU=y" >> $config_target_mak
 fi
-if test "$target_user_only" = "yes" ; then
-  echo "CONFIG_USER_ONLY=y" >> $config_target_mak
-  echo "CONFIG_QEMU_INTERP_PREFIX=\"$interp_prefix1\"" >> $config_target_mak
-fi
-if test "$target_linux_user" = "yes" ; then
-  echo "CONFIG_LINUX_USER=y" >> $config_target_mak
-fi
 list=""
 if test ! -z "$gdb_xml_files" ; then
   for x in $gdb_xml_files; do
     list="$list $source_path/gdb-xml/$x"
   done
   echo "TARGET_XML_FILES=$list" >> $config_target_mak
-fi
-
-if test "$target_user_only" = "yes" -a "$bflt" = "yes"; then
-  echo "TARGET_HAS_BFLT=y" >> $config_target_mak
-fi
-if test "$target_bsd_user" = "yes" ; then
-  echo "CONFIG_BSD_USER=y" >> $config_target_mak
 fi
 
 # generate QEMU_CFLAGS/LDFLAGS for targets
@@ -4523,18 +4471,10 @@ done
 
 if test "$gprof" = "yes" ; then
   echo "TARGET_GPROF=yes" >> $config_target_mak
-  if test "$target_linux_user" = "yes" ; then
-    cflags="-p $cflags"
-    ldflags="-p $ldflags"
-  fi
   if test "$target_softmmu" = "yes" ; then
     ldflags="-p $ldflags"
     echo "GPROF_CFLAGS=-p" >> $config_target_mak
   fi
-fi
-
-if test "$target_linux_user" = "yes" -o "$target_bsd_user" = "yes" ; then
-  ldflags="$ldflags $textseg_ldflags"
 fi
 
 echo "LDFLAGS+=$ldflags" >> $config_target_mak
