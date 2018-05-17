@@ -19,9 +19,6 @@
 #include "qemu/sockets.h"
 #include "chardev/char.h"
 #include "sysemu/sysemu.h"
-#include "hw/nvram/chrp_nvram.h"
-
-#define MIN_NVRAM_SIZE 8192 /* from spapr_nvram.c */
 
 const unsigned start_address = 1024 * 1024;
 const unsigned end_address = 100 * 1024 * 1024;

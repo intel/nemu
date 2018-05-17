@@ -100,28 +100,6 @@ static void test_plug_with_device_add_x86(gconstpointer data)
     g_free(args);
 }
 
-static void test_plug_with_device_add_coreid(gconstpointer data)
-{
-    const PlugTestData *td = data;
-    char *args;
-    unsigned int c;
-
-    args = g_strdup_printf("-machine %s -cpu %s "
-                           "-smp 1,sockets=%u,cores=%u,threads=%u,maxcpus=%u",
-                           td->machine, td->cpu_model,
-                           td->sockets, td->cores, td->threads, td->maxcpus);
-    qtest_start(args);
-
-    for (c = td->cores; c < td->maxcpus / td->sockets / td->threads; c++) {
-        char *id = g_strdup_printf("id-%i", c);
-        qtest_qmp_device_add(td->device_model, id, "'core-id':'%i'", c);
-        g_free(id);
-    }
-
-    qtest_end();
-    g_free(args);
-}
-
 static void test_data_free(gpointer data)
 {
     PlugTestData *pc = data;

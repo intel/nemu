@@ -106,38 +106,6 @@ static void test_pc_boot_order(void)
     test_boot_orders(NULL, read_boot_order_pc, test_cases_pc);
 }
 
-static const boot_order_test test_cases_prep[] = {
-    { "", 'c', 'c' },
-    { "-boot c", 'c', 'c' },
-    { "-boot d", 'd', 'd' },
-    {}
-};
-
-static uint64_t read_boot_order_pmac(void)
-{
-    QFWCFG *fw_cfg = mm_fw_cfg_init(global_qtest, 0xf0000510);
-
-    return qfw_cfg_get_u16(fw_cfg, FW_CFG_BOOT_DEVICE);
-}
-
-static const boot_order_test test_cases_fw_cfg[] = {
-    { "", 'c', 'c' },
-    { "-boot c", 'c', 'c' },
-    { "-boot d", 'd', 'd' },
-    { "-boot once=d,order=c", 'd', 'c' },
-    {}
-};
-
-static void test_pmac_oldworld_boot_order(void)
-{
-    test_boot_orders("g3beige", read_boot_order_pmac, test_cases_fw_cfg);
-}
-
-static void test_pmac_newworld_boot_order(void)
-{
-    test_boot_orders("mac99", read_boot_order_pmac, test_cases_fw_cfg);
-}
-
 int main(int argc, char *argv[])
 {
     const char *arch = qtest_get_arch();

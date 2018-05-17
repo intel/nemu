@@ -37,8 +37,6 @@ static QVirtIO9P *qvirtio_9p_start(const char *driver)
 
     if (strcmp(arch, "i386") == 0 || strcmp(arch, "x86_64") == 0) {
         v9p->qs = qtest_pc_boot(cmd, driver, mount_tag);
-    } else if (strcmp(arch, "ppc64") == 0) {
-        v9p->qs = qtest_spapr_boot(cmd, driver, mount_tag);
     } else {
         g_printerr("virtio-9p tests are only available on x86 or ppc64\n");
         exit(EXIT_FAILURE);
