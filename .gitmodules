@@ -1,45 +1,9 @@
-[submodule "roms/vgabios"]
-	path = roms/vgabios
-	url = http://git.qemu-project.org/git/vgabios.git/
 [submodule "roms/seabios"]
 	path = roms/seabios
 	url = http://git.qemu-project.org/git/seabios.git/
-[submodule "roms/SLOF"]
-	path = roms/SLOF
-	url = http://git.qemu-project.org/git/SLOF.git
-[submodule "roms/ipxe"]
-	path = roms/ipxe
-	url = http://git.qemu-project.org/git/ipxe.git
-[submodule "roms/openbios"]
-	path = roms/openbios
-	url = http://git.qemu-project.org/git/openbios.git
-[submodule "roms/openhackware"]
-	path = roms/openhackware
-	url = http://git.qemu-project.org/git/openhackware.git
-[submodule "roms/qemu-palcode"]
-	path = roms/qemu-palcode
-	url = http://git.qemu.org/git/qemu-palcode.git
-[submodule "roms/sgabios"]
-	path = roms/sgabios
-	url = http://git.qemu-project.org/git/sgabios.git
 [submodule "dtc"]
 	path = dtc
 	url = http://git.qemu-project.org/git/dtc.git
-[submodule "roms/u-boot"]
-	path = roms/u-boot
-	url = http://git.qemu-project.org/git/u-boot.git
-[submodule "roms/skiboot"]
-	path = roms/skiboot
-	url = http://git.qemu.org/git/skiboot.git
-[submodule "roms/QemuMacDrivers"]
-	path = roms/QemuMacDrivers
-	url = http://git.qemu.org/git/QemuMacDrivers.git
 [submodule "ui/keycodemapdb"]
 	path = ui/keycodemapdb
 	url = http://git.qemu.org/git/keycodemapdb.git
-[submodule "roms/seabios-hppa"]
-	path = roms/seabios-hppa
-	url = git://github.com/hdeller/seabios-hppa.git
-[submodule "roms/u-boot-sam460ex"]
-	path = roms/u-boot-sam460ex
-	url = http://git.qemu.org/git/u-boot-sam460ex.git
