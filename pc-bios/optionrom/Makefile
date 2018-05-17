@@ -37,7 +37,7 @@ Wa = -Wa,
 ASFLAGS += -32
 QEMU_CFLAGS += $(call cc-c-option, $(QEMU_CFLAGS), $(Wa)-32)
 
-build-all: linuxboot.bin linuxboot_dma.bin kvmvapic.bin
+build-all: linuxboot_dma.bin kvmvapic.bin
 
 # suppress auto-removal of intermediate files
 .SECONDARY:
