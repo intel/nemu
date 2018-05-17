@@ -4087,7 +4087,6 @@ echo "jemalloc support  $jemalloc"
 echo "avx2 optimization $avx2_opt"
 echo "replication support $replication"
 echo "VxHS block device $vxhs"
-echo "capstone          $capstone"
 
 if test "$supported_cpu" = "no"; then
     echo
@@ -4915,9 +4914,6 @@ done # for target in $targets
 
 if [ "$dtc_internal" = "yes" ]; then
   echo "config-host.h: subdir-dtc" >> $config_host_mak
-fi
-if test -n "$LIBCAPSTONE"; then
-  echo "LIBCAPSTONE=$LIBCAPSTONE" >> $config_host_mak
 fi
 
 if test "$numa" = "yes"; then
