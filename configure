@@ -183,17 +183,6 @@ supported_kvm_target() {
     return 1
 }
 
-supported_whpx_target() {
-    test "$whpx" = "yes" || return 1
-    glob "$1" "*-softmmu" || return 1
-    case "${1%-softmmu}" in
-        i386|x86_64)
-            return 0
-        ;;
-    esac
-    return 1
-}
-
 supported_target() {
     case "$1" in
         *-softmmu)
@@ -205,7 +194,6 @@ supported_target() {
     esac
     test "$tcg" = "yes" && return 0
     supported_kvm_target "$1" && return 0
-    supported_whpx_target "$1" && return 0
     print_error "TCG disabled, but hardware accelerator not available for '$target'"
     return 1
 }
@@ -280,7 +268,6 @@ vhost_scsi="no"
 vhost_vsock="no"
 vhost_user=""
 kvm="no"
-whpx="no"
 rdma=""
 gprof="no"
 debug="no"
@@ -704,10 +691,6 @@ for opt do
   ;;
   --enable-kvm) kvm="yes"
   ;;
-  --disable-whpx) whpx="no"
-  ;;
-  --enable-whpx) whpx="yes"
-  ;;
   --disable-cap-ng)  cap_ng="no"
   ;;
   --enable-cap-ng) cap_ng="yes"
@@ -1064,7 +1047,6 @@ disabled with --disable-FEATURE, default is enabled if available:
   membarrier      membarrier system call (for Linux 4.14+ or Windows)
   fdt             fdt device tree
   kvm             KVM acceleration support
-  whpx            Windows Hypervisor Platform acceleration support
   rdma            Enable RDMA-based migration and PVRDMA support
   vde             support for vde network
   netmap          support for netmap network
@@ -1581,32 +1563,6 @@ if test "$seccomp" != "no" ; then
             fi
         fi
         seccomp="no"
-    fi
-fi
-
-##########################################
-# Windows Hypervisor Platform accelerator (WHPX) check
-if test "$whpx" != "no" ; then
-    cat > $TMPC << EOF
-#include <windows.h>
-#include <WinHvPlatform.h>
-#include <WinHvEmulation.h>
-int main(void) {
-    WHV_CAPABILITY whpx_cap;
-    UINT32 writtenSize;
-    WHvGetCapability(WHvCapabilityCodeFeatures, &whpx_cap, sizeof(whpx_cap),
-                     &writtenSize);
-    return 0;
-}
-EOF
-    if compile_prog "" "-lWinHvPlatform -lWinHvEmulation" ; then
-        libs_softmmu="$libs_softmmu -lWinHvPlatform -lWinHvEmulation"
-        whpx="yes"
-    else
-        if test "$whpx" = "yes"; then
-            feature_not_found "WinHvPlatform" "WinHvEmulation is not installed"
-        fi
-        whpx="no"
     fi
 fi
 
@@ -4084,7 +4040,6 @@ echo "Linux AIO support $linux_aio"
 echo "ATTR/XATTR support $attr"
 echo "Install blobs     $blobs"
 echo "KVM support       $kvm"
-echo "WHPX support      $whpx"
 echo "TCG support       $tcg"
 echo "malloc trim support $malloc_trim"
 echo "RDMA support      $rdma"
@@ -4896,9 +4851,6 @@ if supported_kvm_target $target; then
             echo "CONFIG_VHOST_USER_NET_TEST_$target_name=y" >> $config_host_mak
         fi
     fi
-fi
-if supported_whpx_target $target; then
-    echo "CONFIG_WHPX=y" >> $config_target_mak
 fi
 if test "$target_bigendian" = "yes" ; then
   echo "TARGET_WORDS_BIGENDIAN=y" >> $config_target_mak
