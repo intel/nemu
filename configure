@@ -264,7 +264,6 @@ vhost_scsi="no"
 vhost_vsock="no"
 vhost_user=""
 kvm="no"
-rdma=""
 gprof="no"
 debug="no"
 sanitizers="no"
@@ -837,10 +836,6 @@ for opt do
   ;;
   --tls-priority=*) tls_priority="$optarg"
   ;;
-  --enable-rdma) rdma="yes"
-  ;;
-  --disable-rdma) rdma="no"
-  ;;
   --disable-virglrenderer) virglrenderer="no"
   ;;
   --enable-virglrenderer) virglrenderer="yes"
@@ -1032,7 +1027,6 @@ disabled with --disable-FEATURE, default is enabled if available:
   membarrier      membarrier system call (for Linux 4.14+ or Windows)
   fdt             fdt device tree
   kvm             KVM acceleration support
-  rdma            Enable RDMA-based migration and PVRDMA support
   vde             support for vde network
   netmap          support for netmap network
   linux-aio       Linux AIO support
@@ -1592,30 +1586,6 @@ fi
 have_ifaddrs_h=yes
 if ! check_include "ifaddrs.h" ; then
   have_ifaddrs_h=no
-fi
-
-##########################################
-# RDMA needs OpenFabrics libraries
-if test "$rdma" != "no" ; then
-  cat > $TMPC <<EOF
-#include <rdma/rdma_cma.h>
-int main(void) { return 0; }
-EOF
-  rdma_libs="-lrdmacm -libverbs -libumad"
-  if compile_prog "" "$rdma_libs" ; then
-    rdma="yes"
-    libs_softmmu="$libs_softmmu $rdma_libs"
-  else
-    if test "$rdma" = "yes" ; then
-        error_exit \
-            " OpenFabrics librdmacm/libibverbs/libibumad not present." \
-            " Your options:" \
-            "  (1) Fast: Install infiniband packages (devel) from your distro." \
-            "  (2) Cleanest: Install libraries from www.openfabrics.org" \
-            "  (3) Also: Install softiwarp if you don't have RDMA hardware"
-    fi
-    rdma="no"
-  fi
 fi
 
 ##########################################
@@ -3958,7 +3928,6 @@ echo "Install blobs     $blobs"
 echo "KVM support       $kvm"
 echo "TCG support       $tcg"
 echo "malloc trim support $malloc_trim"
-echo "RDMA support      $rdma"
 echo "fdt support       $fdt"
 echo "membarrier        $membarrier"
 echo "preadv support    $preadv"
@@ -4516,11 +4485,6 @@ if have_backend "syslog"; then
   fi
 fi
 echo "CONFIG_TRACE_FILE=$trace_file" >> $config_host_mak
-
-if test "$rdma" = "yes" ; then
-  echo "CONFIG_RDMA=y" >> $config_host_mak
-  echo "RDMA_LIBS=$rdma_libs" >> $config_host_mak
-fi
 
 if test "$have_rtnetlink" = "yes" ; then
   echo "CONFIG_RTNETLINK=y" >> $config_host_mak

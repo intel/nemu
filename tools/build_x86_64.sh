@@ -18,7 +18,6 @@ $SRCDIR/configure \
  --disable-netmap \
  --disable-opengl \
  --disable-qom-cast-debug \
- --disable-rdma \
  --disable-seccomp \
  --disable-smartcard \
  --disable-snappy \
