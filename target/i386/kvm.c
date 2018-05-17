@@ -1054,10 +1054,10 @@ int kvm_arch_init_vcpu(CPUState *cs)
         }
     }
 
-    if (cpu->vmware_cpuid_freq
+    if (
         /* Guests depend on 0x40000000 to detect this feature, so only expose
          * it if KVM exposes leaf 0x40000000. (Conflicts with Hyper-V) */
-        && cpu->expose_kvm
+        cpu->expose_kvm
         && kvm_base == KVM_CPUID_SIGNATURE
         /* TSC clock must be stable and known for this feature. */
         && tsc_is_stable_and_known(env)) {

@@ -653,10 +653,6 @@ DEFINE_I440FX_MACHINE(v1_2, "pc-1.2", pc_compat_1_2,
             .property = "vgamem_mb",\
             .value    = stringify(8),\
         },{\
-            .driver   = "vmware-svga",\
-            .property = "vgamem_mb",\
-            .value    = stringify(8),\
-        },{\
             .driver   = "qxl-vga",\
             .property = "vgamem_mb",\
             .value    = stringify(8),\
@@ -777,10 +773,6 @@ DEFINE_I440FX_MACHINE(v0_14, "pc-0.14", pc_compat_1_2,
             .value    = stringify(0),\
         },{\
             .driver   = "VGA",\
-            .property = "rombar",\
-            .value    = stringify(0),\
-        },{\
-            .driver   = "vmware-svga",\
             .property = "rombar",\
             .value    = stringify(0),\
         },

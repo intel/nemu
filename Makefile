@@ -748,7 +748,7 @@ bepo    cz
 
 ifdef INSTALL_BLOBS
 BLOBS=bios.bin bios-256k.bin sgabios.bin vgabios.bin vgabios-cirrus.bin \
-vgabios-stdvga.bin vgabios-vmware.bin vgabios-qxl.bin vgabios-virtio.bin \
+vgabios-stdvga.bin vgabios-qxl.bin vgabios-virtio.bin \
 QEMU,cgthree.bin \
 pxe-virtio.rom \
 efi-virtio.rom \

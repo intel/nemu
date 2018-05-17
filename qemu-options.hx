@@ -1455,7 +1455,7 @@ Rotate graphical output some deg left (only PXA LCD).
 ETEXI
 
 DEF("vga", HAS_ARG, QEMU_OPTION_vga,
-    "-vga [std|cirrus|vmware|qxl|tcx|cg3|virtio|none]\n"
+    "-vga [std|cirrus|qxl|virtio|none]\n"
     "                select video card type\n", QEMU_ARCH_ALL)
 STEXI
 @item -vga @var{type}
@@ -1472,10 +1472,6 @@ Standard VGA card with Bochs VBE extensions.  If your guest OS
 supports the VESA 2.0 VBE extensions (e.g. Windows XP) and if you want
 to use high resolution modes (>= 1280x1024x16) then you should use
 this option. (This card is the default since QEMU 2.2)
-@item vmware
-VMWare SVGA-II compatible adapter. Use it if you have sufficiently
-recent XFree86/XOrg server or Windows guest with a driver for this
-card.
 @item qxl
 QXL paravirtual graphic card.  It is VGA compatible (including VESA
 2.0 VBE support).  Works best with qxl guest drivers installed though.
