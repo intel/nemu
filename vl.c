@@ -124,7 +124,6 @@ QEMUClockType rtc_clock;
 static DisplayOptions dpy;
 int no_frame;
 Chardev *serial_hds[MAX_SERIAL_PORTS];
-Chardev *parallel_hds[MAX_PARALLEL_PORTS];
 Chardev *virtcon_hds[MAX_VIRTIO_CONSOLES];
 int win2k_install_hack = 0;
 int singlestep = 0;
@@ -2010,7 +2009,6 @@ static void monitor_parse(const char *optarg, const char *mode, bool pretty)
 struct device_config {
     enum {
         DEV_SERIAL,    /* -serial        */
-        DEV_PARALLEL,  /* -parallel      */
         DEV_VIRTCON,   /* -virtioconsole */
         DEV_DEBUGCON,  /* -debugcon */
         DEV_GDB,       /* -gdb, -s */
@@ -2067,28 +2065,6 @@ static int serial_parse(const char *devname)
     serial_hds[index] = qemu_chr_new(label, devname);
     if (!serial_hds[index]) {
         error_report("could not connect serial device"
-                     " to character backend '%s'", devname);
-        return -1;
-    }
-    index++;
-    return 0;
-}
-
-static int parallel_parse(const char *devname)
-{
-    static int index = 0;
-    char label[32];
-
-    if (strcmp(devname, "none") == 0)
-        return 0;
-    if (index == MAX_PARALLEL_PORTS) {
-        error_report("too many parallel ports");
-        exit(1);
-    }
-    snprintf(label, sizeof(label), "parallel%d", index);
-    parallel_hds[index] = qemu_chr_new(label, devname);
-    if (!parallel_hds[index]) {
-        error_report("could not connect parallel device"
                      " to character backend '%s'", devname);
         return -1;
     }
@@ -3092,12 +3068,6 @@ int main(int argc, char **argv, char **envp)
                     default_monitor = 0;
                 }
                 break;
-            case QEMU_OPTION_parallel:
-                add_device_config(DEV_PARALLEL, optarg);
-                if (strncmp(optarg, "mon:", 4) == 0) {
-                    default_monitor = 0;
-                }
-                break;
             case QEMU_OPTION_debugcon:
                 add_device_config(DEV_DEBUGCON, optarg);
                 break;
@@ -3866,8 +3836,6 @@ int main(int argc, char **argv, char **envp)
     }
 
     if (foreach_device_config(DEV_SERIAL, serial_parse) < 0)
-        exit(1);
-    if (foreach_device_config(DEV_PARALLEL, parallel_parse) < 0)
         exit(1);
     if (foreach_device_config(DEV_VIRTCON, virtcon_parse) < 0)
         exit(1);

@@ -2474,7 +2474,6 @@ DEF("chardev", HAS_ARG, QEMU_OPTION_chardev,
     "-chardev tty,id=id,path=path[,mux=on|off][,logfile=PATH][,logappend=on|off]\n"
 #endif
 #if defined(__linux__) || defined(__FreeBSD__) || defined(__DragonFly__)
-    "-chardev parallel,id=id,path=path[,mux=on|off][,logfile=PATH][,logappend=on|off]\n"
     "-chardev parport,id=id,path=path[,mux=on|off][,logfile=PATH][,logappend=on|off]\n"
 #endif
 #if defined(CONFIG_SPICE)
@@ -2505,7 +2504,6 @@ Backend is one of:
 @option{stdio},
 @option{braille},
 @option{tty},
-@option{parallel},
 @option{parport},
 @option{spicevmc},
 @option{spiceport}.
@@ -3091,23 +3089,6 @@ or fake device.
 @item msmouse
 Three button serial mouse. Configure the guest to use Microsoft protocol.
 @end table
-ETEXI
-
-DEF("parallel", HAS_ARG, QEMU_OPTION_parallel, \
-    "-parallel dev   redirect the parallel port to char device 'dev'\n",
-    QEMU_ARCH_ALL)
-STEXI
-@item -parallel @var{dev}
-@findex -parallel
-Redirect the virtual parallel port to host device @var{dev} (same
-devices as the serial port). On Linux hosts, @file{/dev/parportN} can
-be used to use hardware devices connected on the corresponding host
-parallel port.
-
-This option can be used several times to simulate up to 3 parallel
-ports.
-
-Use @code{-parallel none} to disable all parallel ports.
 ETEXI
 
 DEF("monitor", HAS_ARG, QEMU_OPTION_monitor, \
