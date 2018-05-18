@@ -218,7 +218,6 @@ static inline const char *dm2str(uint32_t dm)
     static const char *str[] = {
         "Fixed",
         "...",
-        "SMI",
         "...",
         "NMI",
         "INIT",

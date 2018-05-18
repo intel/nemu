@@ -77,47 +77,6 @@ static const MemoryRegionOps ich9_gpe_ops = {
     .endianness = DEVICE_LITTLE_ENDIAN,
 };
 
-static uint64_t ich9_smi_readl(void *opaque, hwaddr addr, unsigned width)
-{
-    ICH9LPCPMRegs *pm = opaque;
-    switch (addr) {
-    case 0:
-        return pm->smi_en;
-    case 4:
-        return pm->smi_sts;
-    default:
-        return 0;
-    }
-}
-
-static void ich9_smi_writel(void *opaque, hwaddr addr, uint64_t val,
-                            unsigned width)
-{
-    ICH9LPCPMRegs *pm = opaque;
-    TCOIORegs *tr = &pm->tco_regs;
-    uint64_t tco_en;
-
-    switch (addr) {
-    case 0:
-        tco_en = pm->smi_en & ICH9_PMIO_SMI_EN_TCO_EN;
-        /* once TCO_LOCK bit is set, TCO_EN bit cannot be overwritten */
-        if (tr->tco.cnt1 & TCO_LOCK) {
-            val = (val & ~ICH9_PMIO_SMI_EN_TCO_EN) | tco_en;
-        }
-        pm->smi_en &= ~pm->smi_en_wmask;
-        pm->smi_en |= (val & pm->smi_en_wmask);
-        break;
-    }
-}
-
-static const MemoryRegionOps ich9_smi_ops = {
-    .read = ich9_smi_readl,
-    .write = ich9_smi_writel,
-    .valid.min_access_size = 4,
-    .valid.max_access_size = 4,
-    .endianness = DEVICE_LITTLE_ENDIAN,
-};
-
 void ich9_pm_iospace_update(ICH9LPCPMRegs *pm, uint32_t pm_io_base)
 {
     ICH9_DEBUG("to 0x%x\n", pm_io_base);
@@ -228,8 +187,6 @@ const VMStateDescription vmstate_ich9_pm = {
         VMSTATE_INT64(acpi_regs.tmr.overflow_time, ICH9LPCPMRegs),
         VMSTATE_GPE_ARRAY(acpi_regs.gpe.sts, ICH9LPCPMRegs),
         VMSTATE_GPE_ARRAY(acpi_regs.gpe.en, ICH9LPCPMRegs),
-        VMSTATE_UINT32(smi_en, ICH9LPCPMRegs),
-        VMSTATE_UINT32(smi_sts, ICH9LPCPMRegs),
         VMSTATE_END_OF_LIST()
     },
     .subsections = (const VMStateDescription*[]) {
@@ -249,11 +206,6 @@ static void pm_reset(void *opaque)
     acpi_pm1_cnt_reset(&pm->acpi_regs);
     acpi_pm_tmr_reset(&pm->acpi_regs);
     acpi_gpe_reset(&pm->acpi_regs);
-
-    pm->smi_en = 0;
-    /* Mark SMM as already inited to prevent SMM from running. */
-    pm->smi_en |= ICH9_PMIO_SMI_EN_APMC_EN;
-    pm->smi_en_wmask = ~0;
 
     acpi_update_sci(&pm->acpi_regs, pm->irq);
 }
@@ -284,9 +236,6 @@ void ich9_pm_init(PCIDevice *lpc_pci, ICH9LPCPMRegs *pm,
                           "acpi-gpe0", ICH9_PMIO_GPE0_LEN);
     memory_region_add_subregion(&pm->io, ICH9_PMIO_GPE0_STS, &pm->io_gpe);
 
-    memory_region_init_io(&pm->io_smi, OBJECT(lpc_pci), &ich9_smi_ops, pm,
-                          "acpi-smi", 8);
-    memory_region_add_subregion(&pm->io, ICH9_PMIO_SMI_EN, &pm->io_smi);
 
 
     pm->enable_tco = true;

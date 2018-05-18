@@ -732,15 +732,6 @@ DeviceState *cpu_get_current_apic(void)
     }
 }
 
-void pc_acpi_smi_interrupt(void *opaque, int irq, int level)
-{
-    X86CPU *cpu = opaque;
-
-    if (level) {
-        cpu_interrupt(CPU(cpu), CPU_INTERRUPT_SMI);
-    }
-}
-
 static void pc_new_cpu(const char *typename, int64_t apic_id, Error **errp)
 {
     Object *cpu = NULL;

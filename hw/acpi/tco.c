@@ -80,9 +80,6 @@ static void tco_timer_expired(void *opaque)
         }
     }
 
-    if (pm->smi_en & ICH9_PMIO_SMI_EN_TCO_EN) {
-        ich9_generate_smi();
-    }
     tr->tco.rld = tr->tco.tmr;
     tco_timer_reload(tr);
 }
@@ -147,8 +144,6 @@ static void tco_ioport_writew(TCOIORegs *tr, uint32_t addr, uint32_t val)
         break;
     case TCO_DAT_IN:
         tr->tco.din = val;
-        tr->tco.sts1 |= SW_TCO_SMI;
-        ich9_generate_smi();
         break;
     case TCO_DAT_OUT:
         tr->tco.dout = val;

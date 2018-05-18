@@ -70,7 +70,6 @@ typedef struct PIIX4PMState {
     APMState apm;
 
     qemu_irq irq;
-    qemu_irq smi_irq;
     Notifier machine_ready;
     Notifier powerdown_notifier;
 
@@ -108,18 +107,11 @@ static void pm_tmr_timer(ACPIREGS *ar)
 static void apm_ctrl_changed(uint32_t val, void *arg)
 {
     PIIX4PMState *s = arg;
-    PCIDevice *d = PCI_DEVICE(s);
 
     /* ACPI specs 3.0, 4.7.2.5 */
     acpi_pm1_cnt_update(&s->ar, val == ACPI_ENABLE, val == ACPI_DISABLE);
     if (val == ACPI_ENABLE || val == ACPI_DISABLE) {
         return;
-    }
-
-    if (d->config[0x5b] & (1 << 1)) {
-        if (s->smi_irq) {
-            qemu_irq_raise(s->smi_irq);
-        }
     }
 }
 

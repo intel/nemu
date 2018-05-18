@@ -81,7 +81,6 @@
 #define SVM_EXIT_EXCP_BASE      0x040
 #define SVM_EXIT_INTR		0x060
 #define SVM_EXIT_NMI		0x061
-#define SVM_EXIT_SMI		0x062
 #define SVM_EXIT_INIT		0x063
 #define SVM_EXIT_VINTR		0x064
 #define SVM_EXIT_CR0_SEL_WRITE	0x065

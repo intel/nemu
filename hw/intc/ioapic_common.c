@@ -54,7 +54,7 @@ static void ioapic_irr_dump(Monitor *mon, const char *name, uint32_t bitmap)
 void ioapic_print_redtbl(Monitor *mon, IOAPICCommonState *s)
 {
     static const char *delm_str[] = {
-        "fixed", "lowest", "SMI", "...", "NMI", "INIT", "...", "extINT"};
+        "fixed", "lowest", "...", "NMI", "INIT", "...", "extINT"};
     uint32_t remote_irr = 0;
     int i;
 

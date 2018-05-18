@@ -38,11 +38,6 @@ typedef struct ICH9LPCPMRegs {
 
     MemoryRegion io;
     MemoryRegion io_gpe;
-    MemoryRegion io_smi;
-
-    uint32_t smi_en;
-    uint32_t smi_en_wmask;
-    uint32_t smi_sts;
 
     qemu_irq irq;      /* SCI */
 
