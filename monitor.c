@@ -44,7 +44,6 @@
 #include "ui/input.h"
 #include "sysemu/blockdev.h"
 #include "sysemu/block-backend.h"
-#include "disas/disas.h"
 #include "sysemu/balloon.h"
 #include "qemu/timer.h"
 #include "sysemu/hw_accel.h"
@@ -1554,11 +1553,6 @@ static void memory_dump(Monitor *mon, int count, int format, int wsize,
 
     if (!cs && (format == 'i' || !is_physical)) {
         monitor_printf(mon, "Can not dump without CPU\n");
-        return;
-    }
-
-    if (format == 'i') {
-        monitor_disas(mon, cs, addr, count, is_physical);
         return;
     }
 

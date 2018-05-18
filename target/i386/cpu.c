@@ -48,8 +48,6 @@
 #include "hw/hw.h"
 #include "hw/i386/apic_internal.h"
 
-#include "disas/capstone.h"
-
 
 /* Cache topology CPUID constants: */
 

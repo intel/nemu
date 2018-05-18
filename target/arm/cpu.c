@@ -33,7 +33,6 @@
 #include "sysemu/sysemu.h"
 #include "sysemu/hw_accel.h"
 #include "kvm_arm.h"
-#include "disas/capstone.h"
 #include "fpu/softfloat.h"
 
 static void arm_cpu_set_pc(CPUState *cs, vaddr value)
@@ -418,66 +417,6 @@ static inline void set_feature(CPUARMState *env, int feature)
 static inline void unset_feature(CPUARMState *env, int feature)
 {
     env->features &= ~(1ULL << feature);
-}
-
-static int
-print_insn_thumb1(bfd_vma pc, disassemble_info *info)
-{
-  return print_insn_arm(pc | 1, info);
-}
-
-static void arm_disas_set_info(CPUState *cpu, disassemble_info *info)
-{
-    ARMCPU *ac = ARM_CPU(cpu);
-    CPUARMState *env = &ac->env;
-    bool sctlr_b;
-
-    if (is_a64(env)) {
-        /* We might not be compiled with the A64 disassembler
-         * because it needs a C++ compiler. Leave print_insn
-         * unset in this case to use the caller default behaviour.
-         */
-#if defined(CONFIG_ARM_A64_DIS)
-        info->print_insn = print_insn_arm_a64;
-#endif
-        info->cap_arch = CS_ARCH_ARM64;
-        info->cap_insn_unit = 4;
-        info->cap_insn_split = 4;
-    } else {
-        int cap_mode;
-        if (env->thumb) {
-            info->print_insn = print_insn_thumb1;
-            info->cap_insn_unit = 2;
-            info->cap_insn_split = 4;
-            cap_mode = CS_MODE_THUMB;
-        } else {
-            info->print_insn = print_insn_arm;
-            info->cap_insn_unit = 4;
-            info->cap_insn_split = 4;
-            cap_mode = CS_MODE_ARM;
-        }
-        if (arm_feature(env, ARM_FEATURE_V8)) {
-            cap_mode |= CS_MODE_V8;
-        }
-        if (arm_feature(env, ARM_FEATURE_M)) {
-            cap_mode |= CS_MODE_MCLASS;
-        }
-        info->cap_arch = CS_ARCH_ARM;
-        info->cap_mode = cap_mode;
-    }
-
-    sctlr_b = arm_sctlr_b(env);
-    if (bswap_code(sctlr_b)) {
-#ifdef TARGET_WORDS_BIGENDIAN
-        info->endian = BFD_ENDIAN_LITTLE;
-#else
-        info->endian = BFD_ENDIAN_BIG;
-#endif
-    }
-    info->flags &= ~INSN_ARM_BE32;
-    if (sctlr_b) {
-        info->flags |= INSN_ARM_BE32;
-    }
 }
 
 uint64_t arm_cpu_mp_affinity(int idx, uint8_t clustersz)
@@ -1748,8 +1687,6 @@ static void arm_cpu_class_init(ObjectClass *oc, void *data)
     cc->gdb_stop_before_watchpoint = true;
 
     cc->adjust_watchpoint_address = arm_adjust_watchpoint_address;
-
-    cc->disas_set_info = arm_disas_set_info;
 }
 
 static void arm_host_initfn(Object *obj)
