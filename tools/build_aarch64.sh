@@ -21,7 +21,6 @@ $SRCDIR/configure \
  --disable-tools \
  --disable-tpm \
  --disable-virtfs \
- --disable-vxhs \
  --enable-attr \
  --enable-cap-ng \
  --enable-fdt \

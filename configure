@@ -322,9 +322,7 @@ numa=""
 tcmalloc="no"
 jemalloc="no"
 replication="yes"
-vxhs=""
 libxml2=""
-
 supported_cpu="no"
 supported_os="no"
 bogus_os="no"
@@ -832,10 +830,6 @@ for opt do
   ;;
   --enable-replication) replication="yes"
   ;;
-  --disable-vxhs) vxhs="no"
-  ;;
-  --enable-vxhs) vxhs="yes"
-  ;;
   --disable-vhost-user) vhost_user="no"
   ;;
   --enable-vhost-user)
@@ -1005,7 +999,6 @@ disabled with --disable-FEATURE, default is enabled if available:
   xfsctl          xfsctl support
   qom-cast-debug  cast debugging support
   tools           build qemu-io, qemu-nbd and qemu-image tools
-  vxhs            Veritas HyperScale vDisk backend support
   crypto-afalg    Linux AF_ALG crypto backend driver
   vhost-user      vhost-user support
 
@@ -3207,33 +3200,6 @@ if compile_prog "" "" ; then
 fi
 
 ##########################################
-# Veritas HyperScale block driver VxHS
-# Check if libvxhs is installed
-
-if test "$vxhs" != "no" ; then
-  cat > $TMPC <<EOF
-#include <stdint.h>
-#include <qnio/qnio_api.h>
-
-void *vxhs_callback;
-
-int main(void) {
-    iio_init(QNIO_VERSION, vxhs_callback);
-    return 0;
-}
-EOF
-  vxhs_libs="-lvxhs -lssl"
-  if compile_prog "" "$vxhs_libs" ; then
-    vxhs=yes
-  else
-    if test "$vxhs" = "yes" ; then
-      feature_not_found "vxhs block device" "Install libvxhs See github"
-    fi
-    vxhs=no
-  fi
-fi
-
-##########################################
 # check for _Static_assert()
 
 have_static_assert=no
@@ -3573,7 +3539,6 @@ echo "tcmalloc support  $tcmalloc"
 echo "jemalloc support  $jemalloc"
 echo "avx2 optimization $avx2_opt"
 echo "replication support $replication"
-echo "VxHS block device $vxhs"
 
 if test "$supported_cpu" = "no"; then
     echo
@@ -4062,11 +4027,6 @@ fi
 if test "$pthread_setname_np" = "yes" ; then
   echo "CONFIG_THREAD_SETNAME_BYTHREAD=y" >> $config_host_mak
   echo "CONFIG_PTHREAD_SETNAME_NP=y" >> $config_host_mak
-fi
-
-if test "$vxhs" = "yes" ; then
-  echo "CONFIG_VXHS=y" >> $config_host_mak
-  echo "VXHS_LIBS=$vxhs_libs" >> $config_host_mak
 fi
 
 if test "$ARCH" = "x86_64" ; then
