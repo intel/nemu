@@ -301,7 +301,6 @@ qom_cast_debug="yes"
 trace_backends="log"
 trace_file="trace"
 rbd=""
-smartcard=""
 cpuid_h="no"
 avx2_opt="no"
 zlib="yes"
@@ -767,10 +766,6 @@ for opt do
   ;;
   --enable-xfsctl) xfs="yes"
   ;;
-  --disable-smartcard) smartcard="no"
-  ;;
-  --enable-smartcard) smartcard="yes"
-  ;;
   --disable-zlib-test) zlib="no"
   ;;
   --disable-lzo) lzo="no"
@@ -1014,7 +1009,6 @@ disabled with --disable-FEATURE, default is enabled if available:
   rbd             rados block device (rbd)
   libiscsi        iscsi support
   libnfs          nfs support
-  smartcard       smartcard support (libcacard)
   live-block-migration   Block migration in the main migration stream
   lzo             support of lzo compression library
   snappy          support of snappy compression library
@@ -3619,7 +3613,6 @@ echo "Trace output file $trace_file-<pid>"
 fi
 echo "rbd support       $rbd"
 echo "xfsctl support    $xfs"
-echo "smartcard support $smartcard"
 echo "libiscsi support  $libiscsi"
 echo "libnfs support    $libnfs"
 echo "build guest agent $guest_agent"
@@ -3929,12 +3922,6 @@ if test "$posix_madvise" = "yes" ; then
 fi
 if test "$posix_memalign" = "yes" ; then
   echo "CONFIG_POSIX_MEMALIGN=y" >> $config_host_mak
-fi
-
-if test "$smartcard" = "yes" ; then
-  echo "CONFIG_SMARTCARD=y" >> $config_host_mak
-  echo "SMARTCARD_CFLAGS=$libcacard_cflags" >> $config_host_mak
-  echo "SMARTCARD_LIBS=$libcacard_libs" >> $config_host_mak
 fi
 
 if test "$malloc_trim" = "yes" ; then
