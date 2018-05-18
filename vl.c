@@ -132,7 +132,6 @@ unsigned int max_cpus;
 int smp_cores = 1;
 int smp_threads = 1;
 int acpi_enabled = 1;
-int no_hpet = 0;
 int fd_bootchk = 1;
 static int no_reboot;
 int no_shutdown = 0;
@@ -3180,9 +3179,6 @@ int main(int argc, char **argv, char **envp)
                 break;
             case QEMU_OPTION_no_acpi:
                 acpi_enabled = 0;
-                break;
-            case QEMU_OPTION_no_hpet:
-                no_hpet = 1;
                 break;
             case QEMU_OPTION_balloon:
                 if (balloon_parse(optarg) < 0) {

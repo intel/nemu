@@ -17,7 +17,6 @@
 #include "hw/mem/nvdimm.h"
 #include "hw/acpi/acpi_dev_interface.h"
 
-#define HPET_INTCAP "hpet-intcap"
 
 /**
  * PCMachineState:
@@ -202,8 +201,7 @@ qemu_irq pc_allocate_cpu_irq(void);
 void pc_basic_device_init(ISABus *isa_bus, qemu_irq *gsi,
                           ISADevice **rtc_state,
                           bool create_fdctrl,
-                          bool has_pit,
-                          uint32_t hpet_irqs);
+                          bool has_pit);
 void pc_cmos_init(PCMachineState *pcms,
                   ISADevice *s);
 void pc_pci_device_init(PCIBus *pci_bus);
@@ -216,9 +214,6 @@ void ioapic_init_gsi(GSIState *gsi_state, const char *parent_name);
 
 #define PORT92_A20_LINE "a20"
 
-
-/* hpet.c */
-extern int no_hpet;
 
 /* piix_pci.c */
 struct PCII440FXState;
@@ -728,11 +723,6 @@ bool e820_get_entry(int, uint32_t, uint64_t *, uint64_t *);
         .driver   = "PIIX4_PM",\
         .property = "acpi-pci-hotplug-with-bridge-support",\
         .value    = "off",\
-    },\
-    {\
-        .driver   = "hpet",\
-        .property = HPET_INTCAP,\
-        .value    = stringify(4),\
     },
 
 #define PC_COMPAT_1_6 \

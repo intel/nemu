@@ -3164,7 +3164,6 @@ void kvm_arch_init_irq_routing(KVMState *s)
          * override 0->2 cannot be set up as required by HPET.
          * So we have to disable it.
          */
-        no_hpet = 1;
     }
     /* We know at this point that we're using the in-kernel
      * irqchip, so we can use irqfds, and on x86 we know

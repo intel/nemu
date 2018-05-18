@@ -180,7 +180,6 @@ static void pc_init1(MachineState *machine,
         i440fx_state = NULL;
         isa_bus = isa_bus_new(NULL, get_system_memory(), system_io,
                               &error_abort);
-        no_hpet = 1;
     }
     isa_bus_irqs(isa_bus, pcms->gsi);
 
@@ -202,7 +201,7 @@ static void pc_init1(MachineState *machine,
 
     /* init basic PC hardware */
     pc_basic_device_init(isa_bus, pcms->gsi, &rtc_state, true,
-                         pcms->pit, 0x4);
+                         pcms->pit);
 
     pc_cmos_init(pcms, rtc_state);
 

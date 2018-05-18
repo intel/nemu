@@ -104,7 +104,7 @@ static void kvm_pit_get(PITCommonState *pit)
             fprintf(stderr, "KVM_GET_PIT2 failed: %s\n", strerror(ret));
             abort();
         }
-        pit->channels[0].irq_disabled = kpit.flags & KVM_PIT_FLAGS_HPET_LEGACY;
+        pit->channels[0].irq_disabled = kpit.flags & 0x01;
     } else {
         /*
          * kvm_pit_state2 is superset of kvm_pit_state struct,
@@ -152,7 +152,7 @@ static void kvm_pit_put(PITCommonState *pit)
         kvm_pit_update_clock_offset(s);
     }
 
-    kpit.flags = pit->channels[0].irq_disabled ? KVM_PIT_FLAGS_HPET_LEGACY : 0;
+    kpit.flags = pit->channels[0].irq_disabled ? 0x01 : 0;
     for (i = 0; i < 3; i++) {
         kchan = &kpit.channels[i];
         sc = &pit->channels[i];

@@ -30,7 +30,6 @@
 #include "hw/pci/pci.h"
 #include "qom/cpu.h"
 #include "target/i386/cpu.h"
-#include "hw/timer/hpet.h"
 #include "hw/acpi/acpi-defs.h"
 #include "hw/acpi/acpi.h"
 #include "hw/acpi/cpu.h"
@@ -99,7 +98,6 @@ typedef struct AcpiPmInfo {
 
 typedef struct AcpiMiscInfo {
     bool is_piix4;
-    bool has_hpet;
     TPMVersion tpm_version;
     const unsigned char *dsdt_code;
     unsigned dsdt_size;
@@ -228,7 +226,6 @@ static void acpi_get_misc_info(AcpiMiscInfo *info)
         info->is_piix4 = false;
     }
 
-    info->has_hpet = hpet_find();
     info->tpm_version = tpm_get_version(tpm_find());
     info->applesmc_io_base = applesmc_port();
 }
@@ -965,58 +962,6 @@ static Aml *build_crs(PCIHostState *host, CrsRangeSet *range_set)
     return crs;
 }
 
-static void build_hpet_aml(Aml *table)
-{
-    Aml *crs;
-    Aml *field;
-    Aml *method;
-    Aml *if_ctx;
-    Aml *scope = aml_scope("_SB");
-    Aml *dev = aml_device("HPET");
-    Aml *zero = aml_int(0);
-    Aml *id = aml_local(0);
-    Aml *period = aml_local(1);
-
-    aml_append(dev, aml_name_decl("_HID", aml_eisaid("PNP0103")));
-    aml_append(dev, aml_name_decl("_UID", zero));
-
-    aml_append(dev,
-        aml_operation_region("HPTM", AML_SYSTEM_MEMORY, aml_int(HPET_BASE),
-                             HPET_LEN));
-    field = aml_field("HPTM", AML_DWORD_ACC, AML_LOCK, AML_PRESERVE);
-    aml_append(field, aml_named_field("VEND", 32));
-    aml_append(field, aml_named_field("PRD", 32));
-    aml_append(dev, field);
-
-    method = aml_method("_STA", 0, AML_NOTSERIALIZED);
-    aml_append(method, aml_store(aml_name("VEND"), id));
-    aml_append(method, aml_store(aml_name("PRD"), period));
-    aml_append(method, aml_shiftright(id, aml_int(16), id));
-    if_ctx = aml_if(aml_lor(aml_equal(id, zero),
-                            aml_equal(id, aml_int(0xffff))));
-    {
-        aml_append(if_ctx, aml_return(zero));
-    }
-    aml_append(method, if_ctx);
-
-    if_ctx = aml_if(aml_lor(aml_equal(period, zero),
-                            aml_lgreater(period, aml_int(100000000))));
-    {
-        aml_append(if_ctx, aml_return(zero));
-    }
-    aml_append(method, if_ctx);
-
-    aml_append(method, aml_return(aml_int(0x0F)));
-    aml_append(dev, method);
-
-    crs = aml_resource_template();
-    aml_append(crs, aml_memory32_fixed(HPET_BASE, HPET_LEN, AML_READ_ONLY));
-    aml_append(dev, aml_name_decl("_CRS", crs));
-
-    aml_append(scope, dev);
-    aml_append(table, scope);
-}
-
 static Aml *build_rtc_device_aml(void)
 {
     Aml *dev;
@@ -1713,7 +1658,6 @@ build_dsdt(GArray *table_data, BIOSLinker *linker,
         aml_append(sb_scope, dev);
         aml_append(dsdt, sb_scope);
 
-        build_hpet_aml(dsdt);
         build_piix4_pm(dsdt);
         build_piix4_isa_bridge(dsdt);
         build_isa_devices_aml(dsdt);
@@ -1730,7 +1674,6 @@ build_dsdt(GArray *table_data, BIOSLinker *linker,
         aml_append(sb_scope, dev);
         aml_append(dsdt, sb_scope);
 
-        build_hpet_aml(dsdt);
         build_q35_isa_bridge(dsdt);
         build_isa_devices_aml(dsdt);
         build_q35_pci0_int(dsdt);
@@ -2077,21 +2020,6 @@ build_dsdt(GArray *table_data, BIOSLinker *linker,
         (void *)(table_data->data + table_data->len - dsdt->buf->len),
         "DSDT", dsdt->buf->len, 1, NULL, NULL);
     free_aml_allocator();
-}
-
-static void
-build_hpet(GArray *table_data, BIOSLinker *linker)
-{
-    Acpi20Hpet *hpet;
-
-    hpet = acpi_data_push(table_data, sizeof(*hpet));
-    /* Note timer_block_id value must be kept in sync with value advertised by
-     * emulated hpet
-     */
-    hpet->timer_block_id = cpu_to_le32(0x8086a201);
-    hpet->addr.address = cpu_to_le64(HPET_BASE);
-    build_header(linker, table_data,
-                 (void *)hpet, "HPET", sizeof(*hpet), 1, NULL, NULL);
 }
 
 static void
@@ -2593,10 +2521,6 @@ void acpi_build(AcpiBuildTables *tables, MachineState *machine)
                            tables->vmgenid, tables->linker);
     }
 
-    if (misc.has_hpet) {
-        acpi_add_table(table_offsets, tables_blob);
-        build_hpet(tables_blob, tables->linker);
-    }
     if (misc.tpm_version != TPM_VERSION_UNSPEC) {
         acpi_add_table(table_offsets, tables_blob);
         build_tpm_tcpa(tables_blob, tables->linker, tables->tcpalog);

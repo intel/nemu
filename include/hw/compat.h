@@ -3,10 +3,6 @@
 
 #define HW_COMPAT_2_11 \
     {\
-        .driver   = "hpet",\
-        .property = "hpet-offset-saved",\
-        .value    = "false",\
-    },{\
         .driver   = "virtio-blk-pci",\
         .property = "vectors",\
         .value    = "2",\
