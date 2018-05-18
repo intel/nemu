@@ -1,2 +1,0 @@
-common-obj-$(CONFIG_I8257) += i8257.o
-

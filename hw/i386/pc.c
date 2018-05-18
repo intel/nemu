@@ -37,7 +37,6 @@
 #include "hw/loader.h"
 #include "elf.h"
 #include "hw/timer/mc146818rtc.h"
-#include "hw/dma/i8257.h"
 #include "hw/timer/i8254.h"
 #include "hw/input/i8042.h"
 #include "hw/pci/msi.h"
@@ -1192,9 +1191,6 @@ void pc_basic_device_init(ISABus *isa_bus, qemu_irq *gsi,
             qdev_connect_gpio_out(hpet, 0, qdev_get_gpio_in(DEVICE(pit), 0));
         }
     }
-
-    i8257_dma_init(isa_bus, 0);
-
 }
 
 void ioapic_init_gsi(GSIState *gsi_state, const char *parent_name)

@@ -189,7 +189,6 @@ trace-events-subdirs += hw/misc
 trace-events-subdirs += hw/scsi
 trace-events-subdirs += hw/nvram
 trace-events-subdirs += hw/timer
-trace-events-subdirs += hw/dma
 trace-events-subdirs += hw/isa
 trace-events-subdirs += hw/mem
 trace-events-subdirs += hw/i386

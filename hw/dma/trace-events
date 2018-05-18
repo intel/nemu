@@ -1,4 +1,0 @@
-# See docs/devel/tracing.txt for syntax documentation.
-
-# hw/dma/i8257.c
-i8257_unregistered_dma(int nchan, int dma_pos, int dma_len) "unregistered DMA channel used nchan=%d dma_pos=%d dma_len=%d"
