@@ -9,7 +9,6 @@ $SRCDIR/configure \
  --disable-libiscsi \
  --disable-libnfs \
  --disable-libssh2 \
- --disable-libxml2 \
  --disable-linux-aio \
  --disable-lzo \
  --disable-modules \
