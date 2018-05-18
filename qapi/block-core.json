@@ -270,7 +270,7 @@
 # @drv: the name of the block format used to open the backing device. As of
 #       0.14.0 this can be: 'blkdebug', 'bochs', 'cloop', 'cow', 'dmg',
 #       'file', 'file', 'ftp', 'ftps', 'host_cdrom', 'host_device',
-#       'http', 'https', 'luks', 'nbd', 'parallels', 'qcow',
+#       'http', 'https', 'luks', 'parallels', 'qcow',
 #       'qcow2', 'raw', 'vdi', 'vmdk', 'vpc', 'vvfat'
 #       2.2: 'archipelago' added, 'cow' dropped
 #       2.3: 'host_floppy' deprecated
@@ -2512,7 +2512,7 @@
 { 'enum': 'BlockdevDriver',
   'data': [ 'blkdebug', 'blkverify', 'bochs', 'cloop',
             'dmg', 'file', 'ftp', 'ftps', 'gluster', 'host_cdrom',
-            'host_device', 'http', 'https', 'iscsi', 'luks', 'nbd', 'nfs',
+            'host_device', 'http', 'https', 'iscsi', 'luks', 'nfs',
             'null-aio', 'null-co', 'nvme', 'parallels', 'qcow', 'qcow2', 'qed',
             'quorum', 'raw', 'rbd', 'replication', 'sheepdog', 'ssh',
             'throttle', 'vdi', 'vhdx', 'vmdk', 'vpc', 'vvfat', 'vxhs' ] }
@@ -3533,7 +3533,6 @@
       'https':      'BlockdevOptionsCurlHttps',
       'iscsi':      'BlockdevOptionsIscsi',
       'luks':       'BlockdevOptionsLUKS',
-      'nbd':        'BlockdevOptionsNbd',
       'nfs':        'BlockdevOptionsNfs',
       'null-aio':   'BlockdevOptionsNull',
       'null-co':    'BlockdevOptionsNull',
@@ -4060,7 +4059,6 @@
       'https':          'BlockdevCreateNotSupported',
       'iscsi':          'BlockdevCreateNotSupported',
       'luks':           'BlockdevCreateOptionsLUKS',
-      'nbd':            'BlockdevCreateNotSupported',
       'nfs':            'BlockdevCreateOptionsNfs',
       'null-aio':       'BlockdevCreateNotSupported',
       'null-co':        'BlockdevCreateNotSupported',
