@@ -53,15 +53,4 @@ uint32_t nand_getbuswidth(DeviceState *dev);
 /* onenand.c */
 void *onenand_raw_otp(DeviceState *onenand_device);
 
-/* ecc.c */
-typedef struct {
-    uint8_t cp;		/* Column parity */
-    uint16_t lp[2];	/* Line parity */
-    uint16_t count;
-} ECCState;
-
-uint8_t ecc_digest(ECCState *s, uint8_t sample);
-void ecc_reset(ECCState *s);
-extern VMStateDescription vmstate_ecc_state;
-
 #endif
