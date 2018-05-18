@@ -4,6 +4,3 @@
 [submodule "dtc"]
 	path = dtc
 	url = http://git.qemu-project.org/git/dtc.git
-[submodule "ui/keycodemapdb"]
-	path = ui/keycodemapdb
-	url = http://git.qemu.org/git/keycodemapdb.git

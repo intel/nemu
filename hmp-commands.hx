@@ -253,21 +253,6 @@ Password: ********
 ETEXI
 
     {
-        .name       = "screendump",
-        .args_type  = "filename:F,device:s?,head:i?",
-        .params     = "filename [device [head]]",
-        .help       = "save screen from head 'head' of display device 'device' "
-                      "into PPM image 'filename'",
-        .cmd        = hmp_screendump,
-    },
-
-STEXI
-@item screendump @var{filename}
-@findex screendump
-Save screen into PPM image @var{filename}.
-ETEXI
-
-    {
         .name       = "logfile",
         .args_type  = "filename:F",
         .params     = "filename",
@@ -603,29 +588,6 @@ Write to I/O port.
 ETEXI
 
     {
-        .name       = "sendkey",
-        .args_type  = "keys:s,hold-time:i?",
-        .params     = "keys [hold_ms]",
-        .help       = "send keys to the VM (e.g. 'sendkey ctrl-alt-f1', default hold time=100 ms)",
-        .cmd        = hmp_sendkey,
-        .command_completion = sendkey_completion,
-    },
-
-STEXI
-@item sendkey @var{keys}
-@findex sendkey
-Send @var{keys} to the guest. @var{keys} could be the name of the
-key or the raw value in hexadecimal format. Use @code{-} to press
-several keys simultaneously. Example:
-@example
-sendkey ctrl-alt-f1
-@end example
-
-This command is useful to send keys that your graphical user interface
-intercepts at low level, such as @code{ctrl-alt-f1} in X Window.
-ETEXI
-
-    {
         .name       = "system_reset",
         .args_type  = "",
         .params     = "",
@@ -710,53 +672,6 @@ STEXI
 @item cpu @var{index}
 @findex cpu
 Set the default CPU.
-ETEXI
-
-    {
-        .name       = "mouse_move",
-        .args_type  = "dx_str:s,dy_str:s,dz_str:s?",
-        .params     = "dx dy [dz]",
-        .help       = "send mouse move events",
-        .cmd        = hmp_mouse_move,
-    },
-
-STEXI
-@item mouse_move @var{dx} @var{dy} [@var{dz}]
-@findex mouse_move
-Move the active mouse to the specified coordinates @var{dx} @var{dy}
-with optional scroll axis @var{dz}.
-ETEXI
-
-    {
-        .name       = "mouse_button",
-        .args_type  = "button_state:i",
-        .params     = "state",
-        .help       = "change mouse button state (1=L, 2=M, 4=R)",
-        .cmd        = hmp_mouse_button,
-    },
-
-STEXI
-@item mouse_button @var{val}
-@findex mouse_button
-Change the active mouse button state @var{val} (1=L, 2=M, 4=R).
-ETEXI
-
-    {
-        .name       = "mouse_set",
-        .args_type  = "index:i",
-        .params     = "index",
-        .help       = "set which mouse device receives events",
-        .cmd        = hmp_mouse_set,
-    },
-
-STEXI
-@item mouse_set @var{index}
-@findex mouse_set
-Set which mouse device receives events at given @var{index}, index
-can be obtained with
-@example
-info mice
-@end example
 ETEXI
 
     {

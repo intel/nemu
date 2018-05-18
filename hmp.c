@@ -36,13 +36,11 @@
 #include "qapi/qapi-commands-net.h"
 #include "qapi/qapi-commands-run-state.h"
 #include "qapi/qapi-commands-tpm.h"
-#include "qapi/qapi-commands-ui.h"
 #include "qapi/qmp/qdict.h"
 #include "qapi/qmp/qerror.h"
 #include "qapi/string-input-visitor.h"
 #include "qapi/string-output-visitor.h"
 #include "qom/object_interfaces.h"
-#include "ui/console.h"
 #include "block/qapi.h"
 #include "qemu-io.h"
 #include "qemu/cutils.h"
@@ -138,26 +136,6 @@ void hmp_info_chardev(Monitor *mon, const QDict *qdict)
     }
 
     qapi_free_ChardevInfoList(char_info);
-}
-
-void hmp_info_mice(Monitor *mon, const QDict *qdict)
-{
-    MouseInfoList *mice_list, *mouse;
-
-    mice_list = qmp_query_mice(NULL);
-    if (!mice_list) {
-        monitor_printf(mon, "No mouse devices connected\n");
-        return;
-    }
-
-    for (mouse = mice_list; mouse; mouse = mouse->next) {
-        monitor_printf(mon, "%c Mouse #%" PRId64 ": %s%s\n",
-                       mouse->value->current ? '*' : ' ',
-                       mouse->value->index, mouse->value->name,
-                       mouse->value->absolute ? " (absolute)" : "");
-    }
-
-    qapi_free_MouseInfoList(mice_list);
 }
 
 void hmp_info_migrate(Monitor *mon, const QDict *qdict)
@@ -1834,84 +1812,6 @@ void hmp_closefd(Monitor *mon, const QDict *qdict)
     Error *err = NULL;
 
     qmp_closefd(fdname, &err);
-    hmp_handle_error(mon, &err);
-}
-
-void hmp_sendkey(Monitor *mon, const QDict *qdict)
-{
-    const char *keys = qdict_get_str(qdict, "keys");
-    KeyValueList *keylist, *head = NULL, *tmp = NULL;
-    int has_hold_time = qdict_haskey(qdict, "hold-time");
-    int hold_time = qdict_get_try_int(qdict, "hold-time", -1);
-    Error *err = NULL;
-    char *separator;
-    int keyname_len;
-
-    while (1) {
-        separator = strchr(keys, '-');
-        keyname_len = separator ? separator - keys : strlen(keys);
-
-        /* Be compatible with old interface, convert user inputted "<" */
-        if (keys[0] == '<' && keyname_len == 1) {
-            keys = "less";
-            keyname_len = 4;
-        }
-
-        keylist = g_malloc0(sizeof(*keylist));
-        keylist->value = g_malloc0(sizeof(*keylist->value));
-
-        if (!head) {
-            head = keylist;
-        }
-        if (tmp) {
-            tmp->next = keylist;
-        }
-        tmp = keylist;
-
-        if (strstart(keys, "0x", NULL)) {
-            char *endp;
-            int value = strtoul(keys, &endp, 0);
-            assert(endp <= keys + keyname_len);
-            if (endp != keys + keyname_len) {
-                goto err_out;
-            }
-            keylist->value->type = KEY_VALUE_KIND_NUMBER;
-            keylist->value->u.number.data = value;
-        } else {
-            int idx = index_from_key(keys, keyname_len);
-            if (idx == Q_KEY_CODE__MAX) {
-                goto err_out;
-            }
-            keylist->value->type = KEY_VALUE_KIND_QCODE;
-            keylist->value->u.qcode.data = idx;
-        }
-
-        if (!separator) {
-            break;
-        }
-        keys = separator + 1;
-    }
-
-    qmp_send_key(head, has_hold_time, hold_time, &err);
-    hmp_handle_error(mon, &err);
-
-out:
-    qapi_free_KeyValueList(head);
-    return;
-
-err_out:
-    monitor_printf(mon, "invalid parameter: %.*s\n", keyname_len, keys);
-    goto out;
-}
-
-void hmp_screendump(Monitor *mon, const QDict *qdict)
-{
-    const char *filename = qdict_get_str(qdict, "filename");
-    const char *id = qdict_get_try_str(qdict, "device");
-    int64_t head = qdict_get_try_int(qdict, "head", 0);
-    Error *err = NULL;
-
-    qmp_screendump(filename, id != NULL, id, id != NULL, head, &err);
     hmp_handle_error(mon, &err);
 }
 

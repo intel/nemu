@@ -49,8 +49,6 @@
 #include "net/net.h"
 #include "net/slirp.h"
 #include "monitor/monitor.h"
-#include "ui/console.h"
-#include "ui/input.h"
 #include "sysemu/sysemu.h"
 #include "sysemu/numa.h"
 #include "exec/gdbstub.h"
@@ -107,7 +105,6 @@
 static const char *data_dir[16];
 static int data_dir_idx;
 const char *bios_name = NULL;
-int display_opengl;
 const char* keyboard_layout = NULL;
 ram_addr_t ram_size;
 const char *mem_path = NULL;
@@ -119,7 +116,6 @@ int autostart;
 static int rtc_utc = 1;
 static int rtc_date_offset = -1; /* -1 means no change */
 QEMUClockType rtc_clock;
-static DisplayOptions dpy;
 int no_frame;
 Chardev *serial_hds[MAX_SERIAL_PORTS];
 Chardev *virtcon_hds[MAX_VIRTIO_CONSOLES];
@@ -2467,7 +2463,6 @@ int main(int argc, char **argv, char **envp)
     const char *kernel_filename, *kernel_cmdline;
     const char *boot_order = NULL;
     const char *boot_once = NULL;
-    DisplayState *ds;
     QemuOpts *opts, *machine_opts;
     QemuOpts *accel_opts = NULL;
     QemuOptsList *olist;
@@ -2679,7 +2674,6 @@ int main(int argc, char **argv, char **envp)
                 olist = qemu_find_opts("machine");
                 qemu_opts_parse_noisily(olist, "graphics=off", false);
                 nographic = true;
-                dpy.type = DISPLAY_TYPE_NONE;
                 break;
             case QEMU_OPTION_curses:
                 error_report("curses support is disabled");
@@ -2994,8 +2988,6 @@ int main(int argc, char **argv, char **envp)
                 loadvm = optarg;
                 break;
             case QEMU_OPTION_full_screen:
-                dpy.has_full_screen = true;
-                dpy.full_screen = true;
                 break;
             case QEMU_OPTION_no_frame:
                 g_printerr("The -no-frame switch is deprecated, and will be\n"
@@ -3009,8 +3001,6 @@ int main(int argc, char **argv, char **envp)
                 ctrl_grab = 1;
                 break;
             case QEMU_OPTION_no_quit:
-                dpy.has_window_close = true;
-                dpy.window_close = false;
                 break;
             case QEMU_OPTION_pidfile:
                 pid_file = optarg;
@@ -3543,33 +3533,6 @@ int main(int argc, char **argv, char **envp)
             add_device_config(DEV_VIRTCON, "vc:80Cx24C");
     }
 
-    if (dpy.type == DISPLAY_TYPE_DEFAULT && !display_remote) {
-        if (!qemu_display_find_default(&dpy)) {
-            dpy.type = DISPLAY_TYPE_NONE;
-        }
-    }
-    if (dpy.type == DISPLAY_TYPE_DEFAULT) {
-        dpy.type = DISPLAY_TYPE_NONE;
-    }
-
-    if (no_frame || alt_grab || ctrl_grab) {
-        error_report("-no-frame, -alt-grab and -ctrl-grab are only valid "
-                     "for SDL, ignoring option");
-    }
-    if (dpy.has_window_close &&
-        dpy.type != DISPLAY_TYPE_GTK) {
-        error_report("-no-quit is only valid for GTK, "
-                     "ignoring option");
-    }
-
-    qemu_display_early_init(&dpy);
-    qemu_console_early_init();
-
-    if (dpy.has_gl && dpy.gl && display_opengl == 0) {
-        error_report("OpenGL support is disabled");
-        exit(1);
-    }
-
     page_size_init();
     socket_init();
 
@@ -3808,10 +3771,6 @@ int main(int argc, char **argv, char **envp)
         qemu_boot_set(boot_once, &error_fatal);
         qemu_register_reset(restore_boot_order, g_strdup(boot_order));
     }
-
-    /* init local displays */
-    ds = init_displaystate();
-    qemu_display_init(ds, &dpy);
 
     /* must be after terminal init, SDL library changes signal handlers */
     os_setup_signal_handling();

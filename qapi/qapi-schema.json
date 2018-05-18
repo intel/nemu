@@ -84,7 +84,6 @@
 { 'include': 'char.json' }
 { 'include': 'net.json' }
 { 'include': 'tpm.json' }
-{ 'include': 'ui.json' }
 { 'include': 'migration.json' }
 { 'include': 'transaction.json' }
 { 'include': 'trace.json' }

@@ -12,4 +12,3 @@ chardev-obj-y += char-serial.o
 chardev-obj-y += char-socket.o
 chardev-obj-y += char-stdio.o
 chardev-obj-y += char-udp.o
-

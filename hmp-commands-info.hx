@@ -339,37 +339,6 @@ Show the current VM status (running|paused).
 ETEXI
 
     {
-        .name       = "mice",
-        .args_type  = "",
-        .params     = "",
-        .help       = "show which guest mouse is receiving events",
-        .cmd        = hmp_info_mice,
-    },
-
-STEXI
-@item info mice
-@findex info mice
-Show which guest mouse is receiving events.
-ETEXI
-
-
-#if defined(CONFIG_SPICE)
-    {
-        .name       = "spice",
-        .args_type  = "",
-        .params     = "",
-        .help       = "show the spice server status",
-        .cmd        = hmp_info_spice,
-    },
-#endif
-
-STEXI
-@item info spice
-@findex info spice
-Show the spice server status.
-ETEXI
-
-    {
         .name       = "name",
         .args_type  = "",
         .params     = "",
