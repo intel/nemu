@@ -1,4 +1,4 @@
-block-obj-y += raw-format.o qcow.o cloop.o vvfat.o dmg.o
+block-obj-y += raw-format.o qcow.o cloop.o vvfat.o
 block-obj-y += qcow2.o qcow2-refcount.o qcow2-cluster.o qcow2-snapshot.o qcow2-cache.o qcow2-bitmap.o
 block-obj-y += quorum.o
 block-obj-y += parallels.o blkdebug.o blkverify.o
@@ -32,8 +32,6 @@ gluster.o-libs     := $(GLUSTERFS_LIBS)
 vxhs.o-libs        := $(VXHS_LIBS)
 ssh.o-cflags       := $(LIBSSH2_CFLAGS)
 ssh.o-libs         := $(LIBSSH2_LIBS)
-block-obj-$(if $(CONFIG_BZIP2),m,n) += dmg-bz2.o
-dmg-bz2.o-libs     := $(BZIP2_LIBS)
 qcow.o-libs        := -lz
 linux-aio.o-libs   := -laio
 parallels.o-cflags := $(LIBXML2_CFLAGS)
