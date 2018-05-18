@@ -199,7 +199,6 @@ trace-events-subdirs += hw/pci-host
 trace-events-subdirs += hw/vfio
 trace-events-subdirs += hw/acpi
 trace-events-subdirs += hw/arm
-trace-events-subdirs += hw/ide
 trace-events-subdirs += ui
 trace-events-subdirs += net
 trace-events-subdirs += target/arm

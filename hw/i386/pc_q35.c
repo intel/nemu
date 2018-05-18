@@ -44,14 +44,9 @@
 #include "hw/i386/amd_iommu.h"
 #include "hw/i386/intel_iommu.h"
 #include "hw/smbios/smbios.h"
-#include "hw/ide/pci.h"
-#include "hw/ide/ahci.h"
 #include "qapi/error.h"
 #include "qemu/error-report.h"
 #include "sysemu/numa.h"
-
-/* ICH9 AHCI has 6 ports */
-#define MAX_SATA_PORTS     6
 
 /* PC hardware initialisation */
 static void pc_q35_init(MachineState *machine)
@@ -63,7 +58,6 @@ static void pc_q35_init(MachineState *machine)
     PCIBus *host_bus;
     PCIDevice *lpc;
     DeviceState *lpc_dev;
-    BusState *idebus[MAX_SATA_PORTS];
     ISADevice *rtc_state;
     MemoryRegion *system_io = get_system_io();
     MemoryRegion *pci_memory;
@@ -74,9 +68,7 @@ static void pc_q35_init(MachineState *machine)
     qemu_irq *i8259;
     int i;
     ICH9LPCState *ich9_lpc;
-    PCIDevice *ahci;
     ram_addr_t lowmem;
-    DriveInfo *hd[MAX_SATA_PORTS];
     MachineClass *mc = MACHINE_GET_CLASS(machine);
 
     /* Check whether RAM fits below 4G (leaving 1/2 GByte for IO memory
@@ -222,21 +214,6 @@ static void pc_q35_init(MachineState *machine)
 
     /* connect pm stuff to lpc */
     ich9_lpc_pm_init(lpc, false);
-
-    if (pcms->sata) {
-        /* ahci and SATA device, for q35 1 ahci controller is built-in */
-        ahci = pci_create_simple_multifunction(host_bus,
-                                               PCI_DEVFN(ICH9_SATA1_DEV,
-                                                         ICH9_SATA1_FUNC),
-                                               true, "ich9-ahci");
-        idebus[0] = qdev_get_child_bus(&ahci->qdev, "ide.0");
-        idebus[1] = qdev_get_child_bus(&ahci->qdev, "ide.1");
-        g_assert(MAX_SATA_PORTS == ahci_get_num_ports(ahci));
-        ide_drive_get(hd, ahci_get_num_ports(ahci));
-        ahci_ide_create_devs(ahci, hd);
-    } else {
-        idebus[0] = idebus[1] = NULL;
-    }
 
     pc_cmos_init(pcms, rtc_state);
 

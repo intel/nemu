@@ -198,41 +198,14 @@ static void pic_irq_request(void *opaque, int irq, int level)
 }
 
 /* PC cmos mappings */
-
 #define REG_EQUIPMENT_BYTE          0x14
 
-int cmos_get_fd_drive_type(FloppyDriveType fd0)
-{
-    int val;
-
-    switch (fd0) {
-    case FLOPPY_DRIVE_TYPE_144:
-        /* 1.44 Mb 3"5 drive */
-        val = 4;
-        break;
-    case FLOPPY_DRIVE_TYPE_288:
-        /* 2.88 Mb 3"5 drive */
-        val = 5;
-        break;
-    case FLOPPY_DRIVE_TYPE_120:
-        /* 1.2 Mb 5"5 drive */
-        val = 2;
-        break;
-    case FLOPPY_DRIVE_TYPE_NONE:
-    default:
-        val = 0;
-        break;
-    }
-    return val;
-}
 
 /* convert boot_device letter to something recognizable by the bios */
 static int boot_device2nibble(char boot_device)
 {
     switch(boot_device) {
     case 'a':
-    case 'b':
-        return 0x01; /* floppy boot */
     case 'c':
         return 0x02; /* hard drive boot */
     case 'd':
@@ -1722,20 +1695,6 @@ static void pc_machine_set_smbus(Object *obj, bool value, Error **errp)
     pcms->smbus = value;
 }
 
-static bool pc_machine_get_sata(Object *obj, Error **errp)
-{
-    PCMachineState *pcms = PC_MACHINE(obj);
-
-    return pcms->sata;
-}
-
-static void pc_machine_set_sata(Object *obj, bool value, Error **errp)
-{
-    PCMachineState *pcms = PC_MACHINE(obj);
-
-    pcms->sata = value;
-}
-
 static bool pc_machine_get_pit(Object *obj, Error **errp)
 {
     PCMachineState *pcms = PC_MACHINE(obj);
@@ -1760,7 +1719,6 @@ static void pc_machine_initfn(Object *obj)
     /* acpi build is enabled by default if machine supports it */
     pcms->acpi_build_enabled = PC_MACHINE_GET_CLASS(pcms)->has_acpi_build;
     pcms->smbus = true;
-    pcms->sata = true;
     pcms->pit = true;
 }
 
@@ -1910,9 +1868,6 @@ static void pc_machine_class_init(ObjectClass *oc, void *data)
 
     object_class_property_add_bool(oc, PC_MACHINE_SMBUS,
         pc_machine_get_smbus, pc_machine_set_smbus, &error_abort);
-
-    object_class_property_add_bool(oc, PC_MACHINE_SATA,
-        pc_machine_get_sata, pc_machine_set_sata, &error_abort);
 
     object_class_property_add_bool(oc, PC_MACHINE_PIT,
         pc_machine_get_pit, pc_machine_set_pit, &error_abort);

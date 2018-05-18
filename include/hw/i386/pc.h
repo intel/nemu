@@ -48,7 +48,6 @@ struct PCMachineState {
 
     bool acpi_build_enabled;
     bool smbus;
-    bool sata;
     bool pit;
 
     /* RAM information (sizes, addresses, configuration): */
@@ -73,7 +72,6 @@ struct PCMachineState {
 #define PC_MACHINE_MAX_RAM_BELOW_4G "max-ram-below-4g"
 #define PC_MACHINE_NVDIMM           "nvdimm"
 #define PC_MACHINE_SMBUS            "smbus"
-#define PC_MACHINE_SATA             "sata"
 #define PC_MACHINE_PIT              "pit"
 
 /**
@@ -213,9 +211,6 @@ void pc_pci_device_init(PCIBus *pci_bus);
 typedef void (*cpu_set_smm_t)(int smm, void *arg);
 
 void ioapic_init_gsi(GSIState *gsi_state, const char *parent_name);
-
-ISADevice *pc_find_fdc0(void);
-int cmos_get_fd_drive_type(FloppyDriveType fd0);
 
 #define FW_CFG_IO_BASE     0x510
 

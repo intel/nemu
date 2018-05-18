@@ -33,7 +33,6 @@
 #include "hw/pci/pci_ids.h"
 #include "net/net.h"
 #include "hw/boards.h"
-#include "hw/ide.h"
 #include "sysemu/kvm.h"
 #include "hw/kvm/clock.h"
 #include "sysemu/sysemu.h"
@@ -782,10 +781,6 @@ DEFINE_I440FX_MACHINE(v0_12, "pc-0.12", pc_compat_0_13,
             .property = "rombar",\
             .value    = stringify(0),\
         },{\
-            .driver   = "ide-drive",\
-            .property = "ver",\
-            .value    = "0.11",\
-        },{\
             .driver   = "scsi-disk",\
             .property = "ver",\
             .value    = "0.11",\
@@ -816,10 +811,6 @@ DEFINE_I440FX_MACHINE(v0_11, "pc-0.11", pc_compat_0_13,
         .driver   = "virtio-net-pci",\
         .property = "vectors",\
         .value    = stringify(0),\
-    },{\
-        .driver   = "ide-drive",\
-        .property = "ver",\
-        .value    = "0.10",\
     },{\
         .driver   = "scsi-disk",\
         .property = "ver",\

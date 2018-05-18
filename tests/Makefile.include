@@ -202,7 +202,6 @@ gcov-files-virtio-y += $(gcov-files-virtioserial-y)
 check-qtest-pci-y += $(check-qtest-virtio-y)
 gcov-files-pci-y += $(gcov-files-virtio-y) hw/virtio/virtio-pci.c
 
-check-qtest-x86_64-y += tests/ahci-test$(EXESUF)
 check-qtest-x86_64-y += tests/hd-geo-test$(EXESUF)
 gcov-files-x86_64-y += hw/block/hd-geometry.c
 check-qtest-x86_64-y += tests/boot-order-test$(EXESUF)
@@ -570,7 +569,6 @@ tests/device-introspect-test$(EXESUF): tests/device-introspect-test.o
 tests/rtc-test$(EXESUF): tests/rtc-test.o
 tests/m48t59-test$(EXESUF): tests/m48t59-test.o
 tests/prom-env-test$(EXESUF): tests/prom-env-test.o $(libqos-obj-y)
-tests/ahci-test$(EXESUF): tests/ahci-test.o $(libqos-pc-obj-y)
 tests/hd-geo-test$(EXESUF): tests/hd-geo-test.o
 tests/boot-order-test$(EXESUF): tests/boot-order-test.o $(libqos-obj-y)
 tests/bios-tables-test$(EXESUF): tests/bios-tables-test.o \
