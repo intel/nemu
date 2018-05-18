@@ -36,3 +36,4 @@
 #undef CONFIG_WHPX
 #undef __powerpc64__
 #undef __s390x__
+#undef CONFIG_VDE

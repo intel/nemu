@@ -938,9 +938,6 @@ static int (* const net_client_init_fun[NET_CLIENT_DRIVER__MAX])(
 #endif
         [NET_CLIENT_DRIVER_TAP]       = net_init_tap,
         [NET_CLIENT_DRIVER_SOCKET]    = net_init_socket,
-#ifdef CONFIG_VDE
-        [NET_CLIENT_DRIVER_VDE]       = net_init_vde,
-#endif
 #ifdef CONFIG_NETMAP
         [NET_CLIENT_DRIVER_NETMAP]    = net_init_netmap,
 #endif
@@ -1007,10 +1004,6 @@ static int net_client_init1(const void *object, bool is_netdev, Error **errp)
             legacy.type = NET_CLIENT_DRIVER_SOCKET;
             legacy.u.socket = opts->u.socket;
             break;
-        case NET_LEGACY_OPTIONS_TYPE_VDE:
-            legacy.type = NET_CLIENT_DRIVER_VDE;
-            legacy.u.vde = opts->u.vde;
-            break;
         case NET_LEGACY_OPTIONS_TYPE_BRIDGE:
             legacy.type = NET_CLIENT_DRIVER_BRIDGE;
             legacy.u.bridge = opts->u.bridge;
@@ -1069,9 +1062,6 @@ static void show_netdevs(void)
 #endif
 #ifdef CONFIG_L2TPV3
         "l2tpv3",
-#endif
-#ifdef CONFIG_VDE
-        "vde",
 #endif
 #ifdef CONFIG_NET_BRIDGE
         "bridge",

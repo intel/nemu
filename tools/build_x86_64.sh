@@ -20,7 +20,6 @@ $SRCDIR/configure \
  --disable-tcmalloc \
  --disable-tools \
  --disable-tpm \
- --disable-vde \
  --disable-virtfs \
  --disable-vxhs \
  --enable-attr \

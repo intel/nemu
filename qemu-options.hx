@@ -1911,13 +1911,6 @@ DEF("netdev", HAS_ARG, QEMU_OPTION_netdev,
     "-netdev socket,id=str[,fd=h][,udp=host:port][,localaddr=host:port]\n"
     "                configure a network backend to connect to another network\n"
     "                using an UDP tunnel\n"
-#ifdef CONFIG_VDE
-    "-netdev vde,id=str[,sock=socketpath][,port=n][,group=groupname][,mode=octalmode]\n"
-    "                configure a network backend to connect to port 'n' of a vde switch\n"
-    "                running on host and listening for incoming connections on 'socketpath'.\n"
-    "                Use group 'groupname' and mode 'octalmode' to change default\n"
-    "                ownership and permissions for communication port.\n"
-#endif
 #ifdef CONFIG_NETMAP
     "-netdev netmap,id=str,ifname=name[,devname=nmname]\n"
     "                attach to the existing netmap-enabled network interface 'name', or to a\n"
@@ -1937,9 +1930,6 @@ DEF("nic", HAS_ARG, QEMU_OPTION_nic,
 #endif
 #ifdef __linux__
     "l2tpv3|"
-#endif
-#ifdef CONFIG_VDE
-    "vde|"
 #endif
 #ifdef CONFIG_NETMAP
     "netmap|"
@@ -1964,9 +1954,6 @@ DEF("net", HAS_ARG, QEMU_OPTION_net,
 #endif
     "tap|"
     "bridge|"
-#ifdef CONFIG_VDE
-    "vde|"
-#endif
 #ifdef CONFIG_NETMAP
     "netmap|"
 #endif

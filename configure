@@ -249,7 +249,6 @@ netmap="no"
 virtfs=""
 mpath=""
 sparse="no"
-vde=""
 xkbcommon=""
 linux_aio=""
 cap_ng=""
@@ -656,10 +655,6 @@ for opt do
   --disable-strip) strip_opt="no"
   ;;
   --disable-slirp) slirp="no"
-  ;;
-  --disable-vde) vde="no"
-  ;;
-  --enable-vde) vde="yes"
   ;;
   --disable-netmap) netmap="no"
   ;;
@@ -3655,10 +3650,6 @@ fi
 if test "$slirp" = "yes" ; then
   echo "CONFIG_SLIRP=y" >> $config_host_mak
   echo "CONFIG_SMBD_COMMAND=\"$smbd\"" >> $config_host_mak
-fi
-if test "$vde" = "yes" ; then
-  echo "CONFIG_VDE=y" >> $config_host_mak
-  echo "VDE_LIBS=$vde_libs" >> $config_host_mak
 fi
 if test "$netmap" = "yes" ; then
   echo "CONFIG_NETMAP=y" >> $config_host_mak
