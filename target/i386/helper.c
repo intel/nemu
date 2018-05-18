@@ -1035,11 +1035,6 @@ void do_cpu_init(X86CPU *cpu)
     apic_init_reset(cpu->apic_state);
 }
 
-void do_cpu_sipi(X86CPU *cpu)
-{
-    apic_sipi(cpu->apic_state);
-}
-
 /* Frob eflags into and out of the CPU temporary format.  */
 
 void x86_cpu_exec_enter(CPUState *cs)

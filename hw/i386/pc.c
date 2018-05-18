@@ -150,46 +150,15 @@ uint64_t cpu_get_tsc(CPUX86State *env)
     return cpu_get_ticks();
 }
 
-/* IRQ handling */
-int cpu_get_pic_interrupt(CPUX86State *env)
-{
-    X86CPU *cpu = x86_env_get_cpu(env);
-    int intno;
-
-    if (!kvm_irqchip_in_kernel()) {
-        intno = apic_get_interrupt(cpu->apic_state);
-        if (intno >= 0) {
-            return intno;
-        }
-        /* read the irq from the PIC */
-        if (!apic_accept_pic_intr(cpu->apic_state)) {
-            return -1;
-        }
-    }
-
-    intno = pic_read_irq(isa_pic);
-    return intno;
-}
-
 static void pic_irq_request(void *opaque, int irq, int level)
 {
     CPUState *cs = first_cpu;
-    X86CPU *cpu = X86_CPU(cs);
 
     DPRINTF("pic_irqs: %s irq %d\n", level? "raise" : "lower", irq);
-    if (cpu->apic_state && !kvm_irqchip_in_kernel()) {
-        CPU_FOREACH(cs) {
-            cpu = X86_CPU(cs);
-            if (apic_accept_pic_intr(cpu->apic_state)) {
-                apic_deliver_pic_intr(cpu->apic_state, level);
-            }
-        }
+    if (level) {
+        cpu_interrupt(cs, CPU_INTERRUPT_HARD);
     } else {
-        if (level) {
-            cpu_interrupt(cs, CPU_INTERRUPT_HARD);
-        } else {
-            cpu_reset_interrupt(cs, CPU_INTERRUPT_HARD);
-        }
+        cpu_reset_interrupt(cs, CPU_INTERRUPT_HARD);
     }
 }
 
@@ -1148,11 +1117,7 @@ void ioapic_init_gsi(GSIState *gsi_state, const char *parent_name)
     SysBusDevice *d;
     unsigned int i;
 
-    if (kvm_ioapic_in_kernel()) {
-        dev = qdev_create(NULL, "kvm-ioapic");
-    } else {
-        dev = qdev_create(NULL, "ioapic");
-    }
+    dev = qdev_create(NULL, "kvm-ioapic");
     if (parent_name) {
         object_property_add_child(object_resolve_path(parent_name, NULL),
                                   "ioapic", OBJECT(dev), NULL);

@@ -3700,13 +3700,7 @@ static void mce_init(X86CPU *cpu)
 
 APICCommonClass *apic_get_class(void)
 {
-    const char *apic_type = "apic";
-
-    if (kvm_apic_in_kernel()) {
-        apic_type = "kvm-apic";
-    }
-
-    return APIC_COMMON_CLASS(object_class_by_name(apic_type));
+    return APIC_COMMON_CLASS(object_class_by_name("kvm-apic"));
 }
 
 static void x86_cpu_apic_create(X86CPU *cpu, Error **errp)

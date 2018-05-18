@@ -1404,7 +1404,6 @@ void x86_cpu_exec_exit(CPUState *cpu);
 void x86_cpu_list(FILE *f, fprintf_function cpu_fprintf);
 int cpu_x86_support_mca_broadcast(CPUX86State *env);
 
-int cpu_get_pic_interrupt(CPUX86State *s);
 /* MSDOS compatibility mode FPU exception support */
 void cpu_set_ferr(CPUX86State *s);
 
@@ -1649,7 +1648,6 @@ static inline void cpu_get_tb_cpu_state(CPUX86State *env, target_ulong *pc,
 }
 
 void do_cpu_init(X86CPU *cpu);
-void do_cpu_sipi(X86CPU *cpu);
 
 #define MCE_INJECT_BROADCAST    1
 #define MCE_INJECT_UNCOND_AO    2
