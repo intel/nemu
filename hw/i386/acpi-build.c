@@ -38,7 +38,6 @@
 #include "hw/acpi/bios-linker-loader.h"
 #include "hw/loader.h"
 #include "hw/isa/isa.h"
-#include "hw/block/fdc.h"
 #include "hw/acpi/memory_hotplug.h"
 #include "sysemu/tpm.h"
 #include "hw/acpi/tpm.h"
@@ -1018,34 +1017,6 @@ static void build_hpet_aml(Aml *table)
     aml_append(table, scope);
 }
 
-static Aml *build_fdc_device_aml(ISADevice *fdc)
-{
-    Aml *dev;
-    Aml *crs;
-
-#define ACPI_FDE_MAX_FD 4
-    uint32_t fde_buf[5] = {
-        0, 0, 0, 0,     /* presence of floppy drives #0 - #3 */
-        cpu_to_le32(2)  /* tape presence (2 == never present) */
-    };
-
-    dev = aml_device("FDC0");
-    aml_append(dev, aml_name_decl("_HID", aml_eisaid("PNP0700")));
-
-    crs = aml_resource_template();
-    aml_append(crs, aml_io(AML_DECODE16, 0x03F2, 0x03F2, 0x00, 0x04));
-    aml_append(crs, aml_io(AML_DECODE16, 0x03F7, 0x03F7, 0x00, 0x01));
-    aml_append(crs, aml_irq_no_flags(6));
-    aml_append(crs,
-        aml_dma(AML_COMPATIBILITY, AML_NOTBUSMASTER, AML_TRANSFER8, 2));
-    aml_append(dev, aml_name_decl("_CRS", crs));
-
-    aml_append(dev, aml_name_decl("_FDE",
-               aml_buffer(sizeof(fde_buf), (uint8_t *)fde_buf)));
-
-    return dev;
-}
-
 static Aml *build_rtc_device_aml(void)
 {
     Aml *dev;
@@ -1187,16 +1158,11 @@ static Aml *build_com_device_aml(uint8_t uid)
 
 static void build_isa_devices_aml(Aml *table)
 {
-    ISADevice *fdc = pc_find_fdc0();
-
     Aml *scope = aml_scope("_SB.PCI0.ISA");
 
     aml_append(scope, build_rtc_device_aml());
     aml_append(scope, build_kbd_device_aml());
     aml_append(scope, build_mouse_device_aml());
-    if (fdc) {
-        aml_append(scope, build_fdc_device_aml(fdc));
-    }
     aml_append(scope, build_lpt_device_aml());
     aml_append(scope, build_com_device_aml(1));
     aml_append(scope, build_com_device_aml(2));

@@ -29,8 +29,6 @@
 #include "hw/i386/apic.h"
 #include "hw/i386/topology.h"
 #include "sysemu/cpus.h"
-#include "hw/block/fdc.h"
-#include "hw/ide.h"
 #include "hw/pci/pci.h"
 #include "hw/pci/pci_bus.h"
 #include "hw/nvram/fw_cfg.h"
@@ -228,21 +226,6 @@ int cmos_get_fd_drive_type(FloppyDriveType fd0)
     return val;
 }
 
-static void cmos_init_hd(ISADevice *s, int type_ofs, int info_ofs,
-                         int16_t cylinders, int8_t heads, int8_t sectors)
-{
-    rtc_set_memory(s, type_ofs, 47);
-    rtc_set_memory(s, info_ofs, cylinders);
-    rtc_set_memory(s, info_ofs + 1, cylinders >> 8);
-    rtc_set_memory(s, info_ofs + 2, heads);
-    rtc_set_memory(s, info_ofs + 3, 0xff);
-    rtc_set_memory(s, info_ofs + 4, 0xff);
-    rtc_set_memory(s, info_ofs + 5, 0xc0 | ((heads > 8) << 3));
-    rtc_set_memory(s, info_ofs + 6, cylinders);
-    rtc_set_memory(s, info_ofs + 7, cylinders >> 8);
-    rtc_set_memory(s, info_ofs + 8, sectors);
-}
-
 /* convert boot_device letter to something recognizable by the bios */
 static int boot_device2nibble(char boot_device)
 {
@@ -288,151 +271,10 @@ static void pc_boot_set(void *opaque, const char *boot_device, Error **errp)
     set_boot_dev(opaque, boot_device, errp);
 }
 
-static void pc_cmos_init_floppy(ISADevice *rtc_state, ISADevice *floppy)
-{
-    int val, nb;
-    FloppyDriveType fd_type[2] = { FLOPPY_DRIVE_TYPE_NONE,
-                                   FLOPPY_DRIVE_TYPE_NONE };
-
-    val = (cmos_get_fd_drive_type(fd_type[0]) << 4) |
-        cmos_get_fd_drive_type(fd_type[1]);
-    rtc_set_memory(rtc_state, 0x10, val);
-
-    val = rtc_get_memory(rtc_state, REG_EQUIPMENT_BYTE);
-    nb = 0;
-    if (fd_type[0] != FLOPPY_DRIVE_TYPE_NONE) {
-        nb++;
-    }
-    if (fd_type[1] != FLOPPY_DRIVE_TYPE_NONE) {
-        nb++;
-    }
-    switch (nb) {
-    case 0:
-        break;
-    case 1:
-        val |= 0x01; /* 1 drive, ready for boot */
-        break;
-    case 2:
-        val |= 0x41; /* 2 drives, ready for boot */
-        break;
-    }
-    rtc_set_memory(rtc_state, REG_EQUIPMENT_BYTE, val);
-}
-
-typedef struct pc_cmos_init_late_arg {
-    ISADevice *rtc_state;
-    BusState *idebus[2];
-} pc_cmos_init_late_arg;
-
-typedef struct check_fdc_state {
-    ISADevice *floppy;
-    bool multiple;
-} CheckFdcState;
-
-static int check_fdc(Object *obj, void *opaque)
-{
-    CheckFdcState *state = opaque;
-    Object *fdc;
-    uint32_t iobase;
-    Error *local_err = NULL;
-
-    fdc = object_dynamic_cast(obj, TYPE_ISA_FDC);
-    if (!fdc) {
-        return 0;
-    }
-
-    iobase = object_property_get_uint(obj, "iobase", &local_err);
-    if (local_err || iobase != 0x3f0) {
-        error_free(local_err);
-        return 0;
-    }
-
-    if (state->floppy) {
-        state->multiple = true;
-    } else {
-        state->floppy = ISA_DEVICE(obj);
-    }
-    return 0;
-}
-
-static const char * const fdc_container_path[] = {
-    "/unattached", "/peripheral", "/peripheral-anon"
-};
-
-/*
- * Locate the FDC at IO address 0x3f0, in order to configure the CMOS registers
- * and ACPI objects.
- */
-ISADevice *pc_find_fdc0(void)
-{
-    int i;
-    Object *container;
-    CheckFdcState state = { 0 };
-
-    for (i = 0; i < ARRAY_SIZE(fdc_container_path); i++) {
-        container = container_get(qdev_get_machine(), fdc_container_path[i]);
-        object_child_foreach(container, check_fdc, &state);
-    }
-
-    if (state.multiple) {
-        warn_report("multiple floppy disk controllers with "
-                    "iobase=0x3f0 have been found");
-        error_printf("the one being picked for CMOS setup might not reflect "
-                     "your intent");
-    }
-
-    return state.floppy;
-}
-
-static void pc_cmos_init_late(void *opaque)
-{
-    pc_cmos_init_late_arg *arg = opaque;
-    ISADevice *s = arg->rtc_state;
-    int16_t cylinders;
-    int8_t heads, sectors;
-    int val;
-    int i, trans;
-
-    val = 0;
-    if (arg->idebus[0] && ide_get_geometry(arg->idebus[0], 0,
-                                           &cylinders, &heads, &sectors) >= 0) {
-        cmos_init_hd(s, 0x19, 0x1b, cylinders, heads, sectors);
-        val |= 0xf0;
-    }
-    if (arg->idebus[0] && ide_get_geometry(arg->idebus[0], 1,
-                                           &cylinders, &heads, &sectors) >= 0) {
-        cmos_init_hd(s, 0x1a, 0x24, cylinders, heads, sectors);
-        val |= 0x0f;
-    }
-    rtc_set_memory(s, 0x12, val);
-
-    val = 0;
-    for (i = 0; i < 4; i++) {
-        /* NOTE: ide_get_geometry() returns the physical
-           geometry.  It is always such that: 1 <= sects <= 63, 1
-           <= heads <= 16, 1 <= cylinders <= 16383. The BIOS
-           geometry can be different if a translation is done. */
-        if (arg->idebus[i / 2] &&
-            ide_get_geometry(arg->idebus[i / 2], i % 2,
-                             &cylinders, &heads, &sectors) >= 0) {
-            trans = ide_get_bios_chs_trans(arg->idebus[i / 2], i % 2) - 1;
-            assert((trans & ~3) == 0);
-            val |= trans << (i * 2);
-        }
-    }
-    rtc_set_memory(s, 0x39, val);
-
-    pc_cmos_init_floppy(s, pc_find_fdc0());
-
-    qemu_unregister_reset(pc_cmos_init_late, opaque);
-}
-
 void pc_cmos_init(PCMachineState *pcms,
-                  BusState *idebus0, BusState *idebus1,
                   ISADevice *s)
 {
     int val;
-    static pc_cmos_init_late_arg arg;
 
     /* various important CMOS locations needed by PC/Bochs bios */
 
@@ -483,12 +325,6 @@ void pc_cmos_init(PCMachineState *pcms,
     val |= 0x02; /* FPU is there */
     val |= 0x04; /* PS/2 mouse installed */
     rtc_set_memory(s, REG_EQUIPMENT_BYTE, val);
-
-    /* hard drives and FDC */
-    arg.rtc_state = s;
-    arg.idebus[0] = idebus0;
-    arg.idebus[1] = idebus1;
-    qemu_register_reset(pc_cmos_init_late, &arg);
 }
 
 int e820_add_entry(uint64_t address, uint64_t length, uint32_t type)
@@ -2047,7 +1883,7 @@ static void pc_machine_class_init(ObjectClass *oc, void *data)
     mc->has_hotpluggable_cpus = true;
     mc->default_boot_order = "cad";
     mc->hot_add_cpu = pc_hot_add_cpu;
-    mc->block_default_type = IF_IDE;
+    mc->block_default_type = IF_VIRTIO;
     mc->max_cpus = 255;
     mc->reset = pc_machine_reset;
     hc->pre_plug = pc_machine_device_pre_plug_cb;

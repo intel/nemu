@@ -238,7 +238,7 @@ static void pc_q35_init(MachineState *machine)
         idebus[0] = idebus[1] = NULL;
     }
 
-    pc_cmos_init(pcms, idebus[0], idebus[1], rtc_state);
+    pc_cmos_init(pcms, rtc_state);
 
     if (pcms->acpi_nvdimm_state.is_enabled) {
         nvdimm_init_acpi_state(&pcms->acpi_nvdimm_state, system_io,

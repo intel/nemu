@@ -50,8 +50,6 @@
 #include "kvm_i386.h"
 #include "sysemu/numa.h"
 
-#define MAX_IDE_BUS 2
-
 /* PC hardware initialisation */
 static void pc_init1(MachineState *machine,
                      const char *host_type, const char *pci_type)
@@ -67,8 +65,6 @@ static void pc_init1(MachineState *machine,
     int piix3_devfn = -1;
     qemu_irq *i8259;
     GSIState *gsi_state;
-    DriveInfo *hd[MAX_IDE_BUS * MAX_IDE_DEVS];
-    BusState *idebus[MAX_IDE_BUS];
     ISADevice *rtc_state;
     MemoryRegion *ram_memory;
     MemoryRegion *pci_memory;
@@ -209,12 +205,7 @@ static void pc_init1(MachineState *machine,
     pc_basic_device_init(isa_bus, pcms->gsi, &rtc_state, true,
                          pcms->pit, 0x4);
 
-
-    idebus[0] = NULL;
-    idebus[1] = NULL;
-    ide_drive_get(hd, ARRAY_SIZE(hd));
-
-    pc_cmos_init(pcms, idebus[0], idebus[1], rtc_state);
+    pc_cmos_init(pcms, rtc_state);
 
     if (pcmc->pci_enabled && acpi_enabled) {
         DeviceState *piix4_pm;
@@ -651,10 +642,6 @@ DEFINE_I440FX_MACHINE(v1_1, "pc-1.1", pc_compat_1_2,
 #define PC_COMPAT_1_0 \
         PC_CPU_MODEL_IDS("1.0") \
         {\
-            .driver   = TYPE_ISA_FDC,\
-            .property = "check_media_rate",\
-            .value    = "off",\
-        }, {\
             .driver   = "virtio-balloon-pci",\
             .property = "class",\
             .value    = stringify(PCI_CLASS_MEMORY_RAM),\

@@ -5,7 +5,6 @@
 #include "exec/memory.h"
 #include "hw/boards.h"
 #include "hw/isa/isa.h"
-#include "hw/block/fdc.h"
 #include "net/net.h"
 #include "hw/i386/ioapic.h"
 
@@ -208,7 +207,6 @@ void pc_basic_device_init(ISABus *isa_bus, qemu_irq *gsi,
                           bool has_pit,
                           uint32_t hpet_irqs);
 void pc_cmos_init(PCMachineState *pcms,
-                  BusState *ide0, BusState *ide1,
                   ISADevice *s);
 void pc_pci_device_init(PCIBus *pci_bus);
 
