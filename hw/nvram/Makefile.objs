@@ -1,2 +1,1 @@
-common-obj-y += eeprom93xx.o
 common-obj-y += fw_cfg.o
