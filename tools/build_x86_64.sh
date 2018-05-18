@@ -6,8 +6,6 @@ pushd $HOME/build-x86_64
 make distclean || true
 $SRCDIR/configure \
  --disable-fdt \
- --disable-guest-agent \
- --disable-guest-agent-msi \
  --disable-libiscsi \
  --disable-libnfs \
  --disable-libssh2 \

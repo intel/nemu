@@ -6,8 +6,6 @@ pushd $HOME/build-aarch64
 make distclean || true
 $SRCDIR/configure \
  --cross-prefix=aarch64-linux-gnu- \
- --disable-guest-agent \
- --disable-guest-agent-msi \
  --disable-libiscsi \
  --disable-libnfs \
  --disable-libssh2 \

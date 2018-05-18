@@ -306,10 +306,6 @@ avx2_opt="no"
 zlib="yes"
 lzo=""
 snappy=""
-guest_agent=""
-guest_agent_with_vss="no"
-guest_agent_ntddscsi="no"
-guest_agent_msi=""
 vss_win32_sdk=""
 win_sdk="no"
 want_tools="yes"
@@ -776,14 +772,6 @@ for opt do
   ;;
   --enable-snappy) snappy="yes"
   ;;
-  --enable-guest-agent) guest_agent="yes"
-  ;;
-  --disable-guest-agent) guest_agent="no"
-  ;;
-  --enable-guest-agent-msi) guest_agent_msi="yes"
-  ;;
-  --disable-guest-agent-msi) guest_agent_msi="no"
-  ;;
   --with-vss-sdk) vss_win32_sdk=""
   ;;
   --with-vss-sdk=*) vss_win32_sdk="$optarg"
@@ -988,8 +976,6 @@ Optional features, enabled with --enable-FEATURE and
 disabled with --disable-FEATURE, default is enabled if available:
 
   system          all system emulation targets
-  guest-agent     build the QEMU Guest Agent
-  guest-agent-msi build guest agent Windows MSI installation package
   pie             Position Independent Executables
   modules         modules support
   debug-info      debugging information
@@ -3470,19 +3456,6 @@ if test "$softmmu" = yes ; then
   fi
 fi
 
-# Probe for guest agent support/options
-
-if [ "$guest_agent" != "no" ]; then
-  if [ "$linux" = "yes" ] ; then
-      tools="qemu-ga $tools"
-      guest_agent=yes
-  elif [ "$guest_agent" != yes ]; then
-      guest_agent=no
-  else
-      error_exit "Guest agent is not supported on this platform"
-  fi
-fi
-
 # Mac OS X ships with a broken assembler
 roms=
 if test \( "$cpu" = "x86_64" \) -a "$softmmu" = yes ; then
@@ -3615,10 +3588,6 @@ echo "rbd support       $rbd"
 echo "xfsctl support    $xfs"
 echo "libiscsi support  $libiscsi"
 echo "libnfs support    $libnfs"
-echo "build guest agent $guest_agent"
-echo "QGA VSS support   $guest_agent_with_vss"
-echo "QGA w32 disk info $guest_agent_ntddscsi"
-echo "QGA MSI support   $guest_agent_msi"
 echo "seccomp support   $seccomp"
 echo "coroutine backend $coroutine"
 echo "coroutine pool    $coroutine_pool"
