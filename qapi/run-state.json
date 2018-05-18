@@ -231,66 +231,6 @@
 ##
 { 'event': 'WAKEUP' }
 
-##
-# @WATCHDOG:
-#
-# Emitted when the watchdog device's timer is expired
-#
-# @action: action that has been taken
-#
-# Note: If action is "reset", "shutdown", or "pause" the WATCHDOG event is
-# followed respectively by the RESET, SHUTDOWN, or STOP events
-#
-# Note: This event is rate-limited.
-#
-# Since: 0.13.0
-#
-# Example:
-#
-# <- { "event": "WATCHDOG",
-#      "data": { "action": "reset" },
-#      "timestamp": { "seconds": 1267061043, "microseconds": 959568 } }
-#
-##
-{ 'event': 'WATCHDOG',
-  'data': { 'action': 'WatchdogAction' } }
-
-##
-# @WatchdogAction:
-#
-# An enumeration of the actions taken when the watchdog device's timer is
-# expired
-#
-# @reset: system resets
-#
-# @shutdown: system shutdown, note that it is similar to @powerdown, which
-#            tries to set to system status and notify guest
-#
-# @poweroff: system poweroff, the emulator program exits
-#
-# @pause: system pauses, similar to @stop
-#
-# @debug: system enters debug state
-#
-# @none: nothing is done
-#
-# @inject-nmi: a non-maskable interrupt is injected into the first VCPU (all
-#              VCPUS on x86) (since 2.4)
-#
-# Since: 2.1
-##
-{ 'enum': 'WatchdogAction',
-  'data': [ 'reset', 'shutdown', 'poweroff', 'pause', 'debug', 'none',
-            'inject-nmi' ] }
-
-##
-# @watchdog-set-action:
-#
-# Set watchdog action
-#
-# Since: 2.11
-##
-{ 'command': 'watchdog-set-action', 'data' : {'action': 'WatchdogAction'} }
 
 ##
 # @GUEST_PANICKED:

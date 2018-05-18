@@ -1,1 +1,0 @@
-common-obj-y += watchdog.o

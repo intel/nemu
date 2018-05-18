@@ -3342,47 +3342,6 @@ Enable @option{driftfix} (i386 targets only) if you experience time drift proble
 specifically with Windows' ACPI HAL. This option will try to figure out how
 many timer interrupts were not processed by the Windows guest and will
 re-inject them.
-ETEXI
-
-DEF("watchdog", HAS_ARG, QEMU_OPTION_watchdog, \
-    "-watchdog model\n" \
-    "                enable virtual hardware watchdog [default=none]\n",
-    QEMU_ARCH_ALL)
-STEXI
-@item -watchdog @var{model}
-@findex -watchdog
-Create a virtual hardware watchdog device.  Once enabled (by a guest
-action), the watchdog must be periodically polled by an agent inside
-the guest or else the guest will be restarted. Choose a model for
-which your guest has drivers.
-
-The @var{model} is the model of hardware watchdog to emulate. Use
-@code{-watchdog help} to list available hardware models. Only one
-watchdog can be enabled for a guest.
-
-The following models may be available:
-@table @option
-@item ib700
-iBASE 700 is a very simple ISA watchdog with a single timer.
-@item i6300esb
-Intel 6300ESB I/O controller hub is a much more featureful PCI-based
-dual-timer watchdog.
-@item diag288
-A virtual watchdog for s390x backed by the diagnose 288 hypercall
-(currently KVM only).
-@end table
-ETEXI
-
-DEF("watchdog-action", HAS_ARG, QEMU_OPTION_watchdog_action, \
-    "-watchdog-action reset|shutdown|poweroff|inject-nmi|pause|debug|none\n" \
-    "                action when watchdog fires [default=reset]\n",
-    QEMU_ARCH_ALL)
-STEXI
-@item -watchdog-action @var{action}
-@findex -watchdog-action
-
-The @var{action} controls what QEMU will do when the watchdog timer
-expires.
 The default is
 @code{reset} (forcefully reset the guest).
 Other possible actions are:

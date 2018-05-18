@@ -41,7 +41,6 @@
 #include "sysemu/accel.h"
 #include "hw/isa/isa.h"
 #include "hw/scsi/scsi.h"
-#include "sysemu/watchdog.h"
 #include "hw/smbios/smbios.h"
 #include "hw/acpi/acpi.h"
 #include "hw/qdev.h"
@@ -526,7 +525,6 @@ static const RunStateTransition runstate_transitions_def[] = {
     { RUN_STATE_INMIGRATE, RUN_STATE_RUNNING },
     { RUN_STATE_INMIGRATE, RUN_STATE_SHUTDOWN },
     { RUN_STATE_INMIGRATE, RUN_STATE_SUSPENDED },
-    { RUN_STATE_INMIGRATE, RUN_STATE_WATCHDOG },
     { RUN_STATE_INMIGRATE, RUN_STATE_GUEST_PANICKED },
     { RUN_STATE_INMIGRATE, RUN_STATE_FINISH_MIGRATE },
     { RUN_STATE_INMIGRATE, RUN_STATE_PRELAUNCH },
@@ -574,7 +572,6 @@ static const RunStateTransition runstate_transitions_def[] = {
     { RUN_STATE_RUNNING, RUN_STATE_RESTORE_VM },
     { RUN_STATE_RUNNING, RUN_STATE_SAVE_VM },
     { RUN_STATE_RUNNING, RUN_STATE_SHUTDOWN },
-    { RUN_STATE_RUNNING, RUN_STATE_WATCHDOG },
     { RUN_STATE_RUNNING, RUN_STATE_GUEST_PANICKED },
     { RUN_STATE_RUNNING, RUN_STATE_COLO},
 
@@ -591,10 +588,6 @@ static const RunStateTransition runstate_transitions_def[] = {
     { RUN_STATE_SUSPENDED, RUN_STATE_PRELAUNCH },
     { RUN_STATE_SUSPENDED, RUN_STATE_COLO},
 
-    { RUN_STATE_WATCHDOG, RUN_STATE_RUNNING },
-    { RUN_STATE_WATCHDOG, RUN_STATE_FINISH_MIGRATE },
-    { RUN_STATE_WATCHDOG, RUN_STATE_PRELAUNCH },
-    { RUN_STATE_WATCHDOG, RUN_STATE_COLO},
 
     { RUN_STATE_GUEST_PANICKED, RUN_STATE_RUNNING },
     { RUN_STATE_GUEST_PANICKED, RUN_STATE_FINISH_MIGRATE },
@@ -3039,19 +3032,6 @@ int main(int argc, char **argv, char **envp)
                     default_monitor = 0;
                 }
                 break;
-            case QEMU_OPTION_watchdog:
-                if (watchdog) {
-                    error_report("only one watchdog option may be given");
-                    return 1;
-                }
-                watchdog = optarg;
-                break;
-            case QEMU_OPTION_watchdog_action:
-                if (select_watchdog_action(optarg) == -1) {
-                    error_report("unknown -watchdog-action parameter");
-                    exit(1);
-                }
-                break;
             case QEMU_OPTION_virtiocon:
                 add_device_config(DEV_VIRTCON, optarg);
                 default_virtcon = 0;
@@ -3829,12 +3809,6 @@ int main(int argc, char **argv, char **envp)
         exit(1);
     if (foreach_device_config(DEV_DEBUGCON, debugcon_parse) < 0)
         exit(1);
-
-    if (watchdog) {
-        i = select_watchdog(watchdog);
-        if (i > 0)
-            exit (i == 1 ? 1 : 0);
-    }
 
     qdev_machine_init();
 

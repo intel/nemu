@@ -120,8 +120,6 @@ void netdev_del_completion(ReadLineState *rs, int nb_args, const char *str);
 void ringbuf_write_completion(ReadLineState *rs, int nb_args, const char *str);
 void info_trace_events_completion(ReadLineState *rs, int nb_args, const char *str);
 void trace_event_completion(ReadLineState *rs, int nb_args, const char *str);
-void watchdog_action_completion(ReadLineState *rs, int nb_args,
-                                const char *str);
 void migrate_set_capability_completion(ReadLineState *rs, int nb_args,
                                        const char *str);
 void migrate_set_parameter_completion(ReadLineState *rs, int nb_args,

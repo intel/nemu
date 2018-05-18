@@ -1351,21 +1351,6 @@ Switch link @var{name} on (i.e. up) or off (i.e. down).
 ETEXI
 
     {
-        .name       = "watchdog_action",
-        .args_type  = "action:s",
-        .params     = "[reset|shutdown|poweroff|pause|debug|none]",
-        .help       = "change watchdog action",
-        .cmd        = hmp_watchdog_action,
-        .command_completion = watchdog_action_completion,
-    },
-
-STEXI
-@item watchdog_action
-@findex watchdog_action
-Change watchdog action.
-ETEXI
-
-    {
         .name       = "acl_show",
         .args_type  = "aclname:s",
         .params     = "aclname",

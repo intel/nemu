@@ -28,7 +28,6 @@
 #include "hw/hw.h"
 #include "monitor/qdev.h"
 #include "hw/pci/pci.h"
-#include "sysemu/watchdog.h"
 #include "hw/loader.h"
 #include "exec/gdbstub.h"
 #include "net/net.h"
@@ -547,7 +546,6 @@ static void monitor_qmp_bh_responder(void *opaque)
 static MonitorQAPIEventConf monitor_qapi_event_conf[QAPI_EVENT__MAX] = {
     /* Limit guest-triggerable events to 1 per second */
     [QAPI_EVENT_RTC_CHANGE]        = { 1000 * SCALE_MS },
-    [QAPI_EVENT_WATCHDOG]          = { 1000 * SCALE_MS },
     [QAPI_EVENT_BALLOON_CHANGE]    = { 1000 * SCALE_MS },
     [QAPI_EVENT_QUORUM_REPORT_BAD] = { 1000 * SCALE_MS },
     [QAPI_EVENT_QUORUM_FAILURE]    = { 1000 * SCALE_MS },
@@ -1518,13 +1516,6 @@ static void hmp_gdbserver(Monitor *mon, const QDict *qdict)
     }
 }
 
-static void hmp_watchdog_action(Monitor *mon, const QDict *qdict)
-{
-    const char *action = qdict_get_str(qdict, "action");
-    if (select_watchdog_action(action) == -1) {
-        monitor_printf(mon, "Unknown watchdog action '%s'\n", action);
-    }
-}
 
 static void monitor_printc(Monitor *mon, int c)
 {
@@ -3706,18 +3697,6 @@ void trace_event_completion(ReadLineState *rs, int nb_args, const char *str)
     }
 }
 
-void watchdog_action_completion(ReadLineState *rs, int nb_args, const char *str)
-{
-    int i;
-
-    if (nb_args != 2) {
-        return;
-    }
-    readline_set_completion_index(rs, strlen(str));
-    for (i = 0; i < WATCHDOG_ACTION__MAX; i++) {
-        add_completion_option(rs, str, WatchdogAction_str(i));
-    }
-}
 
 void migrate_set_capability_completion(ReadLineState *rs, int nb_args,
                                        const char *str)

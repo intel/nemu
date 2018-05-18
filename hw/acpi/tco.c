@@ -8,7 +8,6 @@
  */
 #include "qemu/osdep.h"
 #include "qemu-common.h"
-#include "sysemu/watchdog.h"
 #include "hw/i386/ich9.h"
 
 #include "hw/acpi/tco.h"
@@ -74,7 +73,6 @@ static void tco_timer_expired(void *opaque)
         tr->timeouts_no = 0;
 
         if (!lpc->pin_strap.spkr_hi && !(gcs & ICH9_CC_GCS_NO_REBOOT)) {
-            watchdog_perform_action();
             tco_timer_stop(tr);
             return;
         }
