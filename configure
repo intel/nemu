@@ -289,9 +289,7 @@ local_statedir="\${prefix}/var"
 confsuffix="/qemu"
 slirp="yes"
 oss_lib=""
-bsd="no"
 linux="no"
-solaris="no"
 profiler="no"
 softmmu="yes"
 blobs="yes"
@@ -1184,7 +1182,7 @@ fi
 
 if test "$pie" = ""; then
   case "$cpu-$targetos" in
-    i386-Linux|x86_64-Linux|x32-Linux|i386-OpenBSD|x86_64-OpenBSD)
+    x86_64-Linux)
       ;;
     *)
       pie="no"
@@ -1250,33 +1248,6 @@ int main(void)
 EOF
   if ! compile_prog "" "" ; then
     QEMU_CFLAGS="-march=i486 $QEMU_CFLAGS"
-  fi
-fi
-
-#########################################
-# Solaris specific configure tool chain decisions
-
-if test "$solaris" = "yes" ; then
-  if has $install; then
-    :
-  else
-    error_exit "Solaris install program not found. Use --install=/usr/ucb/install or" \
-        "install fileutils from www.blastwave.org using pkg-get -i fileutils" \
-        "to get ginstall which is used by default (which lives in /opt/csw/bin)"
-  fi
-  if test "$(path_of $install)" = "/usr/sbin/install" ; then
-    error_exit "Solaris /usr/sbin/install is not an appropriate install program." \
-        "try ginstall from the GNU fileutils available from www.blastwave.org" \
-        "using pkg-get -i fileutils, or use --install=/usr/ucb/install"
-  fi
-  if has ar; then
-    :
-  else
-    if test -f /usr/ccs/bin/ar ; then
-      error_exit "No path includes ar" \
-          "Add /usr/ccs/bin to your path and rerun configure"
-    fi
-    error_exit "No path includes ar"
   fi
 fi
 
@@ -3388,10 +3359,8 @@ if test "$werror" = "yes"; then
     QEMU_CFLAGS="-Werror $QEMU_CFLAGS"
 fi
 
-if test "$solaris" = "no" ; then
-    if $ld --version 2>/dev/null | grep "GNU ld" >/dev/null 2>/dev/null ; then
-        LDFLAGS="-Wl,--warn-common $LDFLAGS"
-    fi
+if $ld --version 2>/dev/null | grep "GNU ld" >/dev/null 2>/dev/null ; then
+    LDFLAGS="-Wl,--warn-common $LDFLAGS"
 fi
 
 # test if pod2man has --utf8 option
@@ -3414,7 +3383,7 @@ fi
 tools=""
 if test "$want_tools" = "yes" ; then
   tools="qemu-img\$(EXESUF) qemu-io\$(EXESUF) $tools"
-  if [ "$linux" = "yes" -o "$bsd" = "yes" -o "$solaris" = "yes" ] ; then
+  if [ "$linux" = "yes" ] ; then
     tools="qemu-nbd\$(EXESUF) $tools"
   fi
   if [ "$ivshmem" = "yes" ]; then
@@ -3924,11 +3893,6 @@ if test "$seccomp" = "yes"; then
   echo "CONFIG_SECCOMP=y" >> $config_host_mak
   echo "SECCOMP_CFLAGS=$seccomp_cflags" >> $config_host_mak
   echo "SECCOMP_LIBS=$seccomp_libs" >> $config_host_mak
-fi
-
-# XXX: suppress that
-if [ "$bsd" = "yes" ] ; then
-  echo "CONFIG_BSD=y" >> $config_host_mak
 fi
 
 if test "$localtime_r" = "yes" ; then
