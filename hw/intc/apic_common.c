@@ -111,14 +111,6 @@ void apic_enable_vapic(DeviceState *dev, hwaddr paddr)
     info->vapic_base_update(s);
 }
 
-void apic_handle_tpr_access_report(DeviceState *dev, target_ulong ip,
-                                   TPRAccess access)
-{
-    APICCommonState *s = APIC_COMMON(dev);
-
-    vapic_report_tpr_access(s->vapic, CPU(s->cpu), ip, access);
-}
-
 void apic_report_irq_delivered(int delivered)
 {
     apic_irq_delivered += delivered;
@@ -316,11 +308,6 @@ static void apic_common_realize(DeviceState *dev, Error **errp)
     info = APIC_COMMON_GET_CLASS(s);
     info->realize(dev, errp);
 
-    /* Note: We need at least 1M to map the VAPIC option ROM */
-    if (!vapic && s->vapic_control & VAPIC_ENABLE_MASK &&
-        ram_size >= 1024 * 1024) {
-        vapic = sysbus_create_simple("kvmvapic", -1, NULL);
-    }
     s->vapic = vapic;
     if (apic_report_tpr_access && info->enable_tpr_reporting) {
         info->enable_tpr_reporting(s, true);

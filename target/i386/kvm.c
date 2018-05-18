@@ -2874,12 +2874,6 @@ int kvm_arch_process_async_events(CPUState *cs)
         kvm_cpu_synchronize_state(cs);
         do_cpu_sipi(cpu);
     }
-    if (cs->interrupt_request & CPU_INTERRUPT_TPR) {
-        cs->interrupt_request &= ~CPU_INTERRUPT_TPR;
-        kvm_cpu_synchronize_state(cs);
-        apic_handle_tpr_access_report(cpu->apic_state, env->eip,
-                                      env->tpr_access_type);
-    }
 
     return cs->halted;
 }
@@ -2897,17 +2891,6 @@ static int kvm_handle_halt(X86CPU *cpu)
     }
 
     return 0;
-}
-
-static int kvm_handle_tpr_access(X86CPU *cpu)
-{
-    CPUState *cs = CPU(cpu);
-    struct kvm_run *run = cs->kvm_run;
-
-    apic_handle_tpr_access_report(cpu->apic_state, run->tpr_access.rip,
-                                  run->tpr_access.is_write ? TPR_ACCESS_WRITE
-                                                           : TPR_ACCESS_READ);
-    return 1;
 }
 
 int kvm_arch_insert_sw_breakpoint(CPUState *cs, struct kvm_sw_breakpoint *bp)
@@ -3119,11 +3102,6 @@ int kvm_arch_handle_exit(CPUState *cs, struct kvm_run *run)
         break;
     case KVM_EXIT_SET_TPR:
         ret = 0;
-        break;
-    case KVM_EXIT_TPR_ACCESS:
-        qemu_mutex_lock_iothread();
-        ret = kvm_handle_tpr_access(cpu);
-        qemu_mutex_unlock_iothread();
         break;
     case KVM_EXIT_FAIL_ENTRY:
         code = run->fail_entry.hardware_entry_failure_reason;
