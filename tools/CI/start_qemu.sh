@@ -37,6 +37,8 @@ PLATFORM='x86_64_pc'
 QEMU_PID="qemu.pid"
 
 # Internal variables
+migration="false"
+virtio_crypto="true"
 debugconsole="false"
 legacyserial="false"
 vmimage=""
@@ -175,6 +177,8 @@ Options:
     -memory MEMOR		Memory to use for VM 
     -name NAME		Name to use for VM
     -ssh-port PORT		SSH port to use [2222]
+    -nocrypto                   Disable virtio-crypto (as it cannot migrate)
+    -migration                  Migrate from STATEFILE.gz
     -s , -simple		Simple bootup, no hotplug
     -d , -debugconsole		Connect to the debug console once the VM is launched
     -l , -legacy                Enable legacy serial support
@@ -210,6 +214,12 @@ while [ $# -ge 1 ]; do
     -ssh-port)
         SSH_PORT="$2"
         shift 2 ;;
+    -nocrypto)
+        virtio_crypto='false'
+        shift ;;
+    -migration)
+        migration='true'
+        shift ;;
     -s|-simple)
         SIMPLE_LAUNCH='true'
         shift ;;
@@ -285,7 +295,6 @@ fi
 qemu_args=" -machine $machine,accel=$accel"
 
 qemu_args+=" -pidfile $QEMU_PID"
-qemu_args+=" -qmp unix:$monitor,server,nowait"
 
 if [ "$firmware" != "" ]; then
       if [ ! -f "$firmware" ]; then
@@ -352,17 +361,32 @@ qemu_args+=" -device virtio-rng-pci,rng=rng0 \
          -object rng-random,filename=/dev/random,id=rng0"
 
 qemu_args+=" -device virtio-balloon-pci"
-qemu_args+=" -object cryptodev-backend-builtin,id=cryptodev0"
-qemu_args+=" -device virtio-crypto-pci,id=crypto0,cryptodev=cryptodev0"
+
+
+if [ "$virtio_crypto" = "true" ]; then
+   qemu_args+=" -object cryptodev-backend-builtin,id=cryptodev0"
+   qemu_args+=" -device virtio-crypto-pci,id=crypto0,cryptodev=cryptodev0"
+fi
 
 if [ "$legacyserial" = "true" ]; then
    qemu_args+=" -device isa-serial,chardev=serialconsole0,id=serial0 \
                 -chardev socket,id=serialconsole0,path=$serial,server,nowait"
 fi
 
+if [ "$SIMPLE_LAUNCH" = "true" ]; then
+   qemu_args+=" -monitor telnet:127.0.0.1:1234,server,nowait"
+else
+   qemu_args+=" -qmp unix:$monitor,server,nowait"
+fi
+
+
 
 # Launch with all virtio devices
-$hypervisor $qemu_args "$@"
+if [ "$migration" = "true" ]; then
+   $hypervisor $qemu_args -incoming "exec: gzip -c -d STATEFILE.gz"
+else
+   $hypervisor $qemu_args "$@"
+fi
 
 if [ "$SIMPLE_LAUNCH" = "false" ]; then
    hotplug_check
