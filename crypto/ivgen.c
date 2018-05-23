@@ -78,13 +78,6 @@ QCryptoIVGenAlgorithm qcrypto_ivgen_get_algorithm(QCryptoIVGen *ivgen)
     return ivgen->algorithm;
 }
 
-
-QCryptoCipherAlgorithm qcrypto_ivgen_get_cipher(QCryptoIVGen *ivgen)
-{
-    return ivgen->cipher;
-}
-
-
 QCryptoHashAlgorithm qcrypto_ivgen_get_hash(QCryptoIVGen *ivgen)
 {
     return ivgen->hash;

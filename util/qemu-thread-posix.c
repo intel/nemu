@@ -430,14 +430,6 @@ void qemu_thread_atexit_add(Notifier *notifier)
     pthread_setspecific(exit_key, ntd.ptr);
 }
 
-void qemu_thread_atexit_remove(Notifier *notifier)
-{
-    union NotifierThreadData ntd;
-    ntd.ptr = pthread_getspecific(exit_key);
-    notifier_remove(notifier);
-    pthread_setspecific(exit_key, ntd.ptr);
-}
-
 static void qemu_thread_atexit_run(void *arg)
 {
     union NotifierThreadData ntd = { .ptr = arg };
@@ -528,11 +520,6 @@ void qemu_thread_get_self(QemuThread *thread)
 bool qemu_thread_is_self(QemuThread *thread)
 {
    return pthread_equal(pthread_self(), thread->thread);
-}
-
-void qemu_thread_exit(void *retval)
-{
-    pthread_exit(retval);
 }
 
 void *qemu_thread_join(QemuThread *thread)

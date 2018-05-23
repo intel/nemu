@@ -178,19 +178,9 @@ int pcie_endpoint_cap_init(PCIDevice *dev, uint8_t offset)
     return pcie_endpoint_cap_common_init(dev, offset, PCI_EXP_VER2_SIZEOF);
 }
 
-int pcie_endpoint_cap_v1_init(PCIDevice *dev, uint8_t offset)
-{
-    return pcie_endpoint_cap_common_init(dev, offset, PCI_EXP_VER1_SIZEOF);
-}
-
 void pcie_cap_exit(PCIDevice *dev)
 {
     pci_del_capability(dev, PCI_CAP_ID_EXP, PCI_EXP_VER2_SIZEOF);
-}
-
-void pcie_cap_v1_exit(PCIDevice *dev)
-{
-    pci_del_capability(dev, PCI_CAP_ID_EXP, PCI_EXP_VER1_SIZEOF);
 }
 
 uint8_t pcie_cap_get_type(const PCIDevice *dev)
@@ -199,18 +189,6 @@ uint8_t pcie_cap_get_type(const PCIDevice *dev)
     assert(pos > 0);
     return (pci_get_word(dev->config + pos + PCI_EXP_FLAGS) &
             PCI_EXP_FLAGS_TYPE) >> PCI_EXP_FLAGS_TYPE_SHIFT;
-}
-
-/* MSI/MSI-X */
-/* pci express interrupt message number */
-/* 7.8.2 PCI Express Capabilities Register: Interrupt Message Number */
-void pcie_cap_flags_set_vector(PCIDevice *dev, uint8_t vector)
-{
-    uint8_t *exp_cap = dev->config + dev->exp.exp_cap;
-    assert(vector < 32);
-    pci_word_test_and_clear_mask(exp_cap + PCI_EXP_FLAGS, PCI_EXP_FLAGS_IRQ);
-    pci_word_test_and_set_mask(exp_cap + PCI_EXP_FLAGS,
-                               vector << PCI_EXP_FLAGS_IRQ_SHIFT);
 }
 
 uint8_t pcie_cap_flags_get_vector(PCIDevice *dev)
@@ -581,33 +559,6 @@ void pcie_cap_root_reset(PCIDevice *dev)
     pci_set_word(dev->config + dev->exp.exp_cap + PCI_EXP_RTCTL, 0);
 }
 
-/* function level reset(FLR) */
-void pcie_cap_flr_init(PCIDevice *dev)
-{
-    pci_long_test_and_set_mask(dev->config + dev->exp.exp_cap + PCI_EXP_DEVCAP,
-                               PCI_EXP_DEVCAP_FLR);
-
-    /* Although reading BCR_FLR returns always 0,
-     * the bit is made writable here in order to detect the 1b is written
-     * pcie_cap_flr_write_config() test-and-clear the bit, so
-     * this bit always returns 0 to the guest.
-     */
-    pci_word_test_and_set_mask(dev->wmask + dev->exp.exp_cap + PCI_EXP_DEVCTL,
-                               PCI_EXP_DEVCTL_BCR_FLR);
-}
-
-void pcie_cap_flr_write_config(PCIDevice *dev,
-                               uint32_t addr, uint32_t val, int len)
-{
-    uint8_t *devctl = dev->config + dev->exp.exp_cap + PCI_EXP_DEVCTL;
-    if (pci_get_word(devctl) & PCI_EXP_DEVCTL_BCR_FLR) {
-        /* Clear PCI_EXP_DEVCTL_BCR_FLR after invoking the reset handler
-           so the handler can detect FLR by looking at this bit. */
-        pci_device_reset(dev);
-        pci_word_test_and_clear_mask(devctl, PCI_EXP_DEVCTL_BCR_FLR);
-    }
-}
-
 /* Alternative Routing-ID Interpretation (ARI)
  * forwarding support for root and downstream ports
  */
@@ -624,19 +575,6 @@ void pcie_cap_arifwd_reset(PCIDevice *dev)
 {
     uint8_t *devctl2 = dev->config + dev->exp.exp_cap + PCI_EXP_DEVCTL2;
     pci_long_test_and_clear_mask(devctl2, PCI_EXP_DEVCTL2_ARI);
-}
-
-bool pcie_cap_is_arifwd_enabled(const PCIDevice *dev)
-{
-    if (!pci_is_express(dev)) {
-        return false;
-    }
-    if (!dev->exp.exp_cap) {
-        return false;
-    }
-
-    return pci_get_long(dev->config + dev->exp.exp_cap + PCI_EXP_DEVCTL2) &
-        PCI_EXP_DEVCTL2_ARI;
 }
 
 /**************************************************************************
@@ -677,11 +615,6 @@ out:
         *prev_p = prev;
     }
     return next;
-}
-
-uint16_t pcie_find_capability(PCIDevice *dev, uint16_t cap_id)
-{
-    return pcie_find_capability_list(dev, cap_id, NULL);
 }
 
 static void pcie_ext_cap_set_next(PCIDevice *dev, uint16_t pos, uint16_t next)
@@ -731,24 +664,6 @@ void pcie_add_capability(PCIDevice *dev,
 /**************************************************************************
  * pci express extended capability helper functions
  */
-
-/* ARI */
-void pcie_ari_init(PCIDevice *dev, uint16_t offset, uint16_t nextfn)
-{
-    pcie_add_capability(dev, PCI_EXT_CAP_ID_ARI, PCI_ARI_VER,
-                        offset, PCI_ARI_SIZEOF);
-    pci_set_long(dev->config + offset + PCI_ARI_CAP, (nextfn & 0xff) << 8);
-}
-
-void pcie_dev_ser_num_init(PCIDevice *dev, uint16_t offset, uint64_t ser_num)
-{
-    static const int pci_dsn_ver = 1;
-    static const int pci_dsn_cap = 4;
-
-    pcie_add_capability(dev, PCI_EXT_CAP_ID_DSN, pci_dsn_ver, offset,
-                        PCI_EXT_CAP_DSN_SIZEOF);
-    pci_set_quad(dev->config + offset + pci_dsn_cap, ser_num);
-}
 
 void pcie_ats_init(PCIDevice *dev, uint16_t offset)
 {

@@ -31,7 +31,6 @@ struct MSIMessage {
 
 extern bool msi_nonbroken;
 
-void msi_set_message(PCIDevice *dev, MSIMessage msg);
 MSIMessage msi_get_message(PCIDevice *dev, unsigned int vector);
 bool msi_enabled(const PCIDevice *dev);
 int msi_init(struct PCIDevice *dev, uint8_t offset,

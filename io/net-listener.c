@@ -283,12 +283,6 @@ void qio_net_listener_disconnect(QIONetListener *listener)
     listener->connected = false;
 }
 
-
-bool qio_net_listener_is_connected(QIONetListener *listener)
-{
-    return listener->connected;
-}
-
 static void qio_net_listener_finalize(Object *obj)
 {
     QIONetListener *listener = QIO_NET_LISTENER(obj);

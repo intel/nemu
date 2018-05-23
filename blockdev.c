@@ -168,23 +168,6 @@ void blockdev_auto_del(BlockBackend *blk)
     }
 }
 
-/**
- * Returns the current mapping of how many units per bus
- * a particular interface can support.
- *
- *  A positive integer indicates n units per bus.
- *  0 implies the mapping has not been established.
- * -1 indicates an invalid BlockInterfaceType was given.
- */
-int drive_get_max_devs(BlockInterfaceType type)
-{
-    if (type >= IF_IDE && type < IF_COUNT) {
-        return if_max_devs[type];
-    }
-
-    return -1;
-}
-
 static int drive_index_to_bus_id(BlockInterfaceType type, int index)
 {
     int max_devs = if_max_devs[type];
@@ -262,29 +245,6 @@ void drive_check_orphaned(void)
     if (orphans) {
         exit(1);
     }
-}
-
-DriveInfo *drive_get_by_index(BlockInterfaceType type, int index)
-{
-    return drive_get(type,
-                     drive_index_to_bus_id(type, index),
-                     drive_index_to_unit_id(type, index));
-}
-
-int drive_get_max_bus(BlockInterfaceType type)
-{
-    int max_bus;
-    BlockBackend *blk;
-    DriveInfo *dinfo;
-
-    max_bus = -1;
-    for (blk = blk_next(NULL); blk; blk = blk_next(blk)) {
-        dinfo = blk_legacy_dinfo(blk);
-        if (dinfo && dinfo->type == type && dinfo->bus > max_bus) {
-            max_bus = dinfo->bus;
-        }
-    }
-    return max_bus;
 }
 
 /* Get a block device.  This should only be used for single-drive devices

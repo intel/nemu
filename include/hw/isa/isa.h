@@ -103,13 +103,7 @@ void isa_bus_irqs(ISABus *bus, qemu_irq *irqs);
 qemu_irq isa_get_irq(ISADevice *dev, int isairq);
 void isa_init_irq(ISADevice *dev, qemu_irq *p, int isairq);
 void isa_connect_gpio_out(ISADevice *isadev, int gpioirq, int isairq);
-void isa_bus_dma(ISABus *bus, IsaDma *dma8, IsaDma *dma16);
-IsaDma *isa_get_dma(ISABus *bus, int nchan);
-MemoryRegion *isa_address_space(ISADevice *dev);
-MemoryRegion *isa_address_space_io(ISADevice *dev);
 ISADevice *isa_create(ISABus *bus, const char *name);
-ISADevice *isa_try_create(ISABus *bus, const char *name);
-ISADevice *isa_create_simple(ISABus *bus, const char *name);
 
 /**
  * isa_register_ioport: Install an I/O port region on the ISA bus.
@@ -122,27 +116,6 @@ ISADevice *isa_create_simple(ISABus *bus, const char *name);
  * @start: the base I/O port.
  */
 void isa_register_ioport(ISADevice *dev, MemoryRegion *io, uint16_t start);
-
-/**
- * isa_register_portio_list: Initialize a set of ISA io ports
- *
- * Several ISA devices have many dis-joint I/O ports.  Worse, these I/O
- * ports can be interleaved with I/O ports from other devices.  This
- * function makes it easy to create multiple MemoryRegions for a single
- * device and use the legacy portio routines.
- *
- * @dev: the ISADevice against which these are registered; may be NULL.
- * @piolist: the PortioList associated with the io ports
- * @start: the base I/O port against which the portio->offset is applied.
- * @portio: the ports, sorted by offset.
- * @opaque: passed into the portio callbacks.
- * @name: passed into memory_region_init_io.
- */
-void isa_register_portio_list(ISADevice *dev,
-                              PortioList *piolist,
-                              uint16_t start,
-                              const MemoryRegionPortio *portio,
-                              void *opaque, const char *name);
 
 static inline ISABus *isa_bus_from_device(ISADevice *d)
 {

@@ -397,19 +397,6 @@ void pci_bridge_exitfn(PCIDevice *pci_dev)
     /* object_unparent() is called automatically during device deletion */
 }
 
-/*
- * before qdev initialization(qdev_init()), this function sets bus_name and
- * map_irq callback which are necessry for pci_bridge_initfn() to
- * initialize bus.
- */
-void pci_bridge_map_irq(PCIBridge *br, const char* bus_name,
-                        pci_map_irq_fn map_irq)
-{
-    br->map_irq = map_irq;
-    br->bus_name = bus_name;
-}
-
-
 int pci_bridge_qemu_reserve_cap_init(PCIDevice *dev, int cap_offset,
                                      uint32_t bus_reserve, uint64_t io_reserve,
                                      uint64_t mem_non_pref_reserve,

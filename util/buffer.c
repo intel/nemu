@@ -95,22 +95,6 @@ void buffer_reserve(Buffer *buffer, size_t len)
     }
 }
 
-gboolean buffer_empty(Buffer *buffer)
-{
-    return buffer->offset == 0;
-}
-
-uint8_t *buffer_end(Buffer *buffer)
-{
-    return buffer->buffer + buffer->offset;
-}
-
-void buffer_reset(Buffer *buffer)
-{
-    buffer->offset = 0;
-    buffer_shrink(buffer);
-}
-
 void buffer_free(Buffer *buffer)
 {
     trace_buffer_free(buffer->name ?: "unnamed", buffer->capacity);
@@ -136,38 +120,3 @@ void buffer_advance(Buffer *buffer, size_t len)
     buffer_shrink(buffer);
 }
 
-void buffer_move_empty(Buffer *to, Buffer *from)
-{
-    trace_buffer_move_empty(to->name ?: "unnamed",
-                            from->offset,
-                            from->name ?: "unnamed");
-    assert(to->offset == 0);
-
-    g_free(to->buffer);
-    to->offset = from->offset;
-    to->capacity = from->capacity;
-    to->buffer = from->buffer;
-
-    from->offset = 0;
-    from->capacity = 0;
-    from->buffer = NULL;
-}
-
-void buffer_move(Buffer *to, Buffer *from)
-{
-    if (to->offset == 0) {
-        buffer_move_empty(to, from);
-        return;
-    }
-
-    trace_buffer_move(to->name ?: "unnamed",
-                      from->offset,
-                      from->name ?: "unnamed");
-    buffer_reserve(to, from->offset);
-    buffer_append(to, from->buffer, from->offset);
-
-    g_free(from->buffer);
-    from->offset = 0;
-    from->capacity = 0;
-    from->buffer = NULL;
-}

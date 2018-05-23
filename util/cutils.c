@@ -82,22 +82,6 @@ int strstart(const char *str, const char *val, const char **ptr)
     return 1;
 }
 
-int stristart(const char *str, const char *val, const char **ptr)
-{
-    const char *p, *q;
-    p = str;
-    q = val;
-    while (*q != '\0') {
-        if (qemu_toupper(*p) != qemu_toupper(*q))
-            return 0;
-        p++;
-        q++;
-    }
-    if (ptr)
-        *ptr = p;
-    return 1;
-}
-
 /* XXX: use host strnlen if available ? */
 int qemu_strnlen(const char *s, int max_len)
 {
@@ -689,30 +673,6 @@ int uleb128_decode_small(const uint8_t *in, uint32_t *n)
         *n |= *in++ << 7;
         return 2;
     }
-}
-
-/*
- * helper to parse debug environment variables
- */
-int parse_debug_env(const char *name, int max, int initial)
-{
-    char *debug_env = getenv(name);
-    char *inv = NULL;
-    long debug;
-
-    if (!debug_env) {
-        return initial;
-    }
-    errno = 0;
-    debug = strtol(debug_env, &inv, 10);
-    if (inv == debug_env) {
-        return initial;
-    }
-    if (debug < 0 || debug > max || errno != 0) {
-        warn_report("%s not in [0, %d]", name, max);
-        return initial;
-    }
-    return debug;
 }
 
 /*

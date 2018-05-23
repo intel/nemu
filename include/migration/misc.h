@@ -47,13 +47,7 @@ void migration_object_init(void);
 void migration_object_finalize(void);
 void qemu_start_incoming_migration(const char *uri, Error **errp);
 bool migration_is_idle(void);
-void add_migration_state_change_notifier(Notifier *notify);
-void remove_migration_state_change_notifier(Notifier *notify);
-bool migration_in_setup(MigrationState *);
-bool migration_has_finished(MigrationState *);
-bool migration_has_failed(MigrationState *);
 /* ...and after the device transmission */
-bool migration_in_postcopy_after_devices(MigrationState *);
 void migration_global_dump(Monitor *mon);
 
 /* migration/block-dirty-bitmap.c */

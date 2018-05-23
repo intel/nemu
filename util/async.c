@@ -143,15 +143,6 @@ int aio_bh_poll(AioContext *ctx)
     return ret;
 }
 
-void qemu_bh_schedule_idle(QEMUBH *bh)
-{
-    bh->idle = 1;
-    /* Make sure that idle & any writes needed by the callback are done
-     * before the locations are read in the aio_bh_poll.
-     */
-    atomic_mb_set(&bh->scheduled, 1);
-}
-
 void qemu_bh_schedule(QEMUBH *bh)
 {
     AioContext *ctx;

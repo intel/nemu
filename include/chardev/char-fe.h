@@ -59,12 +59,6 @@ Chardev *qemu_chr_fe_get_driver(CharBackend *be);
  */
 bool qemu_chr_fe_backend_connected(CharBackend *be);
 
-/**
- * @qemu_chr_fe_backend_open:
- *
- * Returns true if chardevice associated with @be is open.
- */
-bool qemu_chr_fe_backend_open(CharBackend *be);
 
 /**
  * @qemu_chr_fe_set_handlers:
@@ -146,18 +140,6 @@ void qemu_chr_fe_set_echo(CharBackend *be, bool echo);
  * Without associated Chardev, do nothing.
  */
 void qemu_chr_fe_set_open(CharBackend *be, int fe_open);
-
-/**
- * @qemu_chr_fe_printf:
- *
- * Write to a character backend using a printf style interface.  This
- * function is thread-safe. It does nothing without associated
- * Chardev.
- *
- * @fmt see #printf
- */
-void qemu_chr_fe_printf(CharBackend *be, const char *fmt, ...)
-    GCC_FMT_ATTR(2, 3);
 
 /**
  * @qemu_chr_fe_add_watch:

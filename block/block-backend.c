@@ -29,7 +29,6 @@
 
 #define NOT_DONE 0x7fffffff /* used while emulated sync operation in progress */
 
-static AioContext *blk_aiocb_get_aio_context(BlockAIOCB *acb);
 
 typedef struct BlockBackendAioNotifier {
     void (*attached_aio_context)(AioContext *new_context, void *opaque);
@@ -96,11 +95,6 @@ typedef struct BlockBackendAIOCB {
     BlockBackend *blk;
     int ret;
 } BlockBackendAIOCB;
-
-static const AIOCBInfo block_backend_aiocb_info = {
-    .get_aio_context = blk_aiocb_get_aio_context,
-    .aiocb_size = sizeof(BlockBackendAIOCB),
-};
 
 static void drive_info_del(DriveInfo *dinfo);
 static BlockBackend *bdrv_first_blk(BlockDriverState *bs);
@@ -423,11 +417,6 @@ static void drive_info_del(DriveInfo *dinfo)
     g_free(dinfo);
 }
 
-int blk_get_refcnt(BlockBackend *blk)
-{
-    return blk ? blk->refcnt : 0;
-}
-
 /*
  * Increment @blk's reference count.
  * @blk must not be null.
@@ -742,14 +731,6 @@ BlockBackendPublic *blk_get_public(BlockBackend *blk)
 }
 
 /*
- * Returns a BlockBackend given the associated @public fields.
- */
-BlockBackend *blk_by_public(BlockBackendPublic *public)
-{
-    return container_of(public, BlockBackend, public);
-}
-
-/*
  * Disassociates the currently associated BlockDriverState from @blk.
  */
 void blk_remove_bs(BlockBackend *blk)
@@ -849,19 +830,6 @@ static int blk_do_attach_dev(BlockBackend *blk, void *dev)
 int blk_attach_dev(BlockBackend *blk, DeviceState *dev)
 {
     return blk_do_attach_dev(blk, dev);
-}
-
-/*
- * Attach device model @dev to @blk.
- * @blk must not have a device model attached already.
- * TODO qdevified devices don't use this, remove when devices are qdevified
- */
-void blk_attach_dev_legacy(BlockBackend *blk, void *dev)
-{
-    if (blk_do_attach_dev(blk, dev) < 0) {
-        abort();
-    }
-    blk->legacy_dev = true;
 }
 
 /*
@@ -1072,11 +1040,6 @@ BlockDeviceIoStatus blk_iostatus(const BlockBackend *blk)
     return blk->iostatus;
 }
 
-void blk_iostatus_disable(BlockBackend *blk)
-{
-    blk->iostatus_enabled = false;
-}
-
 void blk_iostatus_reset(BlockBackend *blk)
 {
     if (blk_iostatus_is_enabled(blk)) {
@@ -1273,11 +1236,6 @@ int blk_pwrite_zeroes(BlockBackend *blk, int64_t offset,
                    flags | BDRV_REQ_ZERO_WRITE);
 }
 
-int blk_make_zero(BlockBackend *blk, BdrvRequestFlags flags)
-{
-    return bdrv_make_zero(blk->root, flags);
-}
-
 static void blk_inc_in_flight(BlockBackend *blk)
 {
     atomic_inc(&blk->in_flight);
@@ -1287,30 +1245,6 @@ static void blk_dec_in_flight(BlockBackend *blk)
 {
     atomic_dec(&blk->in_flight);
     aio_wait_kick(&blk->wait);
-}
-
-static void error_callback_bh(void *opaque)
-{
-    struct BlockBackendAIOCB *acb = opaque;
-
-    blk_dec_in_flight(acb->blk);
-    acb->common.cb(acb->common.opaque, acb->ret);
-    qemu_aio_unref(acb);
-}
-
-BlockAIOCB *blk_abort_aio_request(BlockBackend *blk,
-                                  BlockCompletionFunc *cb,
-                                  void *opaque, int ret)
-{
-    struct BlockBackendAIOCB *acb;
-
-    blk_inc_in_flight(blk);
-    acb = blk_aio_get(&block_backend_aiocb_info, blk, cb, opaque);
-    acb->blk = blk;
-    acb->ret = ret;
-
-    aio_bh_schedule_oneshot(blk_get_aio_context(blk), error_callback_bh, acb);
-    return &acb->common;
 }
 
 typedef struct BlkAioEmAIOCB {
@@ -1497,11 +1431,6 @@ BlockAIOCB *blk_aio_pdiscard(BlockBackend *blk,
 {
     return blk_aio_prwv(blk, offset, bytes, NULL, blk_aio_pdiscard_entry, 0,
                         cb, opaque);
-}
-
-void blk_aio_cancel(BlockAIOCB *acb)
-{
-    bdrv_aio_cancel(acb);
 }
 
 void blk_aio_cancel_async(BlockAIOCB *acb)
@@ -1782,17 +1711,6 @@ void blk_eject(BlockBackend *blk, bool eject_flag)
     g_free(id);
 }
 
-int blk_get_flags(BlockBackend *blk)
-{
-    BlockDriverState *bs = blk_bs(blk);
-
-    if (bs) {
-        return bdrv_get_flags(bs);
-    } else {
-        return blk->root_state.open_flags;
-    }
-}
-
 /* Returns the maximum transfer length, in bytes; guaranteed nonzero */
 uint32_t blk_get_max_transfer(BlockBackend *blk)
 {
@@ -1836,33 +1754,6 @@ bool blk_op_is_blocked(BlockBackend *blk, BlockOpType op, Error **errp)
     return bdrv_op_is_blocked(bs, op, errp);
 }
 
-void blk_op_unblock(BlockBackend *blk, BlockOpType op, Error *reason)
-{
-    BlockDriverState *bs = blk_bs(blk);
-
-    if (bs) {
-        bdrv_op_unblock(bs, op, reason);
-    }
-}
-
-void blk_op_block_all(BlockBackend *blk, Error *reason)
-{
-    BlockDriverState *bs = blk_bs(blk);
-
-    if (bs) {
-        bdrv_op_block_all(bs, reason);
-    }
-}
-
-void blk_op_unblock_all(BlockBackend *blk, Error *reason)
-{
-    BlockDriverState *bs = blk_bs(blk);
-
-    if (bs) {
-        bdrv_op_unblock_all(bs, reason);
-    }
-}
-
 AioContext *blk_get_aio_context(BlockBackend *blk)
 {
     BlockDriverState *bs = blk_bs(blk);
@@ -1872,12 +1763,6 @@ AioContext *blk_get_aio_context(BlockBackend *blk)
     } else {
         return qemu_get_aio_context();
     }
-}
-
-static AioContext *blk_aiocb_get_aio_context(BlockAIOCB *acb)
-{
-    BlockBackendAIOCB *blk_acb = DO_UPCAST(BlockBackendAIOCB, common, acb);
-    return blk_get_aio_context(blk_acb->blk);
 }
 
 void blk_set_aio_context(BlockBackend *blk, AioContext *new_context)
@@ -1940,16 +1825,6 @@ void blk_remove_aio_context_notifier(BlockBackend *blk,
     }
 
     abort();
-}
-
-void blk_add_remove_bs_notifier(BlockBackend *blk, Notifier *notify)
-{
-    notifier_list_add(&blk->remove_bs_notifiers, notify);
-}
-
-void blk_add_insert_bs_notifier(BlockBackend *blk, Notifier *notify)
-{
-    notifier_list_add(&blk->insert_bs_notifiers, notify);
 }
 
 void blk_io_plug(BlockBackend *blk)
@@ -2208,12 +2083,3 @@ static void blk_root_drained_end(BdrvChild *child)
     }
 }
 
-void blk_register_buf(BlockBackend *blk, void *host, size_t size)
-{
-    bdrv_register_buf(blk_bs(blk), host, size);
-}
-
-void blk_unregister_buf(BlockBackend *blk, void *host)
-{
-    bdrv_unregister_buf(blk_bs(blk), host);
-}

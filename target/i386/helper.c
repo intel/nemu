@@ -592,30 +592,6 @@ void x86_cpu_dump_state(CPUState *cs, FILE *f, fprintf_function cpu_fprintf,
     }
 }
 
-/***********************************************************/
-/* x86 mmu */
-/* XXX: add PGE support */
-
-void x86_cpu_set_a20(X86CPU *cpu, int a20_state)
-{
-    CPUX86State *env = &cpu->env;
-
-    a20_state = (a20_state != 0);
-    if (a20_state != ((env->a20_mask >> 20) & 1)) {
-        CPUState *cs = CPU(cpu);
-
-        qemu_log_mask(CPU_LOG_MMU, "A20 update: a20=%d\n", a20_state);
-        /* if the cpu is currently executing code, we must unlink it and
-           all the potentially executing TB */
-        cpu_interrupt(cs, CPU_INTERRUPT_EXITTB);
-
-        /* when a20 is changed, all the MMU mappings are invalid, so
-           we must flush everything */
-        tlb_flush(cs);
-        env->a20_mask = ~(1 << 20) | (a20_state << 20);
-    }
-}
-
 void cpu_x86_update_cr0(CPUX86State *env, uint32_t new_cr0)
 {
     X86CPU *cpu = x86_env_get_cpu(env);
@@ -654,20 +630,6 @@ void cpu_x86_update_cr0(CPUX86State *env, uint32_t new_cr0)
     /* update FPU flags */
     env->hflags = (env->hflags & ~(HF_MP_MASK | HF_EM_MASK | HF_TS_MASK)) |
         ((new_cr0 << (HF_MP_SHIFT - 1)) & (HF_MP_MASK | HF_EM_MASK | HF_TS_MASK));
-}
-
-/* XXX: in legacy PAE mode, generate a GPF if reserved bits are set in
-   the PDPT */
-void cpu_x86_update_cr3(CPUX86State *env, target_ulong new_cr3)
-{
-    X86CPU *cpu = x86_env_get_cpu(env);
-
-    env->cr[3] = new_cr3;
-    if (env->cr[0] & CR0_PG_MASK) {
-        qemu_log_mask(CPU_LOG_MMU,
-                        "CR3 update: CR3=" TARGET_FMT_lx "\n", new_cr3);
-        tlb_flush(CPU(cpu));
-    }
 }
 
 void cpu_x86_update_cr4(CPUX86State *env, uint32_t new_cr4)
@@ -970,18 +932,6 @@ void cpu_x86_inject_mce(Monitor *mon, X86CPU *cpu, int bank,
     }
 }
 
-void cpu_report_tpr_access(CPUX86State *env, TPRAccess access)
-{
-    X86CPU *cpu = x86_env_get_cpu(env);
-    CPUState *cs = CPU(cpu);
-
-    if kvm_enabled() {
-        env->tpr_access_type = access;
-
-        cpu_interrupt(cs, CPU_INTERRUPT_TPR);
-    }
-}
-
 int cpu_x86_get_descr_debug(CPUX86State *env, unsigned int selector,
                             target_ulong *base, unsigned int *limit,
                             unsigned int *flags)
@@ -1056,26 +1006,6 @@ void x86_cpu_exec_exit(CPUState *cs)
     env->eflags = cpu_compute_eflags(env);
 }
 
-uint8_t x86_ldub_phys(CPUState *cs, hwaddr addr)
-{
-    X86CPU *cpu = X86_CPU(cs);
-    CPUX86State *env = &cpu->env;
-    MemTxAttrs attrs = cpu_get_mem_attrs(env);
-    AddressSpace *as = cpu_addressspace(cs, attrs);
-
-    return address_space_ldub(as, addr, attrs, NULL);
-}
-
-uint32_t x86_lduw_phys(CPUState *cs, hwaddr addr)
-{
-    X86CPU *cpu = X86_CPU(cs);
-    CPUX86State *env = &cpu->env;
-    MemTxAttrs attrs = cpu_get_mem_attrs(env);
-    AddressSpace *as = cpu_addressspace(cs, attrs);
-
-    return address_space_lduw(as, addr, attrs, NULL);
-}
-
 uint32_t x86_ldl_phys(CPUState *cs, hwaddr addr)
 {
     X86CPU *cpu = X86_CPU(cs);
@@ -1094,54 +1024,4 @@ uint64_t x86_ldq_phys(CPUState *cs, hwaddr addr)
     AddressSpace *as = cpu_addressspace(cs, attrs);
 
     return address_space_ldq(as, addr, attrs, NULL);
-}
-
-void x86_stb_phys(CPUState *cs, hwaddr addr, uint8_t val)
-{
-    X86CPU *cpu = X86_CPU(cs);
-    CPUX86State *env = &cpu->env;
-    MemTxAttrs attrs = cpu_get_mem_attrs(env);
-    AddressSpace *as = cpu_addressspace(cs, attrs);
-
-    address_space_stb(as, addr, val, attrs, NULL);
-}
-
-void x86_stl_phys_notdirty(CPUState *cs, hwaddr addr, uint32_t val)
-{
-    X86CPU *cpu = X86_CPU(cs);
-    CPUX86State *env = &cpu->env;
-    MemTxAttrs attrs = cpu_get_mem_attrs(env);
-    AddressSpace *as = cpu_addressspace(cs, attrs);
-
-    address_space_stl_notdirty(as, addr, val, attrs, NULL);
-}
-
-void x86_stw_phys(CPUState *cs, hwaddr addr, uint32_t val)
-{
-    X86CPU *cpu = X86_CPU(cs);
-    CPUX86State *env = &cpu->env;
-    MemTxAttrs attrs = cpu_get_mem_attrs(env);
-    AddressSpace *as = cpu_addressspace(cs, attrs);
-
-    address_space_stw(as, addr, val, attrs, NULL);
-}
-
-void x86_stl_phys(CPUState *cs, hwaddr addr, uint32_t val)
-{
-    X86CPU *cpu = X86_CPU(cs);
-    CPUX86State *env = &cpu->env;
-    MemTxAttrs attrs = cpu_get_mem_attrs(env);
-    AddressSpace *as = cpu_addressspace(cs, attrs);
-
-    address_space_stl(as, addr, val, attrs, NULL);
-}
-
-void x86_stq_phys(CPUState *cs, hwaddr addr, uint64_t val)
-{
-    X86CPU *cpu = X86_CPU(cs);
-    CPUX86State *env = &cpu->env;
-    MemTxAttrs attrs = cpu_get_mem_attrs(env);
-    AddressSpace *as = cpu_addressspace(cs, attrs);
-
-    address_space_stq(as, addr, val, attrs, NULL);
 }

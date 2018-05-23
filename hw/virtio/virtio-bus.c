@@ -144,32 +144,6 @@ uint32_t virtio_bus_get_vdev_bad_features(VirtioBusState *bus)
     }
 }
 
-/* Get config of the plugged device. */
-void virtio_bus_get_vdev_config(VirtioBusState *bus, uint8_t *config)
-{
-    VirtIODevice *vdev = virtio_bus_get_device(bus);
-    VirtioDeviceClass *k;
-
-    assert(vdev != NULL);
-    k = VIRTIO_DEVICE_GET_CLASS(vdev);
-    if (k->get_config != NULL) {
-        k->get_config(vdev, config);
-    }
-}
-
-/* Set config of the plugged device. */
-void virtio_bus_set_vdev_config(VirtioBusState *bus, uint8_t *config)
-{
-    VirtIODevice *vdev = virtio_bus_get_device(bus);
-    VirtioDeviceClass *k;
-
-    assert(vdev != NULL);
-    k = VIRTIO_DEVICE_GET_CLASS(vdev);
-    if (k->set_config != NULL) {
-        k->set_config(vdev, config);
-    }
-}
-
 /* On success, ioeventfd ownership belongs to the caller.  */
 int virtio_bus_grab_ioeventfd(VirtioBusState *bus)
 {

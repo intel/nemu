@@ -131,15 +131,4 @@ void qio_channel_tls_handshake(QIOChannelTLS *ioc,
                                GDestroyNotify destroy,
                                GMainContext *context);
 
-/**
- * qio_channel_tls_get_session:
- * @ioc: the TLS channel object
- *
- * Get the TLS session used by the channel.
- *
- * Returns: the TLS session
- */
-QCryptoTLSSession *
-qio_channel_tls_get_session(QIOChannelTLS *ioc);
-
 #endif /* QIO_CHANNEL_TLS_H */

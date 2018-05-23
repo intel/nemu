@@ -233,7 +233,6 @@
                        QEMU_BUILD_BUG_ON_ZERO(!QEMU_IS_ARRAY(x)))
 #endif
 
-int qemu_daemon(int nochdir, int noclose);
 void *qemu_try_memalign(size_t alignment, size_t size);
 void *qemu_memalign(size_t alignment, size_t size);
 void *qemu_anon_ram_alloc(size_t size, uint64_t *align, bool shared);
@@ -362,8 +361,6 @@ void sigaction_invoke(struct sigaction *action,
                       struct qemu_signalfd_siginfo *info);
 
 int qemu_madvise(void *addr, size_t len, int advice);
-int qemu_mprotect_rwx(void *addr, size_t size);
-int qemu_mprotect_none(void *addr, size_t size);
 
 int qemu_open(const char *name, int flags, ...);
 int qemu_close(int fd);
@@ -421,7 +418,6 @@ void qemu_set_hw_version(const char *);
 const char *qemu_hw_version(void);
 
 void fips_set_state(bool requested);
-bool fips_get_state(void);
 
 /* Return a dynamically allocated pathname denoting a file or directory that is
  * appropriate for storing local state.
@@ -442,17 +438,6 @@ void qemu_init_exec_dir(const char *argv0);
 /* Get the saved exec dir.
  * Caller needs to release the returned string by g_free() */
 char *qemu_get_exec_dir(void);
-
-/**
- * qemu_getauxval:
- * @type: the auxiliary vector key to lookup
- *
- * Search the auxiliary vector for @type, returning the value
- * or 0 if @type is not present.
- */
-unsigned long qemu_getauxval(unsigned long type);
-
-void qemu_set_tty_echo(int fd, bool echo);
 
 void os_mem_prealloc(int fd, char *area, size_t sz, int smp_cpus,
                      Error **errp);

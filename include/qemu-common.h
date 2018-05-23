@@ -85,27 +85,6 @@ bool set_preferred_target_page_bits(int bits);
  * The same interface as qemu_sendv_recvv(), with added yielding.
  * XXX should mark these as coroutine_fn
  */
-ssize_t qemu_co_sendv_recvv(int sockfd, struct iovec *iov, unsigned iov_cnt,
-                            size_t offset, size_t bytes, bool do_send);
-#define qemu_co_recvv(sockfd, iov, iov_cnt, offset, bytes) \
-  qemu_co_sendv_recvv(sockfd, iov, iov_cnt, offset, bytes, false)
-#define qemu_co_sendv(sockfd, iov, iov_cnt, offset, bytes) \
-  qemu_co_sendv_recvv(sockfd, iov, iov_cnt, offset, bytes, true)
-
-/**
- * The same as above, but with just a single buffer
- */
-ssize_t qemu_co_send_recv(int sockfd, void *buf, size_t bytes, bool do_send);
-#define qemu_co_recv(sockfd, buf, bytes) \
-  qemu_co_send_recv(sockfd, buf, bytes, false)
-#define qemu_co_send(sockfd, buf, bytes) \
-  qemu_co_send_recv(sockfd, buf, bytes, true)
-
-void qemu_progress_init(int enabled, float min_skip);
-void qemu_progress_end(void);
-void qemu_progress_print(float delta, int max);
-const char *qemu_get_vm_name(void);
-
 #define QEMU_FILE_TYPE_BIOS   0
 #define QEMU_FILE_TYPE_KEYMAP 1
 char *qemu_find_file(int type, const char *name);
@@ -122,11 +101,6 @@ void os_parse_cmd_args(int index, const char *optarg);
  */
 
 void qemu_hexdump(const char *buf, FILE *fp, const char *prefix, size_t size);
-
-/*
- * helper to parse debug environment variables
- */
-int parse_debug_env(const char *name, int max, int initial);
 
 const char *qemu_ether_ntoa(const MACAddr *mac);
 char *size_to_str(uint64_t val);

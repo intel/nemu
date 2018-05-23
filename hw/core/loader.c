@@ -118,27 +118,6 @@ ssize_t load_image_size(const char *filename, void *addr, size_t size)
     return actsize;
 }
 
-/* read()-like version */
-ssize_t read_targphys(const char *name,
-                      int fd, hwaddr dst_addr, size_t nbytes)
-{
-    uint8_t *buf;
-    ssize_t did;
-
-    buf = g_malloc(nbytes);
-    did = read(fd, buf, nbytes);
-    if (did > 0)
-        rom_add_blob_fixed("read", buf, did, dst_addr);
-    g_free(buf);
-    return did;
-}
-
-int load_image_targphys(const char *filename,
-                        hwaddr addr, uint64_t max_sz)
-{
-    return load_image_targphys_as(filename, addr, max_sz, NULL);
-}
-
 /* return the size or -1 if error */
 int load_image_targphys_as(const char *filename,
                            hwaddr addr, uint64_t max_sz, AddressSpace *as)
@@ -179,23 +158,6 @@ int load_image_mr(const char *filename, MemoryRegion *mr)
     return size;
 }
 
-void pstrcpy_targphys(const char *name, hwaddr dest, int buf_size,
-                      const char *source)
-{
-    const char *nulp;
-    char *ptr;
-
-    if (buf_size <= 0) return;
-    nulp = memchr(source, 0, buf_size);
-    if (nulp) {
-        rom_add_blob_fixed(name, source, (nulp - source) + 1, dest);
-    } else {
-        rom_add_blob_fixed(name, source, buf_size, dest);
-        ptr = rom_ptr(dest + buf_size - 1);
-        *ptr = 0;
-    }
-}
-
 /* A.OUT loader */
 
 struct exec
@@ -209,18 +171,6 @@ struct exec
   uint32_t a_trsize; /* length of relocation info for text, in bytes */
   uint32_t a_drsize; /* length of relocation info for data, in bytes */
 };
-
-static void bswap_ahdr(struct exec *e)
-{
-    bswap32s(&e->a_info);
-    bswap32s(&e->a_text);
-    bswap32s(&e->a_data);
-    bswap32s(&e->a_bss);
-    bswap32s(&e->a_syms);
-    bswap32s(&e->a_entry);
-    bswap32s(&e->a_trsize);
-    bswap32s(&e->a_drsize);
-}
 
 #define N_MAGIC(exec) ((exec).a_info & 0xffff)
 #define OMAGIC 0407
@@ -240,61 +190,6 @@ static void bswap_ahdr(struct exec *e)
     (N_MAGIC(x)==OMAGIC? (_N_TXTENDADDR(x, target_page_size)) \
      : (_N_SEGMENT_ROUND (_N_TXTENDADDR(x, target_page_size), target_page_size)))
 
-
-int load_aout(const char *filename, hwaddr addr, int max_sz,
-              int bswap_needed, hwaddr target_page_size)
-{
-    int fd;
-    ssize_t size, ret;
-    struct exec e;
-    uint32_t magic;
-
-    fd = open(filename, O_RDONLY | O_BINARY);
-    if (fd < 0)
-        return -1;
-
-    size = read(fd, &e, sizeof(e));
-    if (size < 0)
-        goto fail;
-
-    if (bswap_needed) {
-        bswap_ahdr(&e);
-    }
-
-    magic = N_MAGIC(e);
-    switch (magic) {
-    case ZMAGIC:
-    case QMAGIC:
-    case OMAGIC:
-        if (e.a_text + e.a_data > max_sz)
-            goto fail;
-	lseek(fd, N_TXTOFF(e), SEEK_SET);
-	size = read_targphys(filename, fd, addr, e.a_text + e.a_data);
-	if (size < 0)
-	    goto fail;
-	break;
-    case NMAGIC:
-        if (N_DATADDR(e, target_page_size) + e.a_data > max_sz)
-            goto fail;
-	lseek(fd, N_TXTOFF(e), SEEK_SET);
-	size = read_targphys(filename, fd, addr, e.a_text);
-	if (size < 0)
-	    goto fail;
-        ret = read_targphys(filename, fd, addr + N_DATADDR(e, target_page_size),
-                            e.a_data);
-	if (ret < 0)
-	    goto fail;
-	size += ret;
-	break;
-    default:
-	goto fail;
-    }
-    close(fd);
-    return size;
- fail:
-    close(fd);
-    return -1;
-}
 
 /* ELF loader */
 
@@ -345,24 +240,6 @@ static void *load_at(int fd, off_t offset, size_t size)
 #define bswapSZs	bswap64s
 #define SZ		64
 #include "hw/elf_ops.h"
-
-const char *load_elf_strerror(int error)
-{
-    switch (error) {
-    case 0:
-        return "No error";
-    case ELF_LOAD_FAILED:
-        return "Failed to load ELF";
-    case ELF_LOAD_NOT_ELF:
-        return "The image is not ELF";
-    case ELF_LOAD_WRONG_ARCH:
-        return "The image is from incompatible architecture";
-    case ELF_LOAD_WRONG_ENDIAN:
-        return "The image has incorrect endianness";
-    default:
-        return "Unknown error";
-    }
-}
 
 void load_elf_hdr(const char *filename, void *hdr, bool *is64, Error **errp)
 {
@@ -417,17 +294,6 @@ void load_elf_hdr(const char *filename, void *hdr, bool *is64, Error **errp)
 
 fail:
     close(fd);
-}
-
-/* return < 0 if error, otherwise the number of bytes loaded in memory */
-int load_elf(const char *filename, uint64_t (*translate_fn)(void *, uint64_t),
-             void *translate_opaque, uint64_t *pentry, uint64_t *lowaddr,
-             uint64_t *highaddr, int big_endian, int elf_machine,
-             int clear_lsb, int data_swab)
-{
-    return load_elf_as(filename, translate_fn, translate_opaque, pentry,
-                       lowaddr, highaddr, big_endian, elf_machine, clear_lsb,
-                       data_swab, NULL);
 }
 
 /* return < 0 if error, otherwise the number of bytes loaded in memory */
@@ -723,15 +589,6 @@ out:
     return ret;
 }
 
-int load_uimage(const char *filename, hwaddr *ep, hwaddr *loadaddr,
-                int *is_linux,
-                uint64_t (*translate_fn)(void *, uint64_t),
-                void *translate_opaque)
-{
-    return load_uboot_image(filename, ep, loadaddr, is_linux, IH_TYPE_KERNEL,
-                            translate_fn, translate_opaque, NULL);
-}
-
 int load_uimage_as(const char *filename, hwaddr *ep, hwaddr *loadaddr,
                    int *is_linux,
                    uint64_t (*translate_fn)(void *, uint64_t),
@@ -739,12 +596,6 @@ int load_uimage_as(const char *filename, hwaddr *ep, hwaddr *loadaddr,
 {
     return load_uboot_image(filename, ep, loadaddr, is_linux, IH_TYPE_KERNEL,
                             translate_fn, translate_opaque, as);
-}
-
-/* Load a ramdisk.  */
-int load_ramdisk(const char *filename, hwaddr addr, uint64_t max_sz)
-{
-    return load_ramdisk_as(filename, addr, max_sz, NULL);
 }
 
 int load_ramdisk_as(const char *filename, hwaddr addr, uint64_t max_sz,
@@ -798,20 +649,6 @@ int load_image_gzipped_buffer(const char *filename, uint64_t max_sz,
     g_free(compressed_data);
     g_free(data);
     return ret;
-}
-
-/* Load a gzip-compressed kernel. */
-int load_image_gzipped(const char *filename, hwaddr addr, uint64_t max_sz)
-{
-    int bytes;
-    uint8_t *data;
-
-    bytes = load_image_gzipped_buffer(filename, max_sz, &data);
-    if (bytes != -1) {
-        rom_add_blob_fixed(filename, data, bytes, addr);
-        g_free(data);
-    }
-    return bytes;
 }
 
 /*
@@ -1185,68 +1022,6 @@ static Rom *find_rom(hwaddr addr)
         return rom;
     }
     return NULL;
-}
-
-/*
- * Copies memory from registered ROMs to dest. Any memory that is contained in
- * a ROM between addr and addr + size is copied. Note that this can involve
- * multiple ROMs, which need not start at addr and need not end at addr + size.
- */
-int rom_copy(uint8_t *dest, hwaddr addr, size_t size)
-{
-    hwaddr end = addr + size;
-    uint8_t *s, *d = dest;
-    size_t l = 0;
-    Rom *rom;
-
-    QTAILQ_FOREACH(rom, &roms, next) {
-        if (rom->fw_file) {
-            continue;
-        }
-        if (rom->mr) {
-            continue;
-        }
-        if (rom->addr + rom->romsize < addr) {
-            continue;
-        }
-        if (rom->addr > end) {
-            break;
-        }
-
-        d = dest + (rom->addr - addr);
-        s = rom->data;
-        l = rom->datasize;
-
-        if ((d + l) > (dest + size)) {
-            l = dest - d;
-        }
-
-        if (l > 0) {
-            memcpy(d, s, l);
-        }
-
-        if (rom->romsize > rom->datasize) {
-            /* If datasize is less than romsize, it means that we didn't
-             * allocate all the ROM because the trailing data are only zeros.
-             */
-
-            d += l;
-            l = rom->romsize - rom->datasize;
-
-            if ((d + l) > (dest + size)) {
-                /* Rom size doesn't fit in the destination area. Adjust to avoid
-                 * overflow.
-                 */
-                l = dest - d;
-            }
-
-            if (l > 0) {
-                memset(d, 0x0, l);
-            }
-        }
-    }
-
-    return (d + l) - dest;
 }
 
 void *rom_ptr(hwaddr addr)

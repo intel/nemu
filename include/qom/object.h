@@ -680,49 +680,6 @@ Object *object_new_with_propv(const char *typename,
                               va_list vargs);
 
 /**
- * object_set_props:
- * @obj: the object instance to set properties on
- * @errp: pointer to error object
- * @...: list of property names and values
- *
- * This function will set a list of properties on an existing object
- * instance.
- *
- * The variadic parameters are a list of pairs of (propname, propvalue)
- * strings. The propname of %NULL indicates the end of the property
- * list.
- *
- * <example>
- *   <title>Update an object's properties</title>
- *   <programlisting>
- *   Error *err = NULL;
- *   Object *obj = ...get / create object...;
- *
- *   obj = object_set_props(obj,
- *                          &err,
- *                          "share", "yes",
- *                          "mem-path", "/dev/shm/somefile",
- *                          "prealloc", "yes",
- *                          "size", "1048576",
- *                          NULL);
- *
- *   if (!obj) {
- *     g_printerr("Cannot set properties: %s\n",
- *                error_get_pretty(err));
- *   }
- *   </programlisting>
- * </example>
- *
- * The returned object will have one stable reference maintained
- * for as long as it is present in the object hierarchy.
- *
- * Returns: -1 on error, 0 on success
- */
-int object_set_props(Object *obj,
-                     Error **errp,
-                     ...) QEMU_SENTINEL;
-
-/**
  * object_set_propv:
  * @obj: the object instance to set properties on
  * @errp: pointer to error object
@@ -1525,10 +1482,6 @@ void object_property_add_tm(Object *obj, const char *name,
                             void (*get)(Object *, struct tm *, Error **),
                             Error **errp);
 
-void object_class_property_add_tm(ObjectClass *klass, const char *name,
-                                  void (*get)(Object *, struct tm *, Error **),
-                                  Error **errp);
-
 /**
  * object_property_add_uint8_ptr:
  * @obj: the object to add a property to
@@ -1541,8 +1494,6 @@ void object_class_property_add_tm(ObjectClass *klass, const char *name,
  */
 void object_property_add_uint8_ptr(Object *obj, const char *name,
                                    const uint8_t *v, Error **errp);
-void object_class_property_add_uint8_ptr(ObjectClass *klass, const char *name,
-                                         const uint8_t *v, Error **errp);
 
 /**
  * object_property_add_uint16_ptr:
@@ -1556,8 +1507,6 @@ void object_class_property_add_uint8_ptr(ObjectClass *klass, const char *name,
  */
 void object_property_add_uint16_ptr(Object *obj, const char *name,
                                     const uint16_t *v, Error **errp);
-void object_class_property_add_uint16_ptr(ObjectClass *klass, const char *name,
-                                          const uint16_t *v, Error **errp);
 
 /**
  * object_property_add_uint32_ptr:
@@ -1571,23 +1520,6 @@ void object_class_property_add_uint16_ptr(ObjectClass *klass, const char *name,
  */
 void object_property_add_uint32_ptr(Object *obj, const char *name,
                                     const uint32_t *v, Error **errp);
-void object_class_property_add_uint32_ptr(ObjectClass *klass, const char *name,
-                                          const uint32_t *v, Error **errp);
-
-/**
- * object_property_add_uint64_ptr:
- * @obj: the object to add a property to
- * @name: the name of the property
- * @v: pointer to value
- * @errp: if an error occurs, a pointer to an area to store the error
- *
- * Add an integer property in memory.  This function will add a
- * property of type 'uint64'.
- */
-void object_property_add_uint64_ptr(Object *obj, const char *name,
-                                    const uint64_t *v, Error **Errp);
-void object_class_property_add_uint64_ptr(ObjectClass *klass, const char *name,
-                                          const uint64_t *v, Error **Errp);
 
 /**
  * object_property_add_alias:
@@ -1608,24 +1540,6 @@ void object_class_property_add_uint64_ptr(ObjectClass *klass, const char *name,
 void object_property_add_alias(Object *obj, const char *name,
                                Object *target_obj, const char *target_name,
                                Error **errp);
-
-/**
- * object_property_add_const_link:
- * @obj: the object to add a property to
- * @name: the name of the property
- * @target: the object to be referred by the link
- * @errp: if an error occurs, a pointer to an area to store the error
- *
- * Add an unmodifiable link for a property on an object.  This function will
- * add a property of type link<TYPE> where TYPE is the type of @target.
- *
- * The caller must ensure that @target stays alive as long as
- * this property exists.  In the case @target is a child of @obj,
- * this will be the case.  Otherwise, the caller is responsible for
- * taking a reference.
- */
-void object_property_add_const_link(Object *obj, const char *name,
-                                    Object *target, Error **errp);
 
 /**
  * object_property_set_description:
@@ -1690,11 +1604,4 @@ int object_child_foreach_recursive(Object *obj,
  */
 Object *container_get(Object *root, const char *path);
 
-/**
- * object_type_get_instance_size:
- * @typename: Name of the Type whose instance_size is required
- *
- * Returns the instance_size of the given @typename.
- */
-size_t object_type_get_instance_size(const char *typename);
 #endif

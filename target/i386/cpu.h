@@ -1404,9 +1404,6 @@ void x86_cpu_exec_exit(CPUState *cpu);
 void x86_cpu_list(FILE *f, fprintf_function cpu_fprintf);
 int cpu_x86_support_mca_broadcast(CPUX86State *env);
 
-/* MSDOS compatibility mode FPU exception support */
-void cpu_set_ferr(CPUX86State *s);
-
 /* this function must always be used to load data in the segment
    cache: it synchronizes the hflags with the segment cache values */
 static inline void cpu_x86_load_seg_cache(CPUX86State *env,
@@ -1513,7 +1510,6 @@ int cpu_x86_signal_handler(int host_signum, void *pinfo,
 void cpu_x86_cpuid(CPUX86State *env, uint32_t index, uint32_t count,
                    uint32_t *eax, uint32_t *ebx,
                    uint32_t *ecx, uint32_t *edx);
-void cpu_clear_apic_feature(CPUX86State *env);
 void host_cpuid(uint32_t function, uint32_t count,
                 uint32_t *eax, uint32_t *ebx, uint32_t *ecx, uint32_t *edx);
 void host_vendor_fms(char *vendor, int *family, int *model, int *stepping);
@@ -1521,8 +1517,6 @@ void host_vendor_fms(char *vendor, int *family, int *model, int *stepping);
 /* helper.c */
 int x86_cpu_handle_mmu_fault(CPUState *cpu, vaddr addr, int size,
                              int is_write, int mmu_idx);
-void x86_cpu_set_a20(X86CPU *cpu, int a20_state);
-
 static inline int x86_asidx_from_attrs(CPUState *cs, MemTxAttrs attrs)
 {
     return !!attrs.secure;
@@ -1533,26 +1527,15 @@ static inline AddressSpace *cpu_addressspace(CPUState *cs, MemTxAttrs attrs)
     return cpu_get_address_space(cs, cpu_asidx_from_attrs(cs, attrs));
 }
 
-uint8_t x86_ldub_phys(CPUState *cs, hwaddr addr);
-uint32_t x86_lduw_phys(CPUState *cs, hwaddr addr);
 uint32_t x86_ldl_phys(CPUState *cs, hwaddr addr);
 uint64_t x86_ldq_phys(CPUState *cs, hwaddr addr);
-void x86_stb_phys(CPUState *cs, hwaddr addr, uint8_t val);
-void x86_stl_phys_notdirty(CPUState *cs, hwaddr addr, uint32_t val);
-void x86_stw_phys(CPUState *cs, hwaddr addr, uint32_t val);
-void x86_stl_phys(CPUState *cs, hwaddr addr, uint32_t val);
-void x86_stq_phys(CPUState *cs, hwaddr addr, uint64_t val);
 
 void breakpoint_handler(CPUState *cs);
 
 /* will be suppressed */
 void cpu_x86_update_cr0(CPUX86State *env, uint32_t new_cr0);
-void cpu_x86_update_cr3(CPUX86State *env, target_ulong new_cr3);
 void cpu_x86_update_cr4(CPUX86State *env, uint32_t new_cr4);
 void cpu_x86_update_dr7(CPUX86State *env, uint32_t new_dr7);
-
-/* hw/pc.c */
-uint64_t cpu_get_tsc(CPUX86State *env);
 
 #define TARGET_PAGE_BITS 12
 
@@ -1749,7 +1732,6 @@ void do_interrupt_x86_hardirq(CPUX86State *env, int intno, int is_hw);
 void do_smm_enter(X86CPU *cpu);
 
 /* apic.c */
-void cpu_report_tpr_access(CPUX86State *env, TPRAccess access);
 void apic_handle_tpr_access_report(DeviceState *d, target_ulong ip,
                                    TPRAccess access);
 
@@ -1769,8 +1751,6 @@ void cpu_sync_bndcs_hflags(CPUX86State *env);
 
 /* Return name of 32-bit register, from a R_* constant */
 const char *get_register_name_32(unsigned int reg);
-
-void enable_compat_apic_id_mode(void);
 
 #define APIC_DEFAULT_ADDRESS 0xfee00000
 #define APIC_SPACE_SIZE      0x100000

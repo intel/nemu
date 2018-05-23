@@ -163,68 +163,6 @@ void parse_option_size(const char *name, const char *value,
     *ret = size;
 }
 
-bool has_help_option(const char *param)
-{
-    size_t buflen = strlen(param) + 1;
-    char *buf = g_malloc(buflen);
-    const char *p = param;
-    bool result = false;
-
-    while (*p) {
-        p = get_opt_value(buf, buflen, p);
-        if (*p) {
-            p++;
-        }
-
-        if (is_help_option(buf)) {
-            result = true;
-            goto out;
-        }
-    }
-
-out:
-    g_free(buf);
-    return result;
-}
-
-bool is_valid_option_list(const char *param)
-{
-    size_t buflen = strlen(param) + 1;
-    char *buf = g_malloc(buflen);
-    const char *p = param;
-    bool result = true;
-
-    while (*p) {
-        p = get_opt_value(buf, buflen, p);
-        if (*p && !*++p) {
-            result = false;
-            goto out;
-        }
-
-        if (!*buf || *buf == ',') {
-            result = false;
-            goto out;
-        }
-    }
-
-out:
-    g_free(buf);
-    return result;
-}
-
-void qemu_opts_print_help(QemuOptsList *list)
-{
-    QemuOptDesc *desc;
-
-    assert(list);
-    desc = list->desc;
-    printf("Supported options:\n");
-    while (desc && desc->name) {
-        printf("%-16s %s\n", desc->name,
-               desc->help ? desc->help : "No description available");
-        desc++;
-    }
-}
 /* ------------------------------------------------------------------ */
 
 QemuOpt *qemu_opt_find(QemuOpts *opts, const char *name)
@@ -277,25 +215,6 @@ const char *qemu_opt_get(QemuOpts *opts, const char *name)
         }
     }
     return opt ? opt->str : NULL;
-}
-
-void qemu_opt_iter_init(QemuOptsIter *iter, QemuOpts *opts, const char *name)
-{
-    iter->opts = opts;
-    iter->opt = QTAILQ_FIRST(&opts->head);
-    iter->name = name;
-}
-
-const char *qemu_opt_iter_next(QemuOptsIter *iter)
-{
-    QemuOpt *ret = iter->opt;
-    if (iter->name) {
-        while (ret && !g_str_equal(iter->name, ret->name)) {
-            ret = QTAILQ_NEXT(ret, next);
-        }
-    }
-    iter->opt = ret ? QTAILQ_NEXT(ret, next) : NULL;
-    return ret ? ret->str : NULL;
 }
 
 /* Get a known option (or its default) and remove it from the list
@@ -367,11 +286,6 @@ static bool qemu_opt_get_bool_helper(QemuOpts *opts, const char *name,
 bool qemu_opt_get_bool(QemuOpts *opts, const char *name, bool defval)
 {
     return qemu_opt_get_bool_helper(opts, name, defval, false);
-}
-
-bool qemu_opt_get_bool_del(QemuOpts *opts, const char *name, bool defval)
-{
-    return qemu_opt_get_bool_helper(opts, name, defval, true);
 }
 
 static uint64_t qemu_opt_get_number_helper(QemuOpts *opts, const char *name,

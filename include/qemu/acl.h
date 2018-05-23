@@ -44,8 +44,6 @@ struct qemu_acl {
     int defaultDeny;
 };
 
-qemu_acl *qemu_acl_init(const char *aclname);
-
 qemu_acl *qemu_acl_find(const char *aclname);
 
 int qemu_acl_party_is_allowed(qemu_acl *acl,

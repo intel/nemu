@@ -104,20 +104,6 @@ void isa_connect_gpio_out(ISADevice *isadev, int gpioirq, int isairq)
     qdev_connect_gpio_out(DEVICE(isadev), gpioirq, irq);
 }
 
-void isa_bus_dma(ISABus *bus, IsaDma *dma8, IsaDma *dma16)
-{
-    assert(bus && dma8 && dma16);
-    assert(!bus->dma[0] && !bus->dma[1]);
-    bus->dma[0] = dma8;
-    bus->dma[1] = dma16;
-}
-
-IsaDma *isa_get_dma(ISABus *bus, int nchan)
-{
-    assert(bus);
-    return bus->dma[nchan > 3 ? 1 : 0];
-}
-
 static inline void isa_init_ioport(ISADevice *dev, uint16_t ioport)
 {
     if (dev && (dev->ioport_id == 0 || ioport < dev->ioport_id)) {
@@ -129,22 +115,6 @@ void isa_register_ioport(ISADevice *dev, MemoryRegion *io, uint16_t start)
 {
     memory_region_add_subregion(isabus->address_space_io, start, io);
     isa_init_ioport(dev, start);
-}
-
-void isa_register_portio_list(ISADevice *dev,
-                              PortioList *piolist, uint16_t start,
-                              const MemoryRegionPortio *pio_start,
-                              void *opaque, const char *name)
-{
-    assert(piolist && !piolist->owner);
-
-    /* START is how we should treat DEV, regardless of the actual
-       contents of the portio array.  This is how the old code
-       actually handled e.g. the FDC device.  */
-    isa_init_ioport(dev, start);
-
-    portio_list_init(piolist, OBJECT(dev), pio_start, opaque, name);
-    portio_list_add(piolist, isabus->address_space_io, start);
 }
 
 static void isa_device_init(Object *obj)
@@ -161,23 +131,6 @@ ISADevice *isa_create(ISABus *bus, const char *name)
 
     dev = qdev_create(BUS(bus), name);
     return ISA_DEVICE(dev);
-}
-
-ISADevice *isa_try_create(ISABus *bus, const char *name)
-{
-    DeviceState *dev;
-
-    dev = qdev_try_create(BUS(bus), name);
-    return ISA_DEVICE(dev);
-}
-
-ISADevice *isa_create_simple(ISABus *bus, const char *name)
-{
-    ISADevice *dev;
-
-    dev = isa_create(bus, name);
-    qdev_init_nofail(DEVICE(dev));
-    return dev;
 }
 
 static void isabus_dev_print(Monitor *mon, DeviceState *dev, int indent)
@@ -244,24 +197,6 @@ static char *isabus_get_fw_dev_path(DeviceState *dev)
     }
 
     return g_strdup(path);
-}
-
-MemoryRegion *isa_address_space(ISADevice *dev)
-{
-    if (dev) {
-        return isa_bus_from_device(dev)->address_space;
-    }
-
-    return isabus->address_space;
-}
-
-MemoryRegion *isa_address_space_io(ISADevice *dev)
-{
-    if (dev) {
-        return isa_bus_from_device(dev)->address_space_io;
-    }
-
-    return isabus->address_space_io;
 }
 
 type_init(isabus_register_types)

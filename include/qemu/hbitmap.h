@@ -85,14 +85,6 @@ void hbitmap_truncate(HBitmap *hb, uint64_t size);
 bool hbitmap_merge(HBitmap *a, const HBitmap *b);
 
 /**
- * hbitmap_empty:
- * @hb: HBitmap to operate on.
- *
- * Return whether the bitmap is empty.
- */
-bool hbitmap_empty(const HBitmap *hb);
-
-/**
  * hbitmap_granularity:
  * @hb: HBitmap to operate on.
  *

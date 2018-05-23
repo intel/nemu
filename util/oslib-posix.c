@@ -74,11 +74,6 @@ int qemu_get_thread_id(void)
     return syscall(SYS_gettid);
 }
 
-int qemu_daemon(int nochdir, int noclose)
-{
-    return daemon(nochdir, noclose);
-}
-
 void *qemu_oom_check(void *ptr)
 {
     if (ptr == NULL) {
@@ -207,21 +202,6 @@ qemu_get_local_state_pathname(const char *relative_pathname)
 {
     return g_strdup_printf("%s/%s", CONFIG_QEMU_LOCALSTATEDIR,
                            relative_pathname);
-}
-
-void qemu_set_tty_echo(int fd, bool echo)
-{
-    struct termios tty;
-
-    tcgetattr(fd, &tty);
-
-    if (echo) {
-        tty.c_lflag |= ECHO | ECHONL | ICANON | IEXTEN;
-    } else {
-        tty.c_lflag &= ~(ECHO | ECHONL | ICANON | IEXTEN);
-    }
-
-    tcsetattr(fd, TCSANOW, &tty);
 }
 
 static char exec_dir[PATH_MAX];

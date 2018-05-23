@@ -296,16 +296,6 @@ static void pci_do_device_reset(PCIDevice *dev)
 }
 
 /*
- * This function is called on #RST and FLR.
- * FLR if PCI_EXP_DEVCTL_BCR_FLR is set
- */
-void pci_device_reset(PCIDevice *dev)
-{
-    qdev_reset_all(&dev->qdev);
-    pci_do_device_reset(dev);
-}
-
-/*
  * Trigger pci bus reset under a given bus.
  * Called via qbus_reset_all on RST# assert, after the devices
  * have been reset qdev_reset_all-ed already.
@@ -387,17 +377,6 @@ bool pci_bus_is_express(PCIBus *bus)
 bool pci_bus_is_root(PCIBus *bus)
 {
     return PCI_BUS_GET_CLASS(bus)->is_root(bus);
-}
-
-void pci_root_bus_new_inplace(PCIBus *bus, size_t bus_size, DeviceState *parent,
-                              const char *name,
-                              MemoryRegion *address_space_mem,
-                              MemoryRegion *address_space_io,
-                              uint8_t devfn_min, const char *typename)
-{
-    qbus_create_inplace(bus, bus_size, typename, parent, name);
-    pci_root_bus_init(bus, parent, address_space_mem, address_space_io,
-                      devfn_min);
 }
 
 PCIBus *pci_root_bus_new(DeviceState *parent, const char *name,
@@ -1211,11 +1190,6 @@ void pci_unregister_vga(PCIDevice *pci_dev)
     pci_dev->has_vga = false;
 }
 
-pcibus_t pci_get_bar_addr(PCIDevice *pci_dev, int region_num)
-{
-    return pci_dev->io_regions[region_num].addr;
-}
-
 static pcibus_t pci_bar_address(PCIDevice *d,
 				int reg, uint8_t type, pcibus_t size)
 {
@@ -1564,34 +1538,6 @@ static const pci_class_desc pci_class_descriptions[] =
     { 0x0c05, "SMBus"},
     { 0, NULL}
 };
-
-static void pci_for_each_device_under_bus_reverse(PCIBus *bus,
-                                                  void (*fn)(PCIBus *b,
-                                                             PCIDevice *d,
-                                                             void *opaque),
-                                                  void *opaque)
-{
-    PCIDevice *d;
-    int devfn;
-
-    for (devfn = 0; devfn < ARRAY_SIZE(bus->devices); devfn++) {
-        d = bus->devices[ARRAY_SIZE(bus->devices) - 1 - devfn];
-        if (d) {
-            fn(bus, d, opaque);
-        }
-    }
-}
-
-void pci_for_each_device_reverse(PCIBus *bus, int bus_num,
-                         void (*fn)(PCIBus *b, PCIDevice *d, void *opaque),
-                         void *opaque)
-{
-    bus = pci_find_bus_nr(bus, bus_num);
-
-    if (bus) {
-        pci_for_each_device_under_bus_reverse(bus, fn, opaque);
-    }
-}
 
 static void pci_for_each_device_under_bus(PCIBus *bus,
                                           void (*fn)(PCIBus *b, PCIDevice *d,
@@ -2485,11 +2431,6 @@ int pci_qdev_find_device(const char *id, PCIDevice **pdev)
     }
 
     return rc;
-}
-
-MemoryRegion *pci_address_space(PCIDevice *dev)
-{
-    return pci_get_bus(dev)->address_space_mem;
 }
 
 MemoryRegion *pci_address_space_io(PCIDevice *dev)

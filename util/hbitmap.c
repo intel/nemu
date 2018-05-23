@@ -227,11 +227,6 @@ int64_t hbitmap_next_zero(const HBitmap *hb, uint64_t start)
     return res;
 }
 
-bool hbitmap_empty(const HBitmap *hb)
-{
-    return hb->count == 0;
-}
-
 int hbitmap_granularity(const HBitmap *hb)
 {
     return hb->granularity;

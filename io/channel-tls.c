@@ -387,12 +387,6 @@ static GSource *qio_channel_tls_create_watch(QIOChannel *ioc,
     return qio_channel_create_watch(tioc->master, condition);
 }
 
-QCryptoTLSSession *
-qio_channel_tls_get_session(QIOChannelTLS *ioc)
-{
-    return ioc->session;
-}
-
 static void qio_channel_tls_class_init(ObjectClass *klass,
                                        void *class_data G_GNUC_UNUSED)
 {

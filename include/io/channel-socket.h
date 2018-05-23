@@ -178,35 +178,6 @@ int qio_channel_socket_dgram_sync(QIOChannelSocket *ioc,
                                   Error **errp);
 
 /**
- * qio_channel_socket_dgram_async:
- * @ioc: the socket channel object
- * @localAddr: the address to local bind address
- * @remoteAddr: the address to remote peer address
- * @callback: the function to invoke on completion
- * @opaque: user data to pass to @callback
- * @destroy: the function to free @opaque
- * @context: the context to run the async task. If %NULL, the default
- *           context will be used.
- *
- * Attempt to initialize a datagram socket bound to
- * @localAddr and communicating with peer @remoteAddr.
- * This method will run in the background so the caller
- * will regain execution control immediately. The function
- * @callback will be invoked on completion or failure.
- * The @localAddr and @remoteAddr parameters will be copied,
- * so may be freed as soon as this function returns without
- * waiting for completion.
- */
-void qio_channel_socket_dgram_async(QIOChannelSocket *ioc,
-                                    SocketAddress *localAddr,
-                                    SocketAddress *remoteAddr,
-                                    QIOTaskFunc callback,
-                                    gpointer opaque,
-                                    GDestroyNotify destroy,
-                                    GMainContext *context);
-
-
-/**
  * qio_channel_socket_get_local_address:
  * @ioc: the socket channel object
  * @errp: pointer to a NULL-initialized error object
@@ -222,24 +193,6 @@ void qio_channel_socket_dgram_async(QIOChannelSocket *ioc,
 SocketAddress *
 qio_channel_socket_get_local_address(QIOChannelSocket *ioc,
                                      Error **errp);
-
-/**
- * qio_channel_socket_get_remote_address:
- * @ioc: the socket channel object
- * @errp: pointer to a NULL-initialized error object
- *
- * Get the string representation of the local socket
- * address. A pointer to the allocated address information
- * struct will be returned, which the caller is required to
- * release with a call qapi_free_SocketAddress() when no
- * longer required.
- *
- * Returns: the socket address struct, or NULL on error
- */
-SocketAddress *
-qio_channel_socket_get_remote_address(QIOChannelSocket *ioc,
-                                      Error **errp);
-
 
 /**
  * qio_channel_socket_accept:
