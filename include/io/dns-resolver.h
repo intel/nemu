@@ -183,47 +183,4 @@ int qio_dns_resolver_lookup_sync(QIODNSResolver *resolver,
                                  SocketAddress ***addrs,
                                  Error **errp);
 
-/**
- * qio_dns_resolver_lookup_async:
- * @resolver: the DNS resolver instance
- * @addr: the address to resolve
- * @func: the callback to invoke on lookup completion
- * @opaque: data blob to pass to @func
- * @notify: the callback to free @opaque, or NULL
- *
- * This will attempt to resolve the address provided
- * in @addr. The callback @func will be invoked when
- * resolution has either completed or failed. On
- * success, the @func should call the method
- * qio_dns_resolver_lookup_result() to obtain the
- * results.
- *
- * DNS resolution will be done asynchronously so execution
- * of the caller will not be blocked.
- */
-void qio_dns_resolver_lookup_async(QIODNSResolver *resolver,
-                                   SocketAddress *addr,
-                                   QIOTaskFunc func,
-                                   gpointer opaque,
-                                   GDestroyNotify notify);
-
-/**
- * qio_dns_resolver_lookup_result:
- * @resolver: the DNS resolver instance
- * @task: the task object to get results for
- * @naddr: pointer to hold number of resolved addresses
- * @addrs: pointer to hold resolved addresses
- *
- * This method should be called from the callback passed
- * to qio_dns_resolver_lookup_async() in order to obtain
- * results.  @addrs will be filled with all the resolved
- * addresses. @naddrs will specify the number of entries
- * allocated in @addrs. The caller is responsible for
- * freeing each entry in @addrs, as well as @addrs itself.
- */
-void qio_dns_resolver_lookup_result(QIODNSResolver *resolver,
-                                    QIOTask *task,
-                                    size_t *naddrs,
-                                    SocketAddress ***addrs);
-
 #endif /* QIO_DNS_RESOLVER_H */

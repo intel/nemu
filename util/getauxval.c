@@ -32,10 +32,6 @@
 
 #include <sys/auxv.h>
 
-unsigned long qemu_getauxval(unsigned long key)
-{
-    return getauxval(key);
-}
 #else
 #include "elf.h"
 
@@ -80,23 +76,6 @@ static const ElfW_auxv_t *qemu_init_auxval(void)
 
     close(fd);
     return a;
-}
-
-unsigned long qemu_getauxval(unsigned long type)
-{
-    const ElfW_auxv_t *a = auxv;
-
-    if (unlikely(a == NULL)) {
-        a = qemu_init_auxval();
-    }
-
-    for (; a->a_type != 0; a++) {
-        if (a->a_type == type) {
-            return a->a_val;
-        }
-    }
-
-    return 0;
 }
 
 #endif

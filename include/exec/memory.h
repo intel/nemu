@@ -1054,18 +1054,6 @@ void memory_region_ram_resize(MemoryRegion *mr, ram_addr_t newsize,
                               Error **errp);
 
 /**
- * memory_region_set_log: Turn dirty logging on or off for a region.
- *
- * Turns dirty logging on or off for a specified client (display, migration).
- * Only meaningful for RAM regions.
- *
- * @mr: the memory region being updated.
- * @log: whether dirty logging is to be enabled or disabled.
- * @client: the user of the logging information; %DIRTY_MEMORY_VGA only.
- */
-void memory_region_set_log(MemoryRegion *mr, bool log, unsigned client);
-
-/**
  * memory_region_set_dirty: Mark a range of bytes as dirty in a memory region.
  *
  * Marks a range of bytes as dirty, after it has been dirtied outside
@@ -1077,51 +1065,6 @@ void memory_region_set_log(MemoryRegion *mr, bool log, unsigned client);
  */
 void memory_region_set_dirty(MemoryRegion *mr, hwaddr addr,
                              hwaddr size);
-
-/**
- * memory_region_snapshot_and_clear_dirty: Get a snapshot of the dirty
- *                                         bitmap and clear it.
- *
- * Creates a snapshot of the dirty bitmap, clears the dirty bitmap and
- * returns the snapshot.  The snapshot can then be used to query dirty
- * status, using memory_region_snapshot_get_dirty.  Snapshotting allows
- * querying the same page multiple times, which is especially useful for
- * display updates where the scanlines often are not page aligned.
- *
- * The dirty bitmap region which gets copyed into the snapshot (and
- * cleared afterwards) can be larger than requested.  The boundaries
- * are rounded up/down so complete bitmap longs (covering 64 pages on
- * 64bit hosts) can be copied over into the bitmap snapshot.  Which
- * isn't a problem for display updates as the extra pages are outside
- * the visible area, and in case the visible area changes a full
- * display redraw is due anyway.  Should other use cases for this
- * function emerge we might have to revisit this implementation
- * detail.
- *
- * Use g_free to release DirtyBitmapSnapshot.
- *
- * @mr: the memory region being queried.
- * @addr: the address (relative to the start of the region) being queried.
- * @size: the size of the range being queried.
- * @client: the user of the logging information; typically %DIRTY_MEMORY_VGA.
- */
-DirtyBitmapSnapshot *memory_region_snapshot_and_clear_dirty(MemoryRegion *mr,
-                                                            hwaddr addr,
-                                                            hwaddr size,
-                                                            unsigned client);
-
-/**
- * memory_region_snapshot_get_dirty: Check whether a range of bytes is dirty
- *                                   in the specified dirty bitmap snapshot.
- *
- * @mr: the memory region being queried.
- * @snap: the dirty bitmap snapshot
- * @addr: the address (relative to the start of the region) being queried.
- * @size: the size of the range being queried.
- */
-bool memory_region_snapshot_get_dirty(MemoryRegion *mr,
-                                      DirtyBitmapSnapshot *snap,
-                                      hwaddr addr, hwaddr size);
 
 /**
  * memory_region_set_readonly: Turn a memory region read-only (or read-write)
@@ -1147,17 +1090,6 @@ void memory_region_set_readonly(MemoryRegion *mr, bool readonly);
  * @romd_mode: %true to put the region into ROMD mode
  */
 void memory_region_rom_device_set_romd(MemoryRegion *mr, bool romd_mode);
-
-/**
- * memory_region_set_coalescing: Enable memory coalescing for the region.
- *
- * Enabled writes to a region to be queued for later processing. MMIO ->write
- * callbacks may be delayed until a non-coalesced MMIO is issued.
- * Only useful for IO regions.  Roughly similar to write-combining hardware.
- *
- * @mr: the memory region to be write coalesced
- */
-void memory_region_set_coalescing(MemoryRegion *mr);
 
 /**
  * memory_region_set_flush_coalesced: Enforce memory coalescing flush before
@@ -1320,18 +1252,6 @@ void memory_region_set_address(MemoryRegion *mr, hwaddr addr);
  */
 void memory_region_set_size(MemoryRegion *mr, uint64_t size);
 
-/*
- * memory_region_set_alias_offset: dynamically update a memory alias's offset
- *
- * Dynamically updates the offset into the target region that an alias points
- * to, as if the fourth argument to memory_region_init_alias() has changed.
- *
- * @mr: the #MemoryRegion to be updated; should be an alias.
- * @offset: the new offset into the target memory region
- */
-void memory_region_set_alias_offset(MemoryRegion *mr,
-                                    hwaddr offset);
-
 /**
  * memory_region_present: checks if an address relative to a @container
  * translates into #MemoryRegion within @container
@@ -1433,19 +1353,6 @@ void memory_global_dirty_log_stop(void);
 
 void mtree_info(fprintf_function mon_printf, void *f, bool flatview,
                 bool dispatch_tree);
-
-/**
- * memory_region_invalidate_mmio_ptr: invalidate the pointer to an mmio
- * previously requested.
- * In the end that means that if something wants to execute from this area it
- * will need to request the pointer again.
- *
- * @mr: #MemoryRegion associated to the pointer.
- * @offset: offset within the memory region
- * @size: size of that area.
- */
-void memory_region_invalidate_mmio_ptr(MemoryRegion *mr, hwaddr offset,
-                                       unsigned size);
 
 /**
  * memory_region_dispatch_read: perform a read directly to the specified
@@ -1674,33 +1581,33 @@ void address_space_cache_destroy(MemoryRegionCache *cache);
  *   if NULL, this information is discarded
  */
 uint32_t address_space_ldub_cached(MemoryRegionCache *cache, hwaddr addr,
-                            MemTxAttrs attrs, MemTxResult *result);
+                                    MemTxAttrs attrs, MemTxResult *result);
 uint32_t address_space_lduw_le_cached(MemoryRegionCache *cache, hwaddr addr,
-                            MemTxAttrs attrs, MemTxResult *result);
+                                    MemTxAttrs attrs, MemTxResult *result);
 uint32_t address_space_lduw_be_cached(MemoryRegionCache *cache, hwaddr addr,
-                            MemTxAttrs attrs, MemTxResult *result);
+                                    MemTxAttrs attrs, MemTxResult *result);
 uint32_t address_space_ldl_le_cached(MemoryRegionCache *cache, hwaddr addr,
-                            MemTxAttrs attrs, MemTxResult *result);
+                                    MemTxAttrs attrs, MemTxResult *result);
 uint32_t address_space_ldl_be_cached(MemoryRegionCache *cache, hwaddr addr,
-                            MemTxAttrs attrs, MemTxResult *result);
+                                    MemTxAttrs attrs, MemTxResult *result);
 uint64_t address_space_ldq_le_cached(MemoryRegionCache *cache, hwaddr addr,
-                            MemTxAttrs attrs, MemTxResult *result);
+                                    MemTxAttrs attrs, MemTxResult *result);
 uint64_t address_space_ldq_be_cached(MemoryRegionCache *cache, hwaddr addr,
-                            MemTxAttrs attrs, MemTxResult *result);
+                                    MemTxAttrs attrs, MemTxResult *result);
 void address_space_stb_cached(MemoryRegionCache *cache, hwaddr addr, uint32_t val,
-                            MemTxAttrs attrs, MemTxResult *result);
+                                    MemTxAttrs attrs, MemTxResult *result);
 void address_space_stw_le_cached(MemoryRegionCache *cache, hwaddr addr, uint32_t val,
-                            MemTxAttrs attrs, MemTxResult *result);
+                                    MemTxAttrs attrs, MemTxResult *result);
 void address_space_stw_be_cached(MemoryRegionCache *cache, hwaddr addr, uint32_t val,
-                            MemTxAttrs attrs, MemTxResult *result);
+                                    MemTxAttrs attrs, MemTxResult *result);
 void address_space_stl_le_cached(MemoryRegionCache *cache, hwaddr addr, uint32_t val,
-                            MemTxAttrs attrs, MemTxResult *result);
+                                    MemTxAttrs attrs, MemTxResult *result);
 void address_space_stl_be_cached(MemoryRegionCache *cache, hwaddr addr, uint32_t val,
-                            MemTxAttrs attrs, MemTxResult *result);
+                                    MemTxAttrs attrs, MemTxResult *result);
 void address_space_stq_le_cached(MemoryRegionCache *cache, hwaddr addr, uint64_t val,
-                            MemTxAttrs attrs, MemTxResult *result);
+                                    MemTxAttrs attrs, MemTxResult *result);
 void address_space_stq_be_cached(MemoryRegionCache *cache, hwaddr addr, uint64_t val,
-                            MemTxAttrs attrs, MemTxResult *result);
+                                    MemTxAttrs attrs, MemTxResult *result);
 
 uint32_t ldub_phys_cached(MemoryRegionCache *cache, hwaddr addr);
 uint32_t lduw_le_phys_cached(MemoryRegionCache *cache, hwaddr addr);
@@ -1745,23 +1652,6 @@ static inline MemoryRegion *address_space_translate(AddressSpace *as,
     return flatview_translate(address_space_to_flatview(as),
                               addr, xlat, len, is_write);
 }
-
-/* address_space_access_valid: check for validity of accessing an address
- * space range
- *
- * Check whether memory is assigned to the given address space range, and
- * access is permitted by any IOMMU regions that are active for the address
- * space.
- *
- * For now, addr and len should be aligned to a page size.  This limitation
- * will be lifted in the future.
- *
- * @as: #AddressSpace to be accessed
- * @addr: address within that address space
- * @len: length of the area to be checked
- * @is_write: indicates the transfer direction
- */
-bool address_space_access_valid(AddressSpace *as, hwaddr addr, int len, bool is_write);
 
 /* address_space_map: map a physical memory region into a host virtual address
  *

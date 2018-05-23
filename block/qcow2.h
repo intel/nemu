@@ -593,9 +593,6 @@ int qcow2_inc_refcounts_imrt(BlockDriverState *bs, BdrvCheckResult *res,
                              int64_t *refcount_table_size,
                              int64_t offset, int64_t size);
 
-int qcow2_change_refcount_order(BlockDriverState *bs, int refcount_order,
-                                BlockDriverAmendStatusCB *status_cb,
-                                void *cb_opaque, Error **errp);
 int qcow2_shrink_reftable(BlockDriverState *bs);
 int64_t qcow2_get_last_cluster(BlockDriverState *bs, int64_t size);
 
@@ -624,10 +621,6 @@ int qcow2_cluster_discard(BlockDriverState *bs, uint64_t offset,
 int qcow2_cluster_zeroize(BlockDriverState *bs, uint64_t offset,
                           uint64_t bytes, int flags);
 
-int qcow2_expand_zero_clusters(BlockDriverState *bs,
-                               BlockDriverAmendStatusCB *status_cb,
-                               void *cb_opaque);
-
 /* qcow2-snapshot.c functions */
 int qcow2_snapshot_create(BlockDriverState *bs, QEMUSnapshotInfo *sn_info);
 int qcow2_snapshot_goto(BlockDriverState *bs, const char *snapshot_id);
@@ -636,10 +629,6 @@ int qcow2_snapshot_delete(BlockDriverState *bs,
                           const char *name,
                           Error **errp);
 int qcow2_snapshot_list(BlockDriverState *bs, QEMUSnapshotInfo **psn_tab);
-int qcow2_snapshot_load_tmp(BlockDriverState *bs,
-                            const char *snapshot_id,
-                            const char *name,
-                            Error **errp);
 
 void qcow2_free_snapshots(BlockDriverState *bs);
 int qcow2_read_snapshots(BlockDriverState *bs);

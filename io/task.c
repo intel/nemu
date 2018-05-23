@@ -181,21 +181,6 @@ bool qio_task_propagate_error(QIOTask *task,
 }
 
 
-void qio_task_set_result_pointer(QIOTask *task,
-                                 gpointer result,
-                                 GDestroyNotify destroy)
-{
-    task->result = result;
-    task->destroyResult = destroy;
-}
-
-
-gpointer qio_task_get_result_pointer(QIOTask *task)
-{
-    return task->result;
-}
-
-
 Object *qio_task_get_source(QIOTask *task)
 {
     return task->source;

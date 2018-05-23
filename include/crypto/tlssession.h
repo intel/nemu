@@ -289,34 +289,4 @@ typedef enum {
 QCryptoTLSSessionHandshakeStatus
 qcrypto_tls_session_get_handshake_status(QCryptoTLSSession *sess);
 
-/**
- * qcrypto_tls_session_get_key_size:
- * @sess: the TLS session object
- * @errp: pointer to a NULL-initialized error object
- *
- * Check the size of the data channel encryption key
- *
- * Returns: the length in bytes of the encryption key
- * or -1 on error
- */
-int qcrypto_tls_session_get_key_size(QCryptoTLSSession *sess,
-                                     Error **errp);
-
-/**
- * qcrypto_tls_session_get_peer_name:
- * @sess: the TLS session object
- *
- * Get the identified name of the remote peer. If the
- * TLS session was negotiated using x509 certificate
- * credentials, this will return the CommonName from
- * the peer's certificate. If no identified name is
- * available it will return NULL.
- *
- * The returned data must be released with g_free()
- * when no longer required.
- *
- * Returns: the peer's name or NULL.
- */
-char *qcrypto_tls_session_get_peer_name(QCryptoTLSSession *sess);
-
 #endif /* QCRYPTO_TLSSESSION_H */

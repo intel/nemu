@@ -956,13 +956,6 @@ void serial_exit_core(SerialState *s)
     qemu_unregister_reset(serial_reset, s);
 }
 
-/* Change the main reference oscillator frequency. */
-void serial_set_frequency(SerialState *s, uint32_t frequency)
-{
-    s->baudbase = frequency;
-    serial_update_parameters(s);
-}
-
 const MemoryRegionOps serial_io_ops = {
     .read = serial_ioport_read,
     .write = serial_ioport_write,
@@ -972,86 +965,3 @@ const MemoryRegionOps serial_io_ops = {
     },
     .endianness = DEVICE_LITTLE_ENDIAN,
 };
-
-SerialState *serial_init(int base, qemu_irq irq, int baudbase,
-                         Chardev *chr, MemoryRegion *system_io)
-{
-    SerialState *s;
-
-    s = g_malloc0(sizeof(SerialState));
-
-    s->irq = irq;
-    s->baudbase = baudbase;
-    qemu_chr_fe_init(&s->chr, chr, &error_abort);
-    serial_realize_core(s, &error_fatal);
-
-    vmstate_register(NULL, base, &vmstate_serial, s);
-
-    memory_region_init_io(&s->io, NULL, &serial_io_ops, s, "serial", 8);
-    memory_region_add_subregion(system_io, base, &s->io);
-
-    return s;
-}
-
-/* Memory mapped interface */
-static uint64_t serial_mm_read(void *opaque, hwaddr addr,
-                               unsigned size)
-{
-    SerialState *s = opaque;
-    return serial_ioport_read(s, addr >> s->it_shift, 1);
-}
-
-static void serial_mm_write(void *opaque, hwaddr addr,
-                            uint64_t value, unsigned size)
-{
-    SerialState *s = opaque;
-    value &= 255;
-    serial_ioport_write(s, addr >> s->it_shift, value, 1);
-}
-
-static const MemoryRegionOps serial_mm_ops[3] = {
-    [DEVICE_NATIVE_ENDIAN] = {
-        .read = serial_mm_read,
-        .write = serial_mm_write,
-        .endianness = DEVICE_NATIVE_ENDIAN,
-        .valid.max_access_size = 8,
-        .impl.max_access_size = 8,
-    },
-    [DEVICE_LITTLE_ENDIAN] = {
-        .read = serial_mm_read,
-        .write = serial_mm_write,
-        .endianness = DEVICE_LITTLE_ENDIAN,
-        .valid.max_access_size = 8,
-        .impl.max_access_size = 8,
-    },
-    [DEVICE_BIG_ENDIAN] = {
-        .read = serial_mm_read,
-        .write = serial_mm_write,
-        .endianness = DEVICE_BIG_ENDIAN,
-        .valid.max_access_size = 8,
-        .impl.max_access_size = 8,
-    },
-};
-
-SerialState *serial_mm_init(MemoryRegion *address_space,
-                            hwaddr base, int it_shift,
-                            qemu_irq irq, int baudbase,
-                            Chardev *chr, enum device_endian end)
-{
-    SerialState *s;
-
-    s = g_malloc0(sizeof(SerialState));
-
-    s->it_shift = it_shift;
-    s->irq = irq;
-    s->baudbase = baudbase;
-    qemu_chr_fe_init(&s->chr, chr, &error_abort);
-
-    serial_realize_core(s, &error_fatal);
-    vmstate_register(NULL, base, &vmstate_serial, s);
-
-    memory_region_init_io(&s->io, NULL, &serial_mm_ops[end], s,
-                          "serial", 8 << it_shift);
-    memory_region_add_subregion(address_space, base, &s->io);
-    return s;
-}

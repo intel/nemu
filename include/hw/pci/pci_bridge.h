@@ -100,14 +100,6 @@ void pci_bridge_initfn(PCIDevice *pci_dev, const char *typename);
 void pci_bridge_exitfn(PCIDevice *pci_dev);
 
 
-/*
- * before qdev initialization(qdev_init()), this function sets bus_name and
- * map_irq callback which are necessry for pci_bridge_initfn() to
- * initialize bus.
- */
-void pci_bridge_map_irq(PCIBridge *br, const char* bus_name,
-                        pci_map_irq_fn map_irq);
-
 /* TODO: add this define to pci_regs.h in linux and then in qemu. */
 #define  PCI_BRIDGE_CTL_VGA_16BIT	0x10	/* VGA 16-bit decode */
 #define  PCI_BRIDGE_CTL_DISCARD		0x100	/* Primary discard timer */

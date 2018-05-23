@@ -1187,42 +1187,11 @@ static void migrate_fd_cancel(MigrationState *s)
     }
 }
 
-void add_migration_state_change_notifier(Notifier *notify)
-{
-    notifier_list_add(&migration_state_notifiers, notify);
-}
-
-void remove_migration_state_change_notifier(Notifier *notify)
-{
-    notifier_remove(notify);
-}
-
-bool migration_in_setup(MigrationState *s)
-{
-    return s->state == MIGRATION_STATUS_SETUP;
-}
-
-bool migration_has_finished(MigrationState *s)
-{
-    return s->state == MIGRATION_STATUS_COMPLETED;
-}
-
-bool migration_has_failed(MigrationState *s)
-{
-    return (s->state == MIGRATION_STATUS_CANCELLED ||
-            s->state == MIGRATION_STATUS_FAILED);
-}
-
 bool migration_in_postcopy(void)
 {
     MigrationState *s = migrate_get_current();
 
     return (s->state == MIGRATION_STATUS_POSTCOPY_ACTIVE);
-}
-
-bool migration_in_postcopy_after_devices(MigrationState *s)
-{
-    return migration_in_postcopy() && s->postcopy_after_devices;
 }
 
 bool migration_is_idle(void)
@@ -1596,15 +1565,6 @@ int migrate_multifd_channels(void)
     s = migrate_get_current();
 
     return s->parameters.x_multifd_channels;
-}
-
-int migrate_multifd_page_count(void)
-{
-    MigrationState *s;
-
-    s = migrate_get_current();
-
-    return s->parameters.x_multifd_page_count;
 }
 
 int migrate_use_xbzrle(void)
@@ -2086,7 +2046,6 @@ static void migration_completion(MigrationState *s)
         ret = global_state_store();
 
         if (!ret) {
-            bool inactivate = !migrate_colo_enabled();
             ret = vm_stop_force_state(RUN_STATE_FINISH_MIGRATE);
             if (ret >= 0) {
                 ret = migration_maybe_pause(s, &current_active_state,
@@ -2095,10 +2054,7 @@ static void migration_completion(MigrationState *s)
             if (ret >= 0) {
                 qemu_file_set_rate_limit(s->to_dst_file, INT64_MAX);
                 ret = qemu_savevm_state_complete_precopy(s->to_dst_file, false,
-                                                         inactivate);
-            }
-            if (inactivate && ret >= 0) {
-                s->block_inactive = true;
+                                                         false);
             }
         }
         qemu_mutex_unlock_iothread();
@@ -2134,10 +2090,8 @@ static void migration_completion(MigrationState *s)
         goto fail_invalidate;
     }
 
-    if (!migrate_colo_enabled()) {
-        migrate_set_state(&s->state, current_active_state,
-                          MIGRATION_STATUS_COMPLETED);
-    }
+    migrate_set_state(&s->state, current_active_state,
+                      MIGRATION_STATUS_COMPLETED);
 
     return;
 
@@ -2162,12 +2116,6 @@ fail_invalidate:
 fail:
     migrate_set_state(&s->state, current_active_state,
                       MIGRATION_STATUS_FAILED);
-}
-
-bool migrate_colo_enabled(void)
-{
-    MigrationState *s = migrate_get_current();
-    return s->enabled_capabilities[MIGRATION_CAPABILITY_X_COLO];
 }
 
 static void migration_calculate_complete(MigrationState *s)
@@ -2287,10 +2235,6 @@ static void migration_iteration_finish(MigrationState *s)
          * We should really assert here, but since it's during
          * migration, let's try to reduce the usage of assertions.
          */
-        if (!migrate_colo_enabled()) {
-            error_report("%s: critical error: calling COLO code without "
-                         "COLO enabled", __func__);
-        }
         /*
          * Fixme: we will run VM in COLO no matter its old running state.
          * After exited COLO, we will keep running.

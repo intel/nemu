@@ -114,7 +114,6 @@ typedef struct QEMUFileHooks {
 } QEMUFileHooks;
 
 QEMUFile *qemu_fopen_ops(void *opaque, const QEMUFileOps *ops);
-void qemu_file_set_hooks(QEMUFile *f, const QEMUFileHooks *hooks);
 int qemu_get_fd(QEMUFile *f);
 int qemu_fclose(QEMUFile *f);
 int64_t qemu_ftell(QEMUFile *f);
@@ -125,7 +124,6 @@ int64_t qemu_ftell_fast(QEMUFile *f);
  */
 void qemu_put_buffer_async(QEMUFile *f, const uint8_t *buf, size_t size,
                            bool may_free);
-bool qemu_file_mode_is_not_valid(const char *mode);
 bool qemu_file_is_writable(QEMUFile *f);
 
 #include "migration/qemu-file-types.h"

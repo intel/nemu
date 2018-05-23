@@ -62,9 +62,7 @@ MachineClass *find_default_machine(void);
 extern MachineState *current_machine;
 
 void machine_run_board_init(MachineState *machine);
-bool machine_usb(MachineState *machine);
 bool machine_kernel_irqchip_allowed(MachineState *machine);
-bool machine_kernel_irqchip_required(MachineState *machine);
 bool machine_kernel_irqchip_split(MachineState *machine);
 int machine_kvm_shadow_mem(MachineState *machine);
 int machine_phandle_start(MachineState *machine);

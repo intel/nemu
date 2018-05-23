@@ -229,43 +229,6 @@ BlockAIOCB *dma_blk_io(AioContext *ctx,
 }
 
 
-static
-BlockAIOCB *dma_blk_read_io_func(int64_t offset, QEMUIOVector *iov,
-                                 BlockCompletionFunc *cb, void *cb_opaque,
-                                 void *opaque)
-{
-    BlockBackend *blk = opaque;
-    return blk_aio_preadv(blk, offset, iov, 0, cb, cb_opaque);
-}
-
-BlockAIOCB *dma_blk_read(BlockBackend *blk,
-                         QEMUSGList *sg, uint64_t offset, uint32_t align,
-                         void (*cb)(void *opaque, int ret), void *opaque)
-{
-    return dma_blk_io(blk_get_aio_context(blk), sg, offset, align,
-                      dma_blk_read_io_func, blk, cb, opaque,
-                      DMA_DIRECTION_FROM_DEVICE);
-}
-
-static
-BlockAIOCB *dma_blk_write_io_func(int64_t offset, QEMUIOVector *iov,
-                                  BlockCompletionFunc *cb, void *cb_opaque,
-                                  void *opaque)
-{
-    BlockBackend *blk = opaque;
-    return blk_aio_pwritev(blk, offset, iov, 0, cb, cb_opaque);
-}
-
-BlockAIOCB *dma_blk_write(BlockBackend *blk,
-                          QEMUSGList *sg, uint64_t offset, uint32_t align,
-                          void (*cb)(void *opaque, int ret), void *opaque)
-{
-    return dma_blk_io(blk_get_aio_context(blk), sg, offset, align,
-                      dma_blk_write_io_func, blk, cb, opaque,
-                      DMA_DIRECTION_TO_DEVICE);
-}
-
-
 static uint64_t dma_buf_rw(uint8_t *ptr, int32_t len, QEMUSGList *sg,
                            DMADirection dir)
 {

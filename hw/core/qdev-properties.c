@@ -634,18 +634,6 @@ const PropertyInfo qdev_prop_bios_chs_trans = {
     .set_default_value = set_default_value_enum,
 };
 
-/* --- FDC default drive types */
-
-const PropertyInfo qdev_prop_fdc_drive_type = {
-    .name = "FdcDriveType",
-    .description = "FDC drive type, "
-                   "144/288/120/none/auto",
-    .enum_table = &FloppyDriveType_lookup,
-    .get = get_enum,
-    .set = set_enum,
-    .set_default_value = set_default_value_enum,
-};
-
 /* --- pci address --- */
 
 /*
@@ -1053,39 +1041,6 @@ const PropertyInfo qdev_prop_arraylen = {
 };
 
 /* --- public helpers --- */
-
-static Property *qdev_prop_walk(Property *props, const char *name)
-{
-    if (!props) {
-        return NULL;
-    }
-    while (props->name) {
-        if (strcmp(props->name, name) == 0) {
-            return props;
-        }
-        props++;
-    }
-    return NULL;
-}
-
-static Property *qdev_prop_find(DeviceState *dev, const char *name)
-{
-    ObjectClass *class;
-    Property *prop;
-
-    /* device properties */
-    class = object_get_class(OBJECT(dev));
-    do {
-        prop = qdev_prop_walk(DEVICE_CLASS(class)->props, name);
-        if (prop) {
-            return prop;
-        }
-        class = object_class_get_parent(class);
-    } while (class != object_class_by_name(TYPE_DEVICE));
-
-    return NULL;
-}
-
 void error_set_from_qdev_prop_error(Error **errp, int ret, DeviceState *dev,
                                     Property *prop, const char *value)
 {
@@ -1151,27 +1106,6 @@ void qdev_prop_set_macaddr(DeviceState *dev, const char *name,
              value[0], value[1], value[2], value[3], value[4], value[5]);
 
     object_property_set_str(OBJECT(dev), str, name, &error_abort);
-}
-
-void qdev_prop_set_enum(DeviceState *dev, const char *name, int value)
-{
-    Property *prop;
-
-    prop = qdev_prop_find(dev, name);
-    object_property_set_str(OBJECT(dev),
-                            qapi_enum_lookup(prop->info->enum_table, value),
-                            name, &error_abort);
-}
-
-void qdev_prop_set_ptr(DeviceState *dev, const char *name, void *value)
-{
-    Property *prop;
-    void **ptr;
-
-    prop = qdev_prop_find(dev, name);
-    assert(prop && prop->info == &qdev_prop_ptr);
-    ptr = qdev_get_prop_ptr(dev, prop);
-    *ptr = value;
 }
 
 static GList *global_props;

@@ -356,7 +356,6 @@ void pci_register_bar(PCIDevice *pci_dev, int region_num,
 void pci_register_vga(PCIDevice *pci_dev, MemoryRegion *mem,
                       MemoryRegion *io_lo, MemoryRegion *io_hi);
 void pci_unregister_vga(PCIDevice *pci_dev);
-pcibus_t pci_get_bar_addr(PCIDevice *pci_dev, int region_num);
 
 int pci_add_capability(PCIDevice *pdev, uint8_t cap_id,
                        uint8_t offset, uint8_t size,
@@ -373,7 +372,6 @@ void pci_default_write_config(PCIDevice *d,
                               uint32_t address, uint32_t val, int len);
 void pci_device_save(PCIDevice *s, QEMUFile *f);
 int pci_device_load(PCIDevice *s, QEMUFile *f);
-MemoryRegion *pci_address_space(PCIDevice *dev);
 MemoryRegion *pci_address_space_io(PCIDevice *dev);
 
 /*
@@ -394,11 +392,6 @@ typedef PCIINTxRoute (*pci_route_irq_fn)(void *opaque, int pin);
 
 bool pci_bus_is_express(PCIBus *bus);
 bool pci_bus_is_root(PCIBus *bus);
-void pci_root_bus_new_inplace(PCIBus *bus, size_t bus_size, DeviceState *parent,
-                              const char *name,
-                              MemoryRegion *address_space_mem,
-                              MemoryRegion *address_space_io,
-                              uint8_t devfn_min, const char *typename);
 PCIBus *pci_root_bus_new(DeviceState *parent, const char *name,
                          MemoryRegion *address_space_mem,
                          MemoryRegion *address_space_io,
@@ -421,8 +414,6 @@ bool pci_intx_route_changed(PCIINTxRoute *old, PCIINTxRoute *new);
 void pci_bus_fire_intx_routing_notifier(PCIBus *bus);
 void pci_device_set_intx_routing_notifier(PCIDevice *dev,
                                           PCIINTxRoutingNotifier notifier);
-void pci_device_reset(PCIDevice *dev);
-
 PCIDevice *pci_nic_init_nofail(NICInfo *nd, PCIBus *rootbus,
                                const char *default_model,
                                const char *default_devaddr);
@@ -443,10 +434,6 @@ int pci_bus_numa_node(PCIBus *bus);
 void pci_for_each_device(PCIBus *bus, int bus_num,
                          void (*fn)(PCIBus *bus, PCIDevice *d, void *opaque),
                          void *opaque);
-void pci_for_each_device_reverse(PCIBus *bus, int bus_num,
-                                 void (*fn)(PCIBus *bus, PCIDevice *d,
-                                            void *opaque),
-                                 void *opaque);
 void pci_for_each_bus_depth_first(PCIBus *bus,
                                   void *(*begin)(PCIBus *bus, void *parent_state),
                                   void (*end)(PCIBus *bus, void *state),

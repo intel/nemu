@@ -162,12 +162,6 @@ static void ramblock_recv_map_init(void)
     }
 }
 
-int ramblock_recv_bitmap_test(RAMBlock *rb, void *host_addr)
-{
-    return test_bit(ramblock_recv_bitmap_offset(host_addr, rb),
-                    rb->receivedmap);
-}
-
 bool ramblock_recv_bitmap_test_byte_offset(RAMBlock *rb, uint64_t byte_offset)
 {
     return test_bit(byte_offset >> TARGET_PAGE_BITS, rb->receivedmap);
@@ -1565,19 +1559,6 @@ static int ram_find_and_save_block(RAMState *rs, bool last_stage)
     rs->last_page = pss.page;
 
     return pages;
-}
-
-void acct_update_position(QEMUFile *f, size_t size, bool zero)
-{
-    uint64_t pages = size / TARGET_PAGE_SIZE;
-
-    if (zero) {
-        ram_counters.duplicate += pages;
-    } else {
-        ram_counters.normal += pages;
-        ram_counters.transferred += size;
-        qemu_update_position(f, size);
-    }
 }
 
 uint64_t ram_bytes_total(void)

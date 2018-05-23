@@ -176,17 +176,4 @@ QIOChannelSocket *qio_net_listener_wait_client(QIONetListener *listener);
  * watches and closing the socket channels.
  */
 void qio_net_listener_disconnect(QIONetListener *listener);
-
-
-/**
- * qio_net_listener_is_connected:
- * @listener: the network listener object
- *
- * Determine if the listener is connected to any socket
- * channels
- *
- * Returns: true if connected, false otherwise
- */
-bool qio_net_listener_is_connected(QIONetListener *listener);
-
 #endif /* QIO_NET_LISTENER_H */

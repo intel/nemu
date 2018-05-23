@@ -33,11 +33,6 @@
 #include "hw/acpi/acpi.h"
 #include "qemu/help_option.h"
 
-int graphic_width = 800;
-int graphic_height = 600;
-int graphic_depth = 32;
-
-
 #if defined(TARGET_ARM)
 #define QEMU_ARCH QEMU_ARCH_ARM
 #elif defined(TARGET_I386)

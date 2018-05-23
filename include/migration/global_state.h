@@ -18,7 +18,6 @@
 
 void register_global_state(void);
 int global_state_store(void);
-void global_state_store_running(void);
 bool global_state_received(void);
 RunState global_state_get_runstate(void);
 

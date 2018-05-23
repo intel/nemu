@@ -212,7 +212,6 @@ int kvm_has_debugregs(void);
 int kvm_has_pit_state2(void);
 int kvm_has_many_ioeventfds(void);
 int kvm_has_gsi_routing(void);
-int kvm_has_intx_set_mask(void);
 
 int kvm_init_vcpu(CPUState *cpu);
 int kvm_cpu_exec(CPUState *cpu);
@@ -261,10 +260,6 @@ int kvm_update_guest_debug(CPUState *cpu, unsigned long reinject_trap);
 int kvm_on_sigbus_vcpu(CPUState *cpu, int code, void *addr);
 int kvm_on_sigbus(int code, void *addr);
 
-/* interface with exec.c */
-
-void phys_mem_set_alloc(void *(*alloc)(size_t, uint64_t *align, bool shared));
-
 /* internal API */
 
 int kvm_ioctl(KVMState *s, int type, ...);
@@ -281,18 +276,6 @@ int kvm_vcpu_ioctl(CPUState *cpu, int type, ...);
  * Returns: -errno on error, nonnegative on success
  */
 int kvm_device_ioctl(int fd, int type, ...);
-
-/**
- * kvm_vm_check_attr - check for existence of a specific vm attribute
- * @s: The KVMState pointer
- * @group: the group
- * @attr: the attribute of that group to query for
- *
- * Returns: 1 if the attribute exists
- *          0 if the attribute either does not exist or if the vm device
- *            interface is unavailable
- */
-int kvm_vm_check_attr(KVMState *s, uint32_t group, uint64_t attr);
 
 /**
  * kvm_device_check_attr - check for existence of a specific device attribute
@@ -370,8 +353,6 @@ int kvm_arch_put_registers(CPUState *cpu, int level);
 int kvm_arch_init(MachineState *ms, KVMState *s);
 
 int kvm_arch_init_vcpu(CPUState *cpu);
-
-bool kvm_vcpu_id_is_valid(int vcpu_id);
 
 /* Returns VCPU ID to be used on KVM_CREATE_VCPU ioctl() */
 unsigned long kvm_arch_vcpu_id(CPUState *cpu);
@@ -463,8 +444,6 @@ int kvm_vm_check_extension(KVMState *s, unsigned int extension);
 uint32_t kvm_arch_get_supported_cpuid(KVMState *env, uint32_t function,
                                       uint32_t index, int reg);
 
-void kvm_set_sigmask_len(KVMState *s, unsigned int sigmask_len);
-
 int kvm_physical_memory_addr_from_host(KVMState *s, void *ram_addr,
                                        hwaddr *phys_addr);
 
@@ -494,8 +473,6 @@ int kvm_irqchip_update_msi_route(KVMState *s, int virq, MSIMessage msg,
 void kvm_irqchip_commit_routes(KVMState *s);
 void kvm_irqchip_release_virq(KVMState *s, int virq);
 
-int kvm_irqchip_add_hv_sint_route(KVMState *s, uint32_t vcpu, uint32_t sint);
-
 int kvm_irqchip_add_irqfd_notifier_gsi(KVMState *s, EventNotifier *n,
                                        EventNotifier *rn, int virq);
 int kvm_irqchip_remove_irqfd_notifier_gsi(KVMState *s, EventNotifier *n,
@@ -523,16 +500,6 @@ void kvm_init_irq_routing(KVMState *s);
 int kvm_arch_irqchip_create(MachineState *ms, KVMState *s);
 
 /**
- * kvm_set_one_reg - set a register value in KVM via KVM_SET_ONE_REG ioctl
- * @id: The register ID
- * @source: The pointer to the value to be set. It must point to a variable
- *          of the correct type/size for the register being accessed.
- *
- * Returns: 0 on success, or a negative errno on failure.
- */
-int kvm_set_one_reg(CPUState *cs, uint64_t id, void *source);
-
-/**
  * kvm_get_one_reg - get a register value from KVM via KVM_GET_ONE_REG ioctl
  * @id: The register ID
  * @target: The pointer where the value is to be stored. It must point to a
@@ -541,5 +508,4 @@ int kvm_set_one_reg(CPUState *cs, uint64_t id, void *source);
  * Returns: 0 on success, or a negative errno on failure.
  */
 int kvm_get_one_reg(CPUState *cs, uint64_t id, void *target);
-int kvm_get_max_memslots(void);
 #endif

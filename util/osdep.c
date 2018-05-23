@@ -73,29 +73,6 @@ int qemu_madvise(void *addr, size_t len, int advice)
 #endif
 }
 
-static int qemu_mprotect__osdep(void *addr, size_t size, int prot)
-{
-    g_assert(!((uintptr_t)addr & ~qemu_real_host_page_mask));
-    g_assert(!(size & ~qemu_real_host_page_mask));
-
-    if (mprotect(addr, size, prot)) {
-        error_report("%s: mprotect failed: %s", __func__, strerror(errno));
-        return -1;
-    }
-    return 0;
-}
-
-int qemu_mprotect_rwx(void *addr, size_t size)
-{
-    return qemu_mprotect__osdep(addr, size, PROT_READ | PROT_WRITE | PROT_EXEC);
-}
-
-int qemu_mprotect_none(void *addr, size_t size)
-{
-    return qemu_mprotect__osdep(addr, size, PROT_NONE);
-}
-
-
 static int fcntl_op_setlk = -1;
 static int fcntl_op_getlk = -1;
 
@@ -445,11 +422,6 @@ void fips_set_state(bool requested)
 	    (fips_enabled ? "enabled" : "disabled"),
 	    (requested ? "enabled" : "disabled"));
 #endif
-}
-
-bool fips_get_state(void)
-{
-    return fips_enabled;
 }
 
 int socket_init(void)

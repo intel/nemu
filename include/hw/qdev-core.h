@@ -291,7 +291,6 @@ void qdev_unplug(DeviceState *dev, Error **errp);
 void qdev_simple_device_unplug_cb(HotplugHandler *hotplug_dev,
                                   DeviceState *dev, Error **errp);
 void qdev_machine_creation_done(void);
-bool qdev_machine_modified(void);
 
 qemu_irq qdev_get_gpio_in(DeviceState *dev, int n);
 qemu_irq qdev_get_gpio_in_named(DeviceState *dev, const char *name, int n);
@@ -371,7 +370,6 @@ int qdev_walk_children(DeviceState *dev,
                        void *opaque);
 
 void qdev_reset_all(DeviceState *dev);
-void qdev_reset_all_fn(void *opaque);
 
 /**
  * @qbus_reset_all:
@@ -442,8 +440,5 @@ static inline bool qbus_is_hotpluggable(BusState *bus)
 {
    return bus->hotplug_handler;
 }
-
-void device_listener_register(DeviceListener *listener);
-void device_listener_unregister(DeviceListener *listener);
 
 #endif

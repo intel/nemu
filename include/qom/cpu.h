@@ -726,19 +726,6 @@ void run_on_cpu(CPUState *cpu, run_on_cpu_func func, run_on_cpu_data data);
  */
 void async_run_on_cpu(CPUState *cpu, run_on_cpu_func func, run_on_cpu_data data);
 
-/**
- * async_safe_run_on_cpu:
- * @cpu: The vCPU to run on.
- * @func: The function to be executed.
- * @data: Data to pass to the function.
- *
- * Schedules the function @func for execution on the vCPU @cpu asynchronously,
- * while all other vCPUs are sleeping.
- *
- * Unlike run_on_cpu and async_run_on_cpu, the function is run outside the
- * BQL.
- */
-void async_safe_run_on_cpu(CPUState *cpu, run_on_cpu_func func, run_on_cpu_data data);
 
 /**
  * qemu_get_cpu:
@@ -749,16 +736,6 @@ void async_safe_run_on_cpu(CPUState *cpu, run_on_cpu_func func, run_on_cpu_data 
  * Returns: The CPU or %NULL if there is no matching CPU.
  */
 CPUState *qemu_get_cpu(int index);
-
-/**
- * cpu_exists:
- * @id: Guest-exposed CPU ID to lookup.
- *
- * Search for CPU with specified ID.
- *
- * Returns: %true - CPU is found, %false - CPU isn't found.
- */
-bool cpu_exists(int64_t id);
 
 /**
  * cpu_by_arch_id:

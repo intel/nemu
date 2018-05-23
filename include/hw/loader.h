@@ -28,13 +28,6 @@ ssize_t load_image_size(const char *filename, void *addr, size_t size);
 int load_image_targphys_as(const char *filename,
                            hwaddr addr, uint64_t max_sz, AddressSpace *as);
 
-/** load_image_targphys:
- * Same as load_image_targphys_as(), but doesn't allow the caller to specify
- * an AddressSpace.
- */
-int load_image_targphys(const char *filename, hwaddr,
-                        uint64_t max_sz);
-
 /**
  * load_image_mr: load an image into a memory region
  * @filename: Path to the image file
@@ -56,13 +49,11 @@ int load_image_mr(const char *filename, MemoryRegion *mr);
 
 int load_image_gzipped_buffer(const char *filename, uint64_t max_sz,
                               uint8_t **buffer);
-int load_image_gzipped(const char *filename, hwaddr addr, uint64_t max_sz);
 
 #define ELF_LOAD_FAILED       -1
 #define ELF_LOAD_NOT_ELF      -2
 #define ELF_LOAD_WRONG_ARCH   -3
 #define ELF_LOAD_WRONG_ENDIAN -4
-const char *load_elf_strerror(int error);
 
 /** load_elf_ram_sym:
  * @filename: Path of ELF file
@@ -124,15 +115,6 @@ int load_elf_as(const char *filename,
                 uint64_t *highaddr, int big_endian, int elf_machine,
                 int clear_lsb, int data_swab, AddressSpace *as);
 
-/** load_elf:
- * Same as load_elf_as(), but doesn't allow the caller to specify an
- * AddressSpace.
- */
-int load_elf(const char *filename, uint64_t (*translate_fn)(void *, uint64_t),
-             void *translate_opaque, uint64_t *pentry, uint64_t *lowaddr,
-             uint64_t *highaddr, int big_endian, int elf_machine,
-             int clear_lsb, int data_swab);
-
 /** load_elf_hdr:
  * @filename: Path of ELF file
  * @hdr: Buffer to populate with header data. Header data will not be
@@ -144,9 +126,6 @@ int load_elf(const char *filename, uint64_t (*translate_fn)(void *, uint64_t),
  * buffer and/or determine if the ELF is 64bit.
  */
 void load_elf_hdr(const char *filename, void *hdr, bool *is64, Error **errp);
-
-int load_aout(const char *filename, hwaddr addr, int max_sz,
-              int bswap_needed, hwaddr target_page_size);
 
 /** load_uimage_as:
  * @filename: Path of uimage file
@@ -167,15 +146,6 @@ int load_uimage_as(const char *filename, hwaddr *ep,
                    uint64_t (*translate_fn)(void *, uint64_t),
                    void *translate_opaque, AddressSpace *as);
 
-/** load_uimage:
- * Same as load_uimage_as(), but doesn't allow the caller to specify an
- * AddressSpace.
- */
-int load_uimage(const char *filename, hwaddr *ep,
-                hwaddr *loadaddr, int *is_linux,
-                uint64_t (*translate_fn)(void *, uint64_t),
-                void *translate_opaque);
-
 /**
  * load_ramdisk_as:
  * @filename: Path to the ramdisk image
@@ -192,20 +162,7 @@ int load_uimage(const char *filename, hwaddr *ep,
 int load_ramdisk_as(const char *filename, hwaddr addr, uint64_t max_sz,
                     AddressSpace *as);
 
-/**
- * load_ramdisk:
- * Same as load_ramdisk_as(), but doesn't allow the caller to specify
- * an AddressSpace.
- */
-int load_ramdisk(const char *filename, hwaddr addr, uint64_t max_sz);
-
 ssize_t gunzip(void *dst, size_t dstlen, uint8_t *src, size_t srclen);
-
-ssize_t read_targphys(const char *name,
-                      int fd, hwaddr dst_addr, size_t nbytes);
-void pstrcpy_targphys(const char *name,
-                      hwaddr dest, int buf_size,
-                      const char *source);
 
 extern bool option_rom_has_mr;
 extern bool rom_file_has_mr;
@@ -225,7 +182,6 @@ int rom_check_and_register_reset(void);
 void rom_set_fw(FWCfgState *f);
 void rom_set_order_override(int order);
 void rom_reset_order_override(void);
-int rom_copy(uint8_t *dest, hwaddr addr, size_t size);
 void *rom_ptr(hwaddr addr);
 void hmp_info_roms(Monitor *mon, const QDict *qdict);
 

@@ -222,74 +222,6 @@ static void scsi_qdev_unrealize(DeviceState *qdev, Error **errp)
     blockdev_mark_auto_del(dev->conf.blk);
 }
 
-/* handle legacy '-drive if=scsi,...' cmd line args */
-SCSIDevice *scsi_bus_legacy_add_drive(SCSIBus *bus, BlockBackend *blk,
-                                      int unit, bool removable, int bootindex,
-                                      bool share_rw,
-                                      const char *serial, Error **errp)
-{
-    const char *driver;
-    char *name;
-    DeviceState *dev;
-    Error *err = NULL;
-
-    driver = blk_is_sg(blk) ? "scsi-generic" : "scsi-disk";
-    dev = qdev_create(&bus->qbus, driver);
-    name = g_strdup_printf("legacy[%d]", unit);
-    object_property_add_child(OBJECT(bus), name, OBJECT(dev), NULL);
-    g_free(name);
-
-    qdev_prop_set_uint32(dev, "scsi-id", unit);
-    if (bootindex >= 0) {
-        object_property_set_int(OBJECT(dev), bootindex, "bootindex",
-                                &error_abort);
-    }
-    if (object_property_find(OBJECT(dev), "removable", NULL)) {
-        qdev_prop_set_bit(dev, "removable", removable);
-    }
-    if (serial && object_property_find(OBJECT(dev), "serial", NULL)) {
-        qdev_prop_set_string(dev, "serial", serial);
-    }
-    qdev_prop_set_drive(dev, "drive", blk, &err);
-    if (err) {
-        error_propagate(errp, err);
-        object_unparent(OBJECT(dev));
-        return NULL;
-    }
-    object_property_set_bool(OBJECT(dev), share_rw, "share-rw", &err);
-    if (err != NULL) {
-        error_propagate(errp, err);
-        object_unparent(OBJECT(dev));
-        return NULL;
-    }
-    object_property_set_bool(OBJECT(dev), true, "realized", &err);
-    if (err != NULL) {
-        error_propagate(errp, err);
-        object_unparent(OBJECT(dev));
-        return NULL;
-    }
-    return SCSI_DEVICE(dev);
-}
-
-void scsi_bus_legacy_handle_cmdline(SCSIBus *bus)
-{
-    Location loc;
-    DriveInfo *dinfo;
-    int unit;
-
-    loc_push_none(&loc);
-    for (unit = 0; unit <= bus->info->max_target; unit++) {
-        dinfo = drive_get(IF_SCSI, bus->busnr, unit);
-        if (dinfo == NULL) {
-            continue;
-        }
-        qemu_opts_loc_restore(dinfo->opts);
-        scsi_bus_legacy_add_drive(bus, blk_by_legacy_dinfo(dinfo),
-                                  unit, false, -1, false, NULL, &error_fatal);
-    }
-    loc_pop(&loc);
-}
-
 static int32_t scsi_invalid_field(SCSIRequest *req, uint8_t *buf)
 {
     scsi_req_build_sense(req, SENSE_CODE(INVALID_FIELD));
@@ -1332,34 +1264,6 @@ void scsi_req_data(SCSIRequest *req, int len)
     scsi_req_continue(req);
 }
 
-void scsi_req_print(SCSIRequest *req)
-{
-    FILE *fp = stderr;
-    int i;
-
-    fprintf(fp, "[%s id=%d] %s",
-            req->dev->qdev.parent_bus->name,
-            req->dev->id,
-            scsi_command_name(req->cmd.buf[0]));
-    for (i = 1; i < req->cmd.len; i++) {
-        fprintf(fp, " 0x%02x", req->cmd.buf[i]);
-    }
-    switch (req->cmd.mode) {
-    case SCSI_XFER_NONE:
-        fprintf(fp, " - none\n");
-        break;
-    case SCSI_XFER_FROM_DEV:
-        fprintf(fp, " - from-dev len=%zd\n", req->cmd.xfer);
-        break;
-    case SCSI_XFER_TO_DEV:
-        fprintf(fp, " - to-dev len=%zd\n", req->cmd.xfer);
-        break;
-    default:
-        fprintf(fp, " - Oops\n");
-        break;
-    }
-}
-
 void scsi_req_complete(SCSIRequest *req, int status)
 {
     assert(req->status == -1);
@@ -1412,7 +1316,6 @@ void scsi_req_cancel_complete(SCSIRequest *req)
  * */
 void scsi_req_cancel_async(SCSIRequest *req, Notifier *notifier)
 {
-    trace_scsi_req_cancel(req->dev->id, req->lun, req->tag);
     if (notifier) {
         notifier_list_add(&req->cancel_notifiers, notifier);
     }
@@ -1430,24 +1333,6 @@ void scsi_req_cancel_async(SCSIRequest *req, Notifier *notifier)
     req->io_canceled = true;
     if (req->aiocb) {
         blk_aio_cancel_async(req->aiocb);
-    } else {
-        scsi_req_cancel_complete(req);
-    }
-}
-
-void scsi_req_cancel(SCSIRequest *req)
-{
-    trace_scsi_req_cancel(req->dev->id, req->lun, req->tag);
-    if (!req->enqueued) {
-        return;
-    }
-    assert(!req->io_canceled);
-    /* Dropped in scsi_req_cancel_complete.  */
-    scsi_req_ref(req);
-    scsi_req_dequeue(req);
-    req->io_canceled = true;
-    if (req->aiocb) {
-        blk_aio_cancel(req->aiocb);
     } else {
         scsi_req_cancel_complete(req);
     }

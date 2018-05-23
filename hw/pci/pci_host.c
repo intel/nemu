@@ -173,22 +173,10 @@ const MemoryRegionOps pci_host_conf_le_ops = {
     .endianness = DEVICE_LITTLE_ENDIAN,
 };
 
-const MemoryRegionOps pci_host_conf_be_ops = {
-    .read = pci_host_config_read,
-    .write = pci_host_config_write,
-    .endianness = DEVICE_BIG_ENDIAN,
-};
-
 const MemoryRegionOps pci_host_data_le_ops = {
     .read = pci_host_data_read,
     .write = pci_host_data_write,
     .endianness = DEVICE_LITTLE_ENDIAN,
-};
-
-const MemoryRegionOps pci_host_data_be_ops = {
-    .read = pci_host_data_read,
-    .write = pci_host_data_write,
-    .endianness = DEVICE_BIG_ENDIAN,
 };
 
 static const TypeInfo pci_host_type_info = {

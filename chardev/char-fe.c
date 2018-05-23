@@ -144,18 +144,6 @@ void qemu_chr_fe_accept_input(CharBackend *be)
     qemu_notify_event();
 }
 
-void qemu_chr_fe_printf(CharBackend *be, const char *fmt, ...)
-{
-    char buf[CHR_READ_BUF_LEN];
-    va_list ap;
-    va_start(ap, fmt);
-    vsnprintf(buf, sizeof(buf), fmt, ap);
-    /* XXX this blocks entire thread. Rewrite to use
-     * qemu_chr_fe_write and background I/O callbacks */
-    qemu_chr_fe_write_all(be, (uint8_t *)buf, strlen(buf));
-    va_end(ap);
-}
-
 Chardev *qemu_chr_fe_get_driver(CharBackend *be)
 {
     /* this is unsafe for the users that support chardev hotswap */
@@ -166,11 +154,6 @@ Chardev *qemu_chr_fe_get_driver(CharBackend *be)
 bool qemu_chr_fe_backend_connected(CharBackend *be)
 {
     return !!be->chr;
-}
-
-bool qemu_chr_fe_backend_open(CharBackend *be)
-{
-    return be->chr && be->chr->be_open;
 }
 
 bool qemu_chr_fe_init(CharBackend *b, Chardev *s, Error **errp)

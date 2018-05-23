@@ -18,7 +18,6 @@ extern int icount_align_option;
 /* drift information for info jit command */
 extern int64_t max_delay;
 extern int64_t max_advance;
-void dump_drift_info(FILE *f, fprintf_function cpu_fprintf);
 
 /* Unblock cpu */
 void qemu_cpu_kick_self(void);

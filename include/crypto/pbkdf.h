@@ -83,17 +83,6 @@
  *
  */
 
-/**
- * qcrypto_pbkdf2_supports:
- * @hash: the hash algorithm
- *
- * Determine if the current build supports the PBKDF2 algorithm
- * in combination with the hash @hash.
- *
- * Returns true if supported, false otherwise
- */
-bool qcrypto_pbkdf2_supports(QCryptoHashAlgorithm hash);
-
 
 /**
  * qcrypto_pbkdf2:

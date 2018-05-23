@@ -121,7 +121,6 @@ extern void rcu_unregister_thread(void);
 /*
  * Support for fork().  fork() support is enabled at startup.
  */
-extern void rcu_enable_atfork(void);
 extern void rcu_disable_atfork(void);
 
 struct rcu_head;

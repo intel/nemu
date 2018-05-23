@@ -66,8 +66,6 @@ void pci_data_write(PCIBus *s, uint32_t addr, uint32_t val, int len);
 uint32_t pci_data_read(PCIBus *s, uint32_t addr, int len);
 
 extern const MemoryRegionOps pci_host_conf_le_ops;
-extern const MemoryRegionOps pci_host_conf_be_ops;
 extern const MemoryRegionOps pci_host_data_le_ops;
-extern const MemoryRegionOps pci_host_data_be_ops;
 
 #endif /* PCI_HOST_H */

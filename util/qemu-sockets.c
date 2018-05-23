@@ -78,19 +78,6 @@ static void inet_setport(struct addrinfo *e, int port)
     }
 }
 
-NetworkAddressFamily inet_netfamily(int family)
-{
-    switch (family) {
-    case PF_INET6: return NETWORK_ADDRESS_FAMILY_IPV6;
-    case PF_INET:  return NETWORK_ADDRESS_FAMILY_IPV4;
-    case PF_UNIX:  return NETWORK_ADDRESS_FAMILY_UNIX;
-#ifdef CONFIG_AF_VSOCK
-    case PF_VSOCK: return NETWORK_ADDRESS_FAMILY_VSOCK;
-#endif /* CONFIG_AF_VSOCK */
-    }
-    return NETWORK_ADDRESS_FAMILY_UNKNOWN;
-}
-
 bool fd_is_socket(int fd)
 {
     int optval;
@@ -650,27 +637,6 @@ int inet_parse(InetSocketAddress *addr, const char *str, Error **errp)
     return 0;
 }
 
-
-/**
- * Create a blocking socket and connect it to an address.
- *
- * @str: address string
- * @errp: set in case of an error
- *
- * Returns -1 in case of error, file descriptor on success
- **/
-int inet_connect(const char *str, Error **errp)
-{
-    int sock = -1;
-    InetSocketAddress *addr = g_new(InetSocketAddress, 1);
-
-    if (!inet_parse(addr, str, errp)) {
-        sock = inet_connect_saddr(addr, errp);
-    }
-    qapi_free_InetSocketAddress(addr);
-    return sock;
-}
-
 #ifdef CONFIG_AF_VSOCK
 static bool vsock_parse_vaddr_to_sockaddr(const VsockSocketAddress *vaddr,
                                           struct sockaddr_vm *svm,
@@ -769,26 +735,6 @@ static int vsock_listen_saddr(VsockSocketAddress *vaddr,
     return slisten;
 }
 
-static int vsock_parse(VsockSocketAddress *addr, const char *str,
-                       Error **errp)
-{
-    char cid[33];
-    char port[33];
-    int n;
-
-    if (sscanf(str, "%32[^:]:%32[^,]%n", cid, port, &n) != 2) {
-        error_setg(errp, "error parsing address '%s'", str);
-        return -1;
-    }
-    if (str[n] != '\0') {
-        error_setg(errp, "trailing characters in address '%s'", str);
-        return -1;
-    }
-
-    addr->cid = g_strdup(cid);
-    addr->port = g_strdup(port);
-    return 0;
-}
 #else
 static void vsock_unsupported(Error **errp)
 {
@@ -808,12 +754,6 @@ static int vsock_listen_saddr(VsockSocketAddress *vaddr,
     return -1;
 }
 
-static int vsock_parse(VsockSocketAddress *addr, const char *str,
-                        Error **errp)
-{
-    vsock_unsupported(errp);
-    return -1;
-}
 #endif /* CONFIG_AF_VSOCK */
 
 static int unix_listen_saddr(UnixSocketAddress *saddr,
@@ -938,33 +878,6 @@ static int unix_connect_saddr(UnixSocketAddress *saddr, Error **errp)
     return -1;
 }
 
-/* compatibility wrapper */
-int unix_listen(const char *str, Error **errp)
-{
-    char *path, *optstr;
-    int sock, len;
-    UnixSocketAddress *saddr;
-
-    saddr = g_new0(UnixSocketAddress, 1);
-
-    optstr = strchr(str, ',');
-    if (optstr) {
-        len = optstr - str;
-        if (len) {
-            path = g_malloc(len+1);
-            snprintf(path, len+1, "%.*s", len, str);
-            saddr->path = path;
-        }
-    } else {
-        saddr->path = g_strdup(str);
-    }
-
-    sock = unix_listen_saddr(saddr, errp);
-
-    qapi_free_UnixSocketAddress(saddr);
-    return sock;
-}
-
 int unix_connect(const char *path, Error **errp)
 {
     UnixSocketAddress *saddr;
@@ -975,46 +888,6 @@ int unix_connect(const char *path, Error **errp)
     sock = unix_connect_saddr(saddr, errp);
     qapi_free_UnixSocketAddress(saddr);
     return sock;
-}
-
-
-SocketAddress *socket_parse(const char *str, Error **errp)
-{
-    SocketAddress *addr;
-
-    addr = g_new0(SocketAddress, 1);
-    if (strstart(str, "unix:", NULL)) {
-        if (str[5] == '\0') {
-            error_setg(errp, "invalid Unix socket address");
-            goto fail;
-        } else {
-            addr->type = SOCKET_ADDRESS_TYPE_UNIX;
-            addr->u.q_unix.path = g_strdup(str + 5);
-        }
-    } else if (strstart(str, "fd:", NULL)) {
-        if (str[3] == '\0') {
-            error_setg(errp, "invalid file descriptor address");
-            goto fail;
-        } else {
-            addr->type = SOCKET_ADDRESS_TYPE_FD;
-            addr->u.fd.str = g_strdup(str + 3);
-        }
-    } else if (strstart(str, "vsock:", NULL)) {
-        addr->type = SOCKET_ADDRESS_TYPE_VSOCK;
-        if (vsock_parse(&addr->u.vsock, str + strlen("vsock:"), errp)) {
-            goto fail;
-        }
-    } else {
-        addr->type = SOCKET_ADDRESS_TYPE_INET;
-        if (inet_parse(&addr->u.inet, str, errp)) {
-            goto fail;
-        }
-    }
-    return addr;
-
-fail:
-    qapi_free_SocketAddress(addr);
-    return NULL;
 }
 
 static int socket_get_fd(const char *fdstr, Error **errp)
@@ -1255,22 +1128,6 @@ SocketAddress *socket_local_address(int fd, Error **errp)
 
     return socket_sockaddr_to_address(&ss, sslen, errp);
 }
-
-
-SocketAddress *socket_remote_address(int fd, Error **errp)
-{
-    struct sockaddr_storage ss;
-    socklen_t sslen = sizeof(ss);
-
-    if (getpeername(fd, (struct sockaddr *)&ss, &sslen) < 0) {
-        error_setg_errno(errp, errno, "%s",
-                         "Unable to query remote socket address");
-        return NULL;
-    }
-
-    return socket_sockaddr_to_address(&ss, sslen, errp);
-}
-
 
 SocketAddress *socket_address_flatten(SocketAddressLegacy *addr_legacy)
 {

@@ -125,26 +125,6 @@ uint8_t cpu_get_apic_tpr(DeviceState *dev)
     return info->get_tpr(s);
 }
 
-void apic_enable_tpr_access_reporting(DeviceState *dev, bool enable)
-{
-    APICCommonState *s = APIC_COMMON(dev);
-    APICCommonClass *info = APIC_COMMON_GET_CLASS(s);
-
-    apic_report_tpr_access = enable;
-    if (info->enable_tpr_reporting) {
-        info->enable_tpr_reporting(s, enable);
-    }
-}
-
-void apic_enable_vapic(DeviceState *dev, hwaddr paddr)
-{
-    APICCommonState *s = APIC_COMMON(dev);
-    APICCommonClass *info = APIC_COMMON_GET_CLASS(s);
-
-    s->vapic_paddr = paddr;
-    info->vapic_base_update(s);
-}
-
 void apic_report_irq_delivered(int delivered)
 {
     apic_irq_delivered += delivered;

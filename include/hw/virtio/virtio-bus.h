@@ -119,10 +119,6 @@ uint16_t virtio_bus_get_vdev_id(VirtioBusState *bus);
 size_t virtio_bus_get_vdev_config_len(VirtioBusState *bus);
 /* Get bad features of the plugged device. */
 uint32_t virtio_bus_get_vdev_bad_features(VirtioBusState *bus);
-/* Get config of the plugged device. */
-void virtio_bus_get_vdev_config(VirtioBusState *bus, uint8_t *config);
-/* Set config of the plugged device. */
-void virtio_bus_set_vdev_config(VirtioBusState *bus, uint8_t *config);
 
 static inline VirtIODevice *virtio_bus_get_device(VirtioBusState *bus)
 {

@@ -135,13 +135,6 @@ static const KVMCapabilityInfo kvm_required_capabilites[] = {
     KVM_CAP_LAST_INFO
 };
 
-int kvm_get_max_memslots(void)
-{
-    KVMState *s = KVM_STATE(current_machine->accelerator);
-
-    return s->nr_slots;
-}
-
 bool kvm_memcrypt_enabled(void)
 {
     if (kvm_state && kvm_state->memcrypt_handle) {
@@ -1267,34 +1260,6 @@ static int kvm_irqchip_assign_irqfd(KVMState *s, int fd, int rfd, int virq,
     return kvm_vm_ioctl(s, KVM_IRQFD, &irqfd);
 }
 
-int kvm_irqchip_add_hv_sint_route(KVMState *s, uint32_t vcpu, uint32_t sint)
-{
-    struct kvm_irq_routing_entry kroute = {};
-    int virq;
-
-    if (!kvm_gsi_routing_enabled()) {
-        return -ENOSYS;
-    }
-    if (!kvm_check_extension(s, KVM_CAP_HYPERV_SYNIC)) {
-        return -ENOSYS;
-    }
-    virq = kvm_irqchip_get_virq(s);
-    if (virq < 0) {
-        return virq;
-    }
-
-    kroute.gsi = virq;
-    kroute.type = KVM_IRQ_ROUTING_HV_SINT;
-    kroute.flags = 0;
-    kroute.u.hv_sint.vcpu = vcpu;
-    kroute.u.hv_sint.sint = sint;
-
-    kvm_add_routing_entry(s, &kroute);
-    kvm_irqchip_commit_routes(s);
-
-    return virq;
-}
-
 #else /* !KVM_CAP_IRQ_ROUTING */
 
 void kvm_init_irq_routing(KVMState *s)
@@ -1311,11 +1276,6 @@ int kvm_irqchip_send_msi(KVMState *s, MSIMessage msg)
 }
 
 int kvm_irqchip_add_msi_route(KVMState *s, int vector, PCIDevice *dev)
-{
-    return -ENOSYS;
-}
-
-int kvm_irqchip_add_hv_sint_route(KVMState *s, uint32_t vcpu, uint32_t sint)
 {
     return -ENOSYS;
 }
@@ -1426,18 +1386,6 @@ static int kvm_max_vcpus(KVMState *s)
 {
     int ret = kvm_check_extension(s, KVM_CAP_MAX_VCPUS);
     return (ret) ? ret : kvm_recommended_vcpus(s);
-}
-
-static int kvm_max_vcpu_id(KVMState *s)
-{
-    int ret = kvm_check_extension(s, KVM_CAP_MAX_VCPU_ID);
-    return (ret) ? ret : kvm_max_vcpus(s);
-}
-
-bool kvm_vcpu_id_is_valid(int vcpu_id)
-{
-    KVMState *s = KVM_STATE(current_machine->accelerator);
-    return vcpu_id >= 0 && vcpu_id < kvm_max_vcpu_id(s);
 }
 
 static int kvm_init(MachineState *ms)
@@ -1660,11 +1608,6 @@ err:
     g_free(s->memory_listener.slots);
 
     return ret;
-}
-
-void kvm_set_sigmask_len(KVMState *s, unsigned int sigmask_len)
-{
-    s->sigmask_len = sigmask_len;
 }
 
 static void kvm_handle_io(uint16_t port, MemTxAttrs attrs, void *data, int direction,
@@ -2054,23 +1997,6 @@ int kvm_device_ioctl(int fd, int type, ...)
     return ret;
 }
 
-int kvm_vm_check_attr(KVMState *s, uint32_t group, uint64_t attr)
-{
-    int ret;
-    struct kvm_device_attr attribute = {
-        .group = group,
-        .attr = attr,
-    };
-
-    if (!kvm_vm_attributes_allowed) {
-        return 0;
-    }
-
-    ret = kvm_vm_ioctl(s, KVM_HAS_DEVICE_ATTR, &attribute);
-    /* kvm returns 0 on success for HAS_DEVICE_ATTR */
-    return ret ? 0 : 1;
-}
-
 int kvm_device_check_attr(int dev_fd, uint32_t group, uint64_t attr)
 {
     struct kvm_device_attr attribute = {
@@ -2140,11 +2066,6 @@ int kvm_has_gsi_routing(void)
 #else
     return false;
 #endif
-}
-
-int kvm_has_intx_set_mask(void)
-{
-    return kvm_state->intx_set_mask;
 }
 
 bool kvm_arm_supports_user_irq(void)
@@ -2447,20 +2368,6 @@ bool kvm_device_supported(int vmfd, uint64_t type)
     }
 
     return (ioctl(vmfd, KVM_CREATE_DEVICE, &create_dev) >= 0);
-}
-
-int kvm_set_one_reg(CPUState *cs, uint64_t id, void *source)
-{
-    struct kvm_one_reg reg;
-    int r;
-
-    reg.id = id;
-    reg.addr = (uintptr_t) source;
-    r = kvm_vcpu_ioctl(cs, KVM_SET_ONE_REG, &reg);
-    if (r) {
-        trace_kvm_failed_reg_set(id, strerror(-r));
-    }
-    return r;
 }
 
 int kvm_get_one_reg(CPUState *cs, uint64_t id, void *target)

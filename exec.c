@@ -379,12 +379,6 @@ static MemoryRegionSection *phys_page_find(AddressSpaceDispatch *d, hwaddr addr)
     }
 }
 
-bool memory_region_is_unassigned(MemoryRegion *mr)
-{
-    return mr != &io_mem_rom && mr != &io_mem_notdirty && !mr->rom_device
-        && mr != &io_mem_watch;
-}
-
 /* Called from RCU critical section */
 static MemoryRegionSection *address_space_lookup_region(AddressSpaceDispatch *d,
                                                         hwaddr addr,
@@ -576,21 +570,6 @@ MemoryRegion *flatview_translate(FlatView *fv, hwaddr addr, hwaddr *xlat,
 
     return mr;
 }
-
-/* Called from RCU critical section */
-MemoryRegionSection *
-address_space_translate_for_iotlb(CPUState *cpu, int asidx, hwaddr addr,
-                                  hwaddr *xlat, hwaddr *plen)
-{
-    MemoryRegionSection *section;
-    AddressSpaceDispatch *d = atomic_rcu_read(&cpu->cpu_ases[asidx].memory_dispatch);
-
-    section = address_space_translate_internal(d, addr, xlat, plen, false);
-
-    assert(!memory_region_is_iommu(section->mr));
-    return section;
-}
-
 
 static int cpu_common_post_load(void *opaque, int version_id)
 {
@@ -1078,131 +1057,12 @@ bool cpu_physical_memory_test_and_clear_dirty(ram_addr_t start,
     return dirty;
 }
 
-DirtyBitmapSnapshot *cpu_physical_memory_snapshot_and_clear_dirty
-     (ram_addr_t start, ram_addr_t length, unsigned client)
-{
-    DirtyMemoryBlocks *blocks;
-    unsigned long align = 1UL << (TARGET_PAGE_BITS + BITS_PER_LEVEL);
-    ram_addr_t first = QEMU_ALIGN_DOWN(start, align);
-    ram_addr_t last  = QEMU_ALIGN_UP(start + length, align);
-    DirtyBitmapSnapshot *snap;
-    unsigned long page, end, dest;
-
-    snap = g_malloc0(sizeof(*snap) +
-                     ((last - first) >> (TARGET_PAGE_BITS + 3)));
-    snap->start = first;
-    snap->end   = last;
-
-    page = first >> TARGET_PAGE_BITS;
-    end  = last  >> TARGET_PAGE_BITS;
-    dest = 0;
-
-    rcu_read_lock();
-
-    blocks = atomic_rcu_read(&ram_list.dirty_memory[client]);
-
-    while (page < end) {
-        unsigned long idx = page / DIRTY_MEMORY_BLOCK_SIZE;
-        unsigned long offset = page % DIRTY_MEMORY_BLOCK_SIZE;
-        unsigned long num = MIN(end - page, DIRTY_MEMORY_BLOCK_SIZE - offset);
-
-        assert(QEMU_IS_ALIGNED(offset, (1 << BITS_PER_LEVEL)));
-        assert(QEMU_IS_ALIGNED(num,    (1 << BITS_PER_LEVEL)));
-        offset >>= BITS_PER_LEVEL;
-
-        bitmap_copy_and_clear_atomic(snap->dirty + dest,
-                                     blocks->blocks[idx] + offset,
-                                     num);
-        page += num;
-        dest += num >> BITS_PER_LEVEL;
-    }
-
-    rcu_read_unlock();
-
-    return snap;
-}
-
-bool cpu_physical_memory_snapshot_get_dirty(DirtyBitmapSnapshot *snap,
-                                            ram_addr_t start,
-                                            ram_addr_t length)
-{
-    unsigned long page, end;
-
-    assert(start >= snap->start);
-    assert(start + length <= snap->end);
-
-    end = TARGET_PAGE_ALIGN(start + length - snap->start) >> TARGET_PAGE_BITS;
-    page = (start - snap->start) >> TARGET_PAGE_BITS;
-
-    while (page < end) {
-        if (test_bit(page, snap->dirty)) {
-            return true;
-        }
-        page++;
-    }
-    return false;
-}
-
-/* Called from RCU critical section */
-hwaddr memory_region_section_get_iotlb(CPUState *cpu,
-                                       MemoryRegionSection *section,
-                                       target_ulong vaddr,
-                                       hwaddr paddr, hwaddr xlat,
-                                       int prot,
-                                       target_ulong *address)
-{
-    hwaddr iotlb;
-    CPUWatchpoint *wp;
-
-    if (memory_region_is_ram(section->mr)) {
-        /* Normal RAM.  */
-        iotlb = memory_region_get_ram_addr(section->mr) + xlat;
-        if (!section->readonly) {
-            iotlb |= PHYS_SECTION_NOTDIRTY;
-        } else {
-            iotlb |= PHYS_SECTION_ROM;
-        }
-    } else {
-        AddressSpaceDispatch *d;
-
-        d = flatview_to_dispatch(section->fv);
-        iotlb = section - d->map.sections;
-        iotlb += xlat;
-    }
-
-    /* Make accesses to pages with watchpoints go via the
-       watchpoint trap routines.  */
-    QTAILQ_FOREACH(wp, &cpu->watchpoints, entry) {
-        if (cpu_watchpoint_address_matches(wp, vaddr, TARGET_PAGE_SIZE)) {
-            /* Avoid trapping reads of pages with a write breakpoint. */
-            if ((prot & PAGE_WRITE) || (wp->flags & BP_MEM_READ)) {
-                iotlb = PHYS_SECTION_WATCH + paddr;
-                *address |= TLB_MMIO;
-                break;
-            }
-        }
-    }
-
-    return iotlb;
-}
-
-
 static int subpage_register (subpage_t *mmio, uint32_t start, uint32_t end,
                              uint16_t section);
 static subpage_t *subpage_init(FlatView *fv, hwaddr base);
 
 static void *(*phys_mem_alloc)(size_t size, uint64_t *align, bool shared) =
                                qemu_anon_ram_alloc;
-
-/*
- * Set a custom physical guest memory alloator.
- * Accelerators with unusual needs may need this.  Hopefully, we can
- * get rid of it eventually.
- */
-void phys_mem_set_alloc(void *(*alloc)(size_t, uint64_t *align, bool shared))
-{
-    phys_mem_alloc = alloc;
-}
 
 static uint16_t phys_section_add(PhysPageMap *map,
                                  MemoryRegionSection *section)
@@ -1355,81 +1215,6 @@ void ram_block_dump(Monitor *mon)
         g_free(psize);
     }
     rcu_read_unlock();
-}
-
-/*
- * FIXME TOCTTOU: this iterates over memory backends' mem-path, which
- * may or may not name the same files / on the same filesystem now as
- * when we actually open and map them.  Iterate over the file
- * descriptors instead, and use qemu_fd_getpagesize().
- */
-static int find_max_supported_pagesize(Object *obj, void *opaque)
-{
-    char *mem_path;
-    long *hpsize_min = opaque;
-
-    if (object_dynamic_cast(obj, TYPE_MEMORY_BACKEND)) {
-        mem_path = object_property_get_str(obj, "mem-path", NULL);
-        if (mem_path) {
-            long hpsize = qemu_mempath_getpagesize(mem_path);
-            g_free(mem_path);
-            if (hpsize < *hpsize_min) {
-                *hpsize_min = hpsize;
-            }
-        } else {
-            *hpsize_min = getpagesize();
-        }
-    }
-
-    return 0;
-}
-
-long qemu_getrampagesize(void)
-{
-    long hpsize = LONG_MAX;
-    long mainrampagesize;
-    Object *memdev_root;
-
-    if (mem_path) {
-        mainrampagesize = qemu_mempath_getpagesize(mem_path);
-    } else {
-        mainrampagesize = getpagesize();
-    }
-
-    /* it's possible we have memory-backend objects with
-     * hugepage-backed RAM. these may get mapped into system
-     * address space via -numa parameters or memory hotplug
-     * hooks. we want to take these into account, but we
-     * also want to make sure these supported hugepage
-     * sizes are applicable across the entire range of memory
-     * we may boot from, so we take the min across all
-     * backends, and assume normal pages in cases where a
-     * backend isn't backed by hugepages.
-     */
-    memdev_root = object_resolve_path("/objects", NULL);
-    if (memdev_root) {
-        object_child_foreach(memdev_root, find_max_supported_pagesize, &hpsize);
-    }
-    if (hpsize == LONG_MAX) {
-        /* No additional memory regions found ==> Report main RAM page size */
-        return mainrampagesize;
-    }
-
-    /* If NUMA is disabled or the NUMA nodes are not backed with a
-     * memory-backend, then there is at least one node using "normal" RAM,
-     * so if its page size is smaller we have got to report that size instead.
-     */
-    if (hpsize > mainrampagesize &&
-        (nb_numa_nodes == 0 || numa_info[0].node_memdev == NULL)) {
-        static bool warned;
-        if (!warned) {
-            error_report("Huge page support disabled (n/a for main memory).");
-            warned = true;
-        }
-        return mainrampagesize;
-    }
-
-    return hpsize;
 }
 
 static int64_t get_file_size(int fd)
@@ -1653,11 +1438,6 @@ static void qemu_ram_setup_dump(void *addr, ram_addr_t size)
 const char *qemu_ram_get_idstr(RAMBlock *rb)
 {
     return rb->idstr;
-}
-
-bool qemu_ram_is_shared(RAMBlock *rb)
-{
-    return rb->flags & RAM_SHARED;
 }
 
 /* Note: Only set at the start of postcopy */
@@ -2503,16 +2283,6 @@ static const MemoryRegionOps readonly_mem_ops = {
     },
 };
 
-MemoryRegion *iotlb_to_region(CPUState *cpu, hwaddr index, MemTxAttrs attrs)
-{
-    int asidx = cpu_asidx_from_attrs(cpu, attrs);
-    CPUAddressSpace *cpuas = &cpu->cpu_ases[asidx];
-    AddressSpaceDispatch *d = atomic_rcu_read(&cpuas->memory_dispatch);
-    MemoryRegionSection *sections = d->map.sections;
-
-    return sections[index & ~TARGET_PAGE_MASK].mr;
-}
-
 static void io_mem_init(void)
 {
     memory_region_init_io(&io_mem_rom, NULL, &readonly_mem_ops,
@@ -3036,19 +2806,6 @@ static bool flatview_access_valid(FlatView *fv, hwaddr addr, int len,
         addr += l;
     }
     return true;
-}
-
-bool address_space_access_valid(AddressSpace *as, hwaddr addr,
-                                int len, bool is_write)
-{
-    FlatView *fv;
-    bool result;
-
-    rcu_read_lock();
-    fv = address_space_to_flatview(as);
-    result = flatview_access_valid(fv, addr, len, is_write);
-    rcu_read_unlock();
-    return result;
 }
 
 static hwaddr

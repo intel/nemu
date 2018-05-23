@@ -49,11 +49,6 @@ CPUState *cpu_by_arch_id(int64_t id)
     return NULL;
 }
 
-bool cpu_exists(int64_t id)
-{
-    return !!cpu_by_arch_id(id);
-}
-
 CPUState *cpu_create(const char *typename)
 {
     Error *err = NULL;

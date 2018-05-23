@@ -3118,12 +3118,6 @@ static void x86_register_cpudef_type(X86CPUDefinition *def)
 }
 
 
-void cpu_clear_apic_feature(CPUX86State *env)
-{
-    env->features[FEAT_1_EDX] &= ~CPUID_APIC;
-}
-
-
 void cpu_x86_cpuid(CPUX86State *env, uint32_t index, uint32_t count,
                    uint32_t *eax, uint32_t *ebx,
                    uint32_t *ecx, uint32_t *edx)

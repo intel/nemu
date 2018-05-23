@@ -419,15 +419,6 @@ Aml *aml_return(Aml *val)
     return var;
 }
 
-/* ACPI 1.0b: 16.2.6.3 Debug Objects Encoding: DebugObj */
-Aml *aml_debug(void)
-{
-    Aml *var = aml_alloc();
-    build_append_byte(var->buf, 0x5B); /* ExtOpPrefix */
-    build_append_byte(var->buf, 0x31); /* DebugOp */
-    return var;
-}
-
 /*
  * ACPI 1.0b: 16.2.3 Data Objects Encoding:
  * encodes: ByteConst, WordConst, DWordConst, QWordConst, ZeroOp, OneOp
@@ -554,15 +545,6 @@ Aml *aml_or(Aml *arg1, Aml *arg2, Aml *dst)
     return build_opcode_2arg_dst(0x7D /* OrOp */, arg1, arg2, dst);
 }
 
-/* ACPI 1.0b: 16.2.5.4 Type 2 Opcodes Encoding: DefLOr */
-Aml *aml_lor(Aml *arg1, Aml *arg2)
-{
-    Aml *var = aml_opcode(0x91 /* LOrOp */);
-    aml_append(var, arg1);
-    aml_append(var, arg2);
-    return var;
-}
-
 /* ACPI 1.0b: 16.2.5.4 Type 2 Opcodes Encoding: DefShiftLeft */
 Aml *aml_shiftleft(Aml *arg1, Aml *count)
 {
@@ -600,14 +582,6 @@ Aml *aml_subtract(Aml *arg1, Aml *arg2, Aml *dst)
 Aml *aml_increment(Aml *arg)
 {
     Aml *var = aml_opcode(0x75 /* IncrementOp */);
-    aml_append(var, arg);
-    return var;
-}
-
-/* ACPI 1.0b: 16.2.5.4 Type 2 Opcodes Encoding: DefDecrement */
-Aml *aml_decrement(Aml *arg)
-{
-    Aml *var = aml_opcode(0x76 /* DecrementOp */);
     aml_append(var, arg);
     return var;
 }
@@ -651,17 +625,6 @@ Aml *aml_call2(const char *method, Aml *arg1, Aml *arg2)
     build_append_namestring(var->buf, "%s", method);
     aml_append(var, arg1);
     aml_append(var, arg2);
-    return var;
-}
-
-/* helper to call method with 3 arguments */
-Aml *aml_call3(const char *method, Aml *arg1, Aml *arg2, Aml *arg3)
-{
-    Aml *var = aml_alloc();
-    build_append_namestring(var->buf, "%s", method);
-    aml_append(var, arg1);
-    aml_append(var, arg2);
-    aml_append(var, arg3);
     return var;
 }
 
@@ -891,26 +854,6 @@ Aml *aml_equal(Aml *arg1, Aml *arg2)
     return var;
 }
 
-/* ACPI 1.0b: 16.2.5.4 Type 2 Opcodes Encoding: DefLGreater */
-Aml *aml_lgreater(Aml *arg1, Aml *arg2)
-{
-    Aml *var = aml_opcode(0x94 /* LGreaterOp */);
-    aml_append(var, arg1);
-    aml_append(var, arg2);
-    return var;
-}
-
-/* ACPI 1.0b: 16.2.5.4 Type 2 Opcodes Encoding: DefLGreaterEqual */
-Aml *aml_lgreater_equal(Aml *arg1, Aml *arg2)
-{
-    /* LGreaterEqualOp := LNotOp LLessOp */
-    Aml *var = aml_opcode(0x92 /* LNotOp */);
-    build_append_byte(var->buf, 0x95 /* LLessOp */);
-    aml_append(var, arg1);
-    aml_append(var, arg2);
-    return var;
-}
-
 /* ACPI 1.0b: 16.2.5.3 Type 1 Opcodes Encoding: DefIfElse */
 Aml *aml_if(Aml *predicate)
 {
@@ -1077,13 +1020,6 @@ Aml *aml_create_field(Aml *srcbuf, Aml *bit_index, Aml *num_bits,
 Aml *aml_create_dword_field(Aml *srcbuf, Aml *index, const char *name)
 {
     return create_field_common(0x8A /* CreateDWordFieldOp */,
-                               srcbuf, index, name);
-}
-
-/* ACPI 2.0a: 17.2.4.2 Named Objects Encoding: DefCreateQWordField */
-Aml *aml_create_qword_field(Aml *srcbuf, Aml *index, const char *name)
-{
-    return create_field_common(0x8F /* CreateQWordFieldOp */,
                                srcbuf, index, name);
 }
 
@@ -1345,20 +1281,6 @@ Aml *aml_qword_memory(AmlDecode dec, AmlMinFixed min_fixed,
                              addr_trans, len, flags);
 }
 
-/* ACPI 1.0b: 6.4.2.2 DMA Format/6.4.2.2.1 ASL Macro for DMA Descriptor */
-Aml *aml_dma(AmlDmaType typ, AmlDmaBusMaster bm, AmlTransferSize sz,
-             uint8_t channel)
-{
-    Aml *var = aml_alloc();
-    uint8_t flags = sz | bm << 2 | typ << 5;
-
-    assert(channel < 8);
-    build_append_byte(var->buf, 0x2A);    /* Byte 0: DMA Descriptor */
-    build_append_byte(var->buf, 1U << channel); /* Byte 1: _DMA - DmaChannel */
-    build_append_byte(var->buf, flags);   /* Byte 2 */
-    return var;
-}
-
 /* ACPI 1.0b: 16.2.5.3 Type 1 Opcodes Encoding: DefSleep */
 Aml *aml_sleep(uint64_t msec)
 {
@@ -1439,14 +1361,6 @@ Aml *aml_unicode(const char *str)
     return var;
 }
 
-/* ACPI 1.0b: 16.2.5.4 Type 2 Opcodes Encoding: DefRefOf */
-Aml *aml_refof(Aml *arg)
-{
-    Aml *var = aml_opcode(0x71 /* RefOfOp */);
-    aml_append(var, arg);
-    return var;
-}
-
 /* ACPI 1.0b: 16.2.5.4 Type 2 Opcodes Encoding: DefDerefOf */
 Aml *aml_derefof(Aml *arg)
 {
@@ -1493,15 +1407,6 @@ Aml *aml_release(Aml *mutex)
     build_append_byte(var->buf, 0x5B); /* ExtOpPrefix */
     build_append_byte(var->buf, 0x27); /* ReleaseOp */
     aml_append(var, mutex);
-    return var;
-}
-
-/* ACPI 1.0b: 16.2.5.1 Name Space Modifier Objects Encoding: DefAlias */
-Aml *aml_alias(const char *source_object, const char *alias_object)
-{
-    Aml *var = aml_opcode(0x06 /* AliasOp */);
-    aml_append(var, aml_name("%s", source_object));
-    aml_append(var, aml_name("%s", alias_object));
     return var;
 }
 

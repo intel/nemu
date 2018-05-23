@@ -191,31 +191,11 @@ typedef struct {
 } commonNaNT;
 
 #ifdef NO_SIGNALING_NANS
-int float16_is_quiet_nan(float16 a_, float_status *status)
-{
-    return float16_is_any_nan(a_);
-}
-
 int float16_is_signaling_nan(float16 a_, float_status *status)
 {
     return 0;
 }
 #else
-/*----------------------------------------------------------------------------
-| Returns 1 if the half-precision floating-point value `a' is a quiet
-| NaN; otherwise returns 0.
-*----------------------------------------------------------------------------*/
-
-int float16_is_quiet_nan(float16 a_, float_status *status)
-{
-    uint16_t a = float16_val(a_);
-    if (status->snan_bit_is_one) {
-        return (((a >> 9) & 0x3F) == 0x3E) && (a & 0x1FF);
-    } else {
-        return ((a & ~0x8000) >= 0x7C80);
-    }
-}
-
 /*----------------------------------------------------------------------------
 | Returns 1 if the half-precision floating-point value `a' is a signaling
 | NaN; otherwise returns 0.

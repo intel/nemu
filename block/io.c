@@ -363,24 +363,6 @@ void bdrv_unapply_subtree_drain(BdrvChild *child, BlockDriverState *old_parent)
     }
 }
 
-/*
- * Wait for pending requests to complete on a single BlockDriverState subtree,
- * and suspend block driver's internal I/O until next request arrives.
- *
- * Note that unlike bdrv_drain_all(), the caller must hold the BlockDriverState
- * AioContext.
- *
- * Only this BlockDriverState's AioContext is run, so in-flight requests must
- * not depend on events in other AioContexts.  In that case, use
- * bdrv_drain_all() instead.
- */
-void coroutine_fn bdrv_co_drain(BlockDriverState *bs)
-{
-    assert(qemu_in_coroutine());
-    bdrv_drained_begin(bs);
-    bdrv_drained_end(bs);
-}
-
 void bdrv_drain(BlockDriverState *bs)
 {
     bdrv_drained_begin(bs);
@@ -766,51 +748,6 @@ int bdrv_pwrite_zeroes(BdrvChild *child, int64_t offset,
     qemu_iovec_init_external(&qiov, &iov, 1);
     return bdrv_prwv_co(child, offset, &qiov, true,
                         BDRV_REQ_ZERO_WRITE | flags);
-}
-
-/*
- * Completely zero out a block device with the help of bdrv_pwrite_zeroes.
- * The operation is sped up by checking the block status and only writing
- * zeroes to the device if they currently do not return zeroes. Optional
- * flags are passed through to bdrv_pwrite_zeroes (e.g. BDRV_REQ_MAY_UNMAP,
- * BDRV_REQ_FUA).
- *
- * Returns < 0 on error, 0 on success. For error codes see bdrv_write().
- */
-int bdrv_make_zero(BdrvChild *child, BdrvRequestFlags flags)
-{
-    int ret;
-    int64_t target_size, bytes, offset = 0;
-    BlockDriverState *bs = child->bs;
-
-    target_size = bdrv_getlength(bs);
-    if (target_size < 0) {
-        return target_size;
-    }
-
-    for (;;) {
-        bytes = MIN(target_size - offset, BDRV_REQUEST_MAX_BYTES);
-        if (bytes <= 0) {
-            return 0;
-        }
-        ret = bdrv_block_status(bs, offset, bytes, &bytes, NULL, NULL);
-        if (ret < 0) {
-            error_report("error getting block status at offset %" PRId64 ": %s",
-                         offset, strerror(-ret));
-            return ret;
-        }
-        if (ret & BDRV_BLOCK_ZERO) {
-            offset += bytes;
-            continue;
-        }
-        ret = bdrv_pwrite_zeroes(child, offset, bytes, flags);
-        if (ret < 0) {
-            error_report("error writing zeroes at offset %" PRId64 ": %s",
-                         offset, strerror(-ret));
-            return ret;
-        }
-        offset += bytes;
-    }
 }
 
 int bdrv_preadv(BdrvChild *child, int64_t offset, QEMUIOVector *qiov)

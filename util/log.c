@@ -95,11 +95,6 @@ void qemu_set_log(int log_flags)
     }
 }
 
-void qemu_log_needs_buffers(void)
-{
-    log_uses_own_buffers = true;
-}
-
 /*
  * Allow the user to include %d in their logfile which will be
  * substituted with the current PID. This is useful for debugging many
