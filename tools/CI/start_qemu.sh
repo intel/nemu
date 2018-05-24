@@ -29,7 +29,8 @@ SCRIPT_DIR="`dirname "$0"`"
 VM_NAME="nemuvm"
 VM_MEMORY='512'
 VM_NCPUS="2"
-SSH_PORT=2222 
+SSH_PORT=2222
+VSOCK="true"
 VM_IMAGE_TYPE="raw"
 SIMPLE_LAUNCH='false'
 CINIT="$SCRIPT_DIR"/cloud-init
@@ -108,11 +109,11 @@ disk_setup() {
 
    scsiimg=testscsi.img
    dd if=/dev/zero of=$scsiimg count=1 bs=50M &> /dev/null
-   printf "g\nn\n\n\n\nw\n" | fdisk $scsiimg > /dev/null
+   printf "g\nn\n\n\n\nw\n" | fdisk $scsiimg 2&> /dev/null
 
    nvdimmimg=testnvdimm.img
    dd if=/dev/zero of=$nvdimmimg count=1 bs=50M &> /dev/null
-   printf "g\nn\n\n\n\nw\n" | fdisk $nvdimmimg > /dev/null
+   printf "g\nn\n\n\n\nw\n" | fdisk $nvdimmimg 2&> /dev/null
    nvdimmsize=$(ls -s $nvdimmimg | cut -f1 -d' ')
 }
 
@@ -175,6 +176,7 @@ Options:
     -memory MEMOR		Memory to use for VM 
     -name NAME		Name to use for VM
     -ssh-port PORT		SSH port to use [2222]
+    -vsock [true|false]		Enable vsock
     -s , -simple		Simple bootup, no hotplug
     -d , -debugconsole		Connect to the debug console once the VM is launched
     -l , -legacy                Enable legacy serial support
@@ -209,6 +211,9 @@ while [ $# -ge 1 ]; do
         shift 2 ;;
     -ssh-port)
         SSH_PORT="$2"
+        shift 2 ;;
+    -vsock)
+        VSOCK="$2"
         shift 2 ;;
     -s|-simple)
         SIMPLE_LAUNCH='true'
@@ -318,7 +323,9 @@ if [ "$PLATFORM" != "aarch64" ]; then
          -device nvdimm,memdev=mem0,id=nv0"
 
    # Our ARM test system doesn't have CONFIG_VHOST_VSOCK
-   qemu_args+=" -device vhost-vsock-pci,id=vhost-vsock-pci0,guest-cid=3"         
+   if [[ "$VSOCK" == "true" ]]; then
+       qemu_args+=" -device vhost-vsock-pci,id=vhost-vsock-pci0,guest-cid=3"
+   fi
 else
    qemu_args+=" \
     -drive if=pflash,file=flash0.img,format=raw \
