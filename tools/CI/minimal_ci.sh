@@ -36,6 +36,7 @@ DOWNLOAD_ONLY="false"
 RUN_UNSAFE="false"
 VERBOSE="false"
 CHECK="false"
+VSOCK="true"
 
 die(){
    echo "${1}"
@@ -84,9 +85,9 @@ run_tests() {
        if [[ "$DOWNLOAD_ONLY" == "false" ]]; then
            echo "Testing $image $format $firmware $platform $uri :"
            if [[ "$firmware" == "uefi" ]]; then
-               "$CI_SCRIPT" -hypervisor "$HYPERVISOR" -imagetype "$format" -image "$WORKLOADS_DIR"/"$image" -cloudinit "$CLOUD_INIT_DIR" -bios "$WORKLOADS_DIR"/OVMF.fd -platform "$platform" $extra_args  | grep "SUCCESS"
+               "$CI_SCRIPT" -hypervisor "$HYPERVISOR" -imagetype "$format" -image "$WORKLOADS_DIR"/"$image" -cloudinit "$CLOUD_INIT_DIR" -bios "$WORKLOADS_DIR"/OVMF.fd -platform "$platform" -vsock "$VSOCK" $extra_args  | grep "SUCCESS"
            else
-               "$CI_SCRIPT" -hypervisor "$HYPERVISOR" -imagetype "$format" -image "$WORKLOADS_DIR"/"$image" -cloudinit "$CLOUD_INIT_DIR" -platform "$platform" $extra_args | grep "SUCCESS"
+               "$CI_SCRIPT" -hypervisor "$HYPERVISOR" -imagetype "$format" -image "$WORKLOADS_DIR"/"$image" -cloudinit "$CLOUD_INIT_DIR" -platform "$platform" -vsock "$VSOCK" $extra_args | grep "SUCCESS"
            fi
            if [ $? -ne 0 ]; then
              echo "FAILED: Test failed for $image"
@@ -105,6 +106,7 @@ Options:
     -unsafe             Test unsafe images
     -download           Download the workloads. Do not test
     -check              Enable make check. Default false
+    -vsock              Enable vsock testing. Default true
     -v                  Verbose mode
     -vv                 -v and verbose tests
     -h , -help		Show this usage information
@@ -135,6 +137,9 @@ while [ $# -ge 1 ]; do
 	shift;;
     -builddir)
         BUILD_DIR="$2"
+        shift 2 ;;
+    -vsock)
+        VSOCK="$2"
         shift 2 ;;
     -v)
         set -x
