@@ -26,15 +26,10 @@ int socket_set_fast_reuse(int fd);
 int inet_ai_family_from_address(InetSocketAddress *addr,
                                 Error **errp);
 int inet_parse(InetSocketAddress *addr, const char *str, Error **errp);
-int inet_connect(const char *str, Error **errp);
 int inet_connect_saddr(InetSocketAddress *saddr, Error **errp);
 
-NetworkAddressFamily inet_netfamily(int family);
-
-int unix_listen(const char *path, Error **errp);
 int unix_connect(const char *path, Error **errp);
 
-SocketAddress *socket_parse(const char *str, Error **errp);
 int socket_connect(SocketAddress *addr, Error **errp);
 int socket_listen(SocketAddress *addr, Error **errp);
 void socket_listen_cleanup(int fd, Error **errp);
@@ -78,21 +73,6 @@ socket_sockaddr_to_address(struct sockaddr_storage *sa,
  * Returns: the socket address struct, or NULL on error
  */
 SocketAddress *socket_local_address(int fd, Error **errp);
-
-/**
- * socket_remote_address:
- * @fd: the socket file handle
- * @errp: pointer to uninitialized error object
- *
- * Get the string representation of the remote socket
- * address. A pointer to the allocated address information
- * struct will be returned, which the caller is required to
- * release with a call qapi_free_SocketAddress() when no
- * longer required.
- *
- * Returns: the socket address struct, or NULL on error
- */
-SocketAddress *socket_remote_address(int fd, Error **errp);
 
 /**
  * socket_address_flatten:

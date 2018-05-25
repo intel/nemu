@@ -33,8 +33,6 @@ const char *get_opt_value(char *buf, int buf_size, const char *p);
 
 void parse_option_size(const char *name, const char *value,
                        uint64_t *ret, Error **errp);
-bool has_help_option(const char *param);
-bool is_valid_option_list(const char *param);
 
 enum QemuOptType {
     QEMU_OPT_STRING = 0,  /* no parsing (use string as-is)                        */
@@ -76,7 +74,6 @@ QemuOpt *qemu_opt_find(QemuOpts *opts, const char *name);
 bool qemu_opt_get_bool(QemuOpts *opts, const char *name, bool defval);
 uint64_t qemu_opt_get_number(QemuOpts *opts, const char *name, uint64_t defval);
 uint64_t qemu_opt_get_size(QemuOpts *opts, const char *name, uint64_t defval);
-bool qemu_opt_get_bool_del(QemuOpts *opts, const char *name, bool defval);
 uint64_t qemu_opt_get_number_del(QemuOpts *opts, const char *name,
                                  uint64_t defval);
 uint64_t qemu_opt_get_size_del(QemuOpts *opts, const char *name,
@@ -99,9 +96,6 @@ typedef struct {
     QemuOpt *opt;
     const char *name;
 } QemuOptsIter;
-
-void qemu_opt_iter_init(QemuOptsIter *iter, QemuOpts *opts, const char *name);
-const char *qemu_opt_iter_next(QemuOptsIter *iter);
 
 QemuOpts *qemu_opts_find(QemuOptsList *list, const char *id);
 QemuOpts *qemu_opts_create(QemuOptsList *list, const char *id,
@@ -133,7 +127,6 @@ typedef int (*qemu_opts_loopfunc)(void *opaque, QemuOpts *opts, Error **errp);
 int qemu_opts_foreach(QemuOptsList *list, qemu_opts_loopfunc func,
                       void *opaque, Error **errp);
 void qemu_opts_print(QemuOpts *opts, const char *sep);
-void qemu_opts_print_help(QemuOptsList *list);
 void qemu_opts_free(QemuOptsList *list);
 QemuOptsList *qemu_opts_append(QemuOptsList *dst, QemuOptsList *list);
 

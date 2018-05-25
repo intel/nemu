@@ -210,14 +210,6 @@ static size_t type_object_get_size(TypeImpl *ti)
     return 0;
 }
 
-size_t object_type_get_instance_size(const char *typename)
-{
-    TypeImpl *type = type_get_by_name(typename);
-
-    g_assert(type != NULL);
-    return type_object_get_size(type);
-}
-
 static bool type_is_ancestor(TypeImpl *type, TypeImpl *target_type)
 {
     assert(target_type);
@@ -566,21 +558,6 @@ Object *object_new_with_propv(const char *typename,
     error_propagate(errp, local_err);
     object_unref(obj);
     return NULL;
-}
-
-
-int object_set_props(Object *obj,
-                     Error **errp,
-                     ...)
-{
-    va_list vargs;
-    int ret;
-
-    va_start(vargs, errp);
-    ret = object_set_propv(obj, errp, vargs);
-    va_end(vargs);
-
-    return ret;
 }
 
 
@@ -1623,22 +1600,6 @@ out:
     g_free(full_type);
 }
 
-void object_property_add_const_link(Object *obj, const char *name,
-                                    Object *target, Error **errp)
-{
-    char *link_type;
-    ObjectProperty *op;
-
-    link_type = g_strdup_printf("link<%s>", object_get_typename(target));
-    op = object_property_add(obj, name, link_type,
-                             object_get_child_property, NULL,
-                             NULL, target, errp);
-    if (op != NULL) {
-        op->resolve = object_resolve_child_property;
-    }
-    g_free(link_type);
-}
-
 gchar *object_get_canonical_path_component(Object *obj)
 {
     ObjectProperty *prop = NULL;
@@ -2140,25 +2101,6 @@ void object_property_add_tm(Object *obj, const char *name,
     }
 }
 
-void object_class_property_add_tm(ObjectClass *klass, const char *name,
-                                  void (*get)(Object *, struct tm *, Error **),
-                                  Error **errp)
-{
-    Error *local_err = NULL;
-    TMProperty *prop = g_malloc0(sizeof(*prop));
-
-    prop->get = get;
-
-    object_class_property_add(klass, name, "struct tm",
-                              get ? property_get_tm : NULL, NULL,
-                              property_release_tm,
-                              prop, &local_err);
-    if (local_err) {
-        error_propagate(errp, local_err);
-        g_free(prop);
-    }
-}
-
 static char *qdev_get_type(Object *obj, Error **errp)
 {
     return g_strdup(object_get_typename(obj));
@@ -2185,25 +2127,11 @@ static void property_get_uint32_ptr(Object *obj, Visitor *v, const char *name,
     visit_type_uint32(v, name, &value, errp);
 }
 
-static void property_get_uint64_ptr(Object *obj, Visitor *v, const char *name,
-                                    void *opaque, Error **errp)
-{
-    uint64_t value = *(uint64_t *)opaque;
-    visit_type_uint64(v, name, &value, errp);
-}
-
 void object_property_add_uint8_ptr(Object *obj, const char *name,
                                    const uint8_t *v, Error **errp)
 {
     object_property_add(obj, name, "uint8", property_get_uint8_ptr,
                         NULL, NULL, (void *)v, errp);
-}
-
-void object_class_property_add_uint8_ptr(ObjectClass *klass, const char *name,
-                                         const uint8_t *v, Error **errp)
-{
-    object_class_property_add(klass, name, "uint8", property_get_uint8_ptr,
-                              NULL, NULL, (void *)v, errp);
 }
 
 void object_property_add_uint16_ptr(Object *obj, const char *name,
@@ -2213,39 +2141,11 @@ void object_property_add_uint16_ptr(Object *obj, const char *name,
                         NULL, NULL, (void *)v, errp);
 }
 
-void object_class_property_add_uint16_ptr(ObjectClass *klass, const char *name,
-                                          const uint16_t *v, Error **errp)
-{
-    object_class_property_add(klass, name, "uint16", property_get_uint16_ptr,
-                              NULL, NULL, (void *)v, errp);
-}
-
 void object_property_add_uint32_ptr(Object *obj, const char *name,
                                     const uint32_t *v, Error **errp)
 {
     object_property_add(obj, name, "uint32", property_get_uint32_ptr,
                         NULL, NULL, (void *)v, errp);
-}
-
-void object_class_property_add_uint32_ptr(ObjectClass *klass, const char *name,
-                                          const uint32_t *v, Error **errp)
-{
-    object_class_property_add(klass, name, "uint32", property_get_uint32_ptr,
-                              NULL, NULL, (void *)v, errp);
-}
-
-void object_property_add_uint64_ptr(Object *obj, const char *name,
-                                    const uint64_t *v, Error **errp)
-{
-    object_property_add(obj, name, "uint64", property_get_uint64_ptr,
-                        NULL, NULL, (void *)v, errp);
-}
-
-void object_class_property_add_uint64_ptr(ObjectClass *klass, const char *name,
-                                          const uint64_t *v, Error **errp)
-{
-    object_class_property_add(klass, name, "uint64", property_get_uint64_ptr,
-                              NULL, NULL, (void *)v, errp);
 }
 
 typedef struct {

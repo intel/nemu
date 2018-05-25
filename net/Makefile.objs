@@ -1,7 +1,6 @@
 common-obj-y = net.o queue.o checksum.o util.o hub.o
 common-obj-y += socket.o
 common-obj-y += dump.o
-common-obj-y += eth.o
 common-obj-$(CONFIG_L2TPV3) += l2tpv3.o
 common-obj-$(CONFIG_POSIX) += vhost-user.o
 common-obj-$(CONFIG_SLIRP) += slirp.o

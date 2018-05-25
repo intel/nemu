@@ -300,43 +300,6 @@ void bitmap_copy_and_clear_atomic(unsigned long *dst, unsigned long *src,
 
 #define ALIGN_MASK(x,mask)      (((x)+(mask))&~(mask))
 
-/**
- * bitmap_find_next_zero_area - find a contiguous aligned zero area
- * @map: The address to base the search on
- * @size: The bitmap size in bits
- * @start: The bitnumber to start searching at
- * @nr: The number of zeroed bits we're looking for
- * @align_mask: Alignment mask for zero area
- *
- * The @align_mask should be one less than a power of 2; the effect is that
- * the bit offset of all zero areas this function finds is multiples of that
- * power of 2. A @align_mask of 0 means no alignment is required.
- */
-unsigned long bitmap_find_next_zero_area(unsigned long *map,
-                                         unsigned long size,
-                                         unsigned long start,
-                                         unsigned long nr,
-                                         unsigned long align_mask)
-{
-    unsigned long index, end, i;
-again:
-    index = find_next_zero_bit(map, size, start);
-
-    /* Align allocation */
-    index = ALIGN_MASK(index, align_mask);
-
-    end = index + nr;
-    if (end > size) {
-        return end;
-    }
-    i = find_next_bit(map, end, index);
-    if (i < end) {
-        start = i + 1;
-        goto again;
-    }
-    return index;
-}
-
 int slow_bitmap_intersects(const unsigned long *bitmap1,
                            const unsigned long *bitmap2, long bits)
 {
@@ -369,36 +332,4 @@ long slow_bitmap_count_one(const unsigned long *bitmap, long nbits)
     }
 
     return result;
-}
-
-static void bitmap_to_from_le(unsigned long *dst,
-                              const unsigned long *src, long nbits)
-{
-    long len = BITS_TO_LONGS(nbits);
-
-#ifdef HOST_WORDS_BIGENDIAN
-    long index;
-
-    for (index = 0; index < len; index++) {
-# if HOST_LONG_BITS == 64
-        dst[index] = bswap64(src[index]);
-# else
-        dst[index] = bswap32(src[index]);
-# endif
-    }
-#else
-    memcpy(dst, src, len * sizeof(unsigned long));
-#endif
-}
-
-void bitmap_from_le(unsigned long *dst, const unsigned long *src,
-                    long nbits)
-{
-    bitmap_to_from_le(dst, src, nbits);
-}
-
-void bitmap_to_le(unsigned long *dst, const unsigned long *src,
-                  long nbits)
-{
-    bitmap_to_from_le(dst, src, nbits);
 }

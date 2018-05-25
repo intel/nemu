@@ -472,34 +472,6 @@ qcrypto_tls_session_get_handshake_status(QCryptoTLSSession *session)
     }
 }
 
-
-int
-qcrypto_tls_session_get_key_size(QCryptoTLSSession *session,
-                                 Error **errp)
-{
-    gnutls_cipher_algorithm_t cipher;
-    int ssf;
-
-    cipher = gnutls_cipher_get(session->handle);
-    ssf = gnutls_cipher_get_key_size(cipher);
-    if (!ssf) {
-        error_setg(errp, "Cannot get TLS cipher key size");
-        return -1;
-    }
-    return ssf;
-}
-
-
-char *
-qcrypto_tls_session_get_peer_name(QCryptoTLSSession *session)
-{
-    if (session->peername) {
-        return g_strdup(session->peername);
-    }
-    return NULL;
-}
-
-
 #else /* ! CONFIG_GNUTLS */
 
 
@@ -575,20 +547,5 @@ qcrypto_tls_session_get_handshake_status(QCryptoTLSSession *sess)
     return QCRYPTO_TLS_HANDSHAKE_COMPLETE;
 }
 
-
-int
-qcrypto_tls_session_get_key_size(QCryptoTLSSession *sess,
-                                 Error **errp)
-{
-    error_setg(errp, "TLS requires GNUTLS support");
-    return -1;
-}
-
-
-char *
-qcrypto_tls_session_get_peer_name(QCryptoTLSSession *sess)
-{
-    return NULL;
-}
 
 #endif

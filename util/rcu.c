@@ -332,11 +332,6 @@ static void rcu_init_complete(void)
 
 static int atfork_depth = 1;
 
-void rcu_enable_atfork(void)
-{
-    atfork_depth++;
-}
-
 void rcu_disable_atfork(void)
 {
     atfork_depth--;

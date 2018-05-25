@@ -188,26 +188,6 @@ enum ListenerDirection { Forward, Reverse };
         }                                                         \
     } while (0)
 
-static int device_listener_add(DeviceState *dev, void *opaque)
-{
-    DEVICE_LISTENER_CALL(realize, Forward, dev);
-
-    return 0;
-}
-
-void device_listener_register(DeviceListener *listener)
-{
-    QTAILQ_INSERT_TAIL(&device_listeners, listener, link);
-
-    qbus_walk_children(sysbus_get_default(), NULL, NULL, device_listener_add,
-                       NULL, NULL);
-}
-
-void device_listener_unregister(DeviceListener *listener)
-{
-    QTAILQ_REMOVE(&device_listeners, listener, link);
-}
-
 static void device_realize(DeviceState *dev, Error **errp)
 {
     DeviceClass *dc = DEVICE_GET_CLASS(dev);
@@ -292,11 +272,6 @@ void qdev_reset_all(DeviceState *dev)
     qdev_walk_children(dev, NULL, NULL, qdev_reset_one, qbus_reset_one, NULL);
 }
 
-void qdev_reset_all_fn(void *opaque)
-{
-    qdev_reset_all(DEVICE(opaque));
-}
-
 void qbus_reset_all(BusState *bus)
 {
     qbus_walk_children(bus, NULL, NULL, qdev_reset_one, qbus_reset_one, NULL);
@@ -352,11 +327,6 @@ void qdev_machine_creation_done(void)
      * only create hotpluggable devices
      */
     qdev_hotplug = true;
-}
-
-bool qdev_machine_modified(void)
-{
-    return qdev_hot_added || qdev_hot_removed;
 }
 
 BusState *qdev_get_parent_bus(DeviceState *dev)

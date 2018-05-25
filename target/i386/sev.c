@@ -388,12 +388,6 @@ sev_enabled(void)
     return sev_state ? true : false;
 }
 
-uint64_t
-sev_get_me_mask(void)
-{
-    return sev_state ? sev_state->me_mask : ~0;
-}
-
 uint32_t
 sev_get_cbit_position(void)
 {

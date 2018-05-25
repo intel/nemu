@@ -22,7 +22,4 @@ void apic_poll_irq(DeviceState *d);
 void apic_designate_bsp(DeviceState *d, bool bsp);
 int apic_get_highest_priority_irr(DeviceState *dev);
 
-/* pc.c */
-DeviceState *cpu_get_current_apic(void);
-
 #endif

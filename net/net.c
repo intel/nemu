@@ -830,19 +830,6 @@ int qemu_show_nic_models(const char *arg, const char *const *models)
     return 1;
 }
 
-void qemu_check_nic_model(NICInfo *nd, const char *model)
-{
-    const char *models[2];
-
-    models[0] = model;
-    models[1] = NULL;
-
-    if (qemu_show_nic_models(nd->model, models))
-        exit(0);
-    if (qemu_find_nic_model(nd, models, model) < 0)
-        exit(1);
-}
-
 int qemu_find_nic_model(NICInfo *nd, const char * const *models,
                         const char *default_model)
 {
@@ -1538,52 +1525,6 @@ int net_client_parse(QemuOptsList *opts_list, const char *optarg)
     }
 
     return 0;
-}
-
-/* From FreeBSD */
-/* XXX: optimize */
-uint32_t net_crc32(const uint8_t *p, int len)
-{
-    uint32_t crc;
-    int carry, i, j;
-    uint8_t b;
-
-    crc = 0xffffffff;
-    for (i = 0; i < len; i++) {
-        b = *p++;
-        for (j = 0; j < 8; j++) {
-            carry = ((crc & 0x80000000L) ? 1 : 0) ^ (b & 0x01);
-            crc <<= 1;
-            b >>= 1;
-            if (carry) {
-                crc = ((crc ^ POLYNOMIAL_BE) | carry);
-            }
-        }
-    }
-
-    return crc;
-}
-
-uint32_t net_crc32_le(const uint8_t *p, int len)
-{
-    uint32_t crc;
-    int carry, i, j;
-    uint8_t b;
-
-    crc = 0xffffffff;
-    for (i = 0; i < len; i++) {
-        b = *p++;
-        for (j = 0; j < 8; j++) {
-            carry = (crc & 0x1) ^ (b & 0x01);
-            crc >>= 1;
-            b >>= 1;
-            if (carry) {
-                crc ^= POLYNOMIAL_LE;
-            }
-        }
-    }
-
-    return crc;
 }
 
 QemuOptsList qemu_netdev_opts = {

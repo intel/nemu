@@ -196,23 +196,6 @@ ssize_t iov_send_recv(int sockfd, const struct iovec *_iov, unsigned iov_cnt,
 }
 
 
-void iov_hexdump(const struct iovec *iov, const unsigned int iov_cnt,
-                 FILE *fp, const char *prefix, size_t limit)
-{
-    int v;
-    size_t size = 0;
-    char *buf;
-
-    for (v = 0; v < iov_cnt; v++) {
-        size += iov[v].iov_len;
-    }
-    size = size > limit ? limit : size;
-    buf = g_malloc(size);
-    iov_to_buf(iov, iov_cnt, 0, buf, size);
-    qemu_hexdump(buf, fp, prefix, size);
-    g_free(buf);
-}
-
 unsigned iov_copy(struct iovec *dst_iov, unsigned int dst_iov_cnt,
                  const struct iovec *iov, unsigned int iov_cnt,
                  size_t offset, size_t bytes)

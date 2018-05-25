@@ -70,22 +70,6 @@ char *pstrcat(char *buf, int buf_size, const char *s);
  */
 int strstart(const char *str, const char *val, const char **ptr);
 /**
- * stristart:
- * @str: string to test
- * @val: prefix string to look for
- * @ptr: NULL, or pointer to be written to indicate start of
- *       the remainder of the string
- *
- * Test whether @str starts with the case-insensitive prefix @val.
- * This function behaves identically to strstart(), except that the
- * comparison is made after calling qemu_toupper() on each pair of
- * characters.
- *
- * Returns: true if @str starts with case-insensitive prefix @val,
- *          false otherwise.
- */
-int stristart(const char *str, const char *val, const char **ptr);
-/**
  * qemu_strnlen:
  * @s: string
  * @max_len: maximum number of bytes in @s to scan

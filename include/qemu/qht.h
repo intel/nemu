@@ -116,18 +116,6 @@ void *qht_lookup(struct qht *ht, qht_lookup_func_t func, const void *userp,
 bool qht_remove(struct qht *ht, const void *p, uint32_t hash);
 
 /**
- * qht_reset - reset a QHT
- * @ht: QHT to be reset
- *
- * All entries in the hash table are reset. No resizing is performed.
- *
- * If concurrent readers may exist, the objects pointed to by the hash table
- * must remain valid for the existing RCU grace period -- see qht_remove().
- * See also: qht_reset_size()
- */
-void qht_reset(struct qht *ht);
-
-/**
  * qht_reset_size - reset and resize a QHT
  * @ht: QHT to be reset and resized
  * @n_elems: number of entries the resized hash table should be optimized for.

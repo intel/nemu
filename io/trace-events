@@ -20,7 +20,6 @@ qio_channel_socket_listen_async(void *ioc, void *addr) "Socket listen async ioc=
 qio_channel_socket_listen_fail(void *ioc) "Socket listen fail ioc=%p"
 qio_channel_socket_listen_complete(void *ioc, int fd) "Socket listen complete ioc=%p fd=%d"
 qio_channel_socket_dgram_sync(void *ioc, void *localAddr, void *remoteAddr) "Socket dgram sync ioc=%p localAddr=%p remoteAddr=%p"
-qio_channel_socket_dgram_async(void *ioc, void *localAddr, void *remoteAddr) "Socket dgram async ioc=%p localAddr=%p remoteAddr=%p"
 qio_channel_socket_dgram_fail(void *ioc) "Socket dgram fail ioc=%p"
 qio_channel_socket_dgram_complete(void *ioc, int fd) "Socket dgram complete ioc=%p fd=%d"
 qio_channel_socket_accept(void *ioc) "Socket accept start ioc=%p"
@@ -42,7 +41,6 @@ qio_channel_tls_credentials_allow(void *ioc) "TLS credentials allow ioc=%p"
 qio_channel_tls_credentials_deny(void *ioc) "TLS credentials deny ioc=%p"
 
 # io/channel-websock.c
-qio_channel_websock_new_server(void *ioc, void *master) "Websock new client ioc=%p master=%p"
 qio_channel_websock_handshake_start(void *ioc) "Websock handshake start ioc=%p"
 qio_channel_websock_handshake_pending(void *ioc, int status) "Websock handshake pending ioc=%p status=%d"
 qio_channel_websock_handshake_reply(void *ioc) "Websock handshake reply ioc=%p"

@@ -144,52 +144,6 @@ void qemu_lockcnt_dec(QemuLockCnt *lockcnt)
     atomic_sub(&lockcnt->count, QEMU_LOCKCNT_COUNT_STEP);
 }
 
-/* Decrement a counter, and return locked if it is decremented to zero.
- * If the function returns true, it is impossible for the counter to
- * become nonzero until the next qemu_lockcnt_unlock.
- */
-bool qemu_lockcnt_dec_and_lock(QemuLockCnt *lockcnt)
-{
-    int val = atomic_read(&lockcnt->count);
-    int locked_state = QEMU_LOCKCNT_STATE_LOCKED;
-    bool waited = false;
-
-    for (;;) {
-        if (val >= 2 * QEMU_LOCKCNT_COUNT_STEP) {
-            int expected = val;
-            val = atomic_cmpxchg(&lockcnt->count, val, val - QEMU_LOCKCNT_COUNT_STEP);
-            if (val == expected) {
-                break;
-            }
-        } else {
-            /* If count is going 1->0, take the lock. The fast path is
-             * (1, unlocked)->(0, locked) or (1, unlocked)->(0, waiting).
-             */
-            if (qemu_lockcnt_cmpxchg_or_wait(lockcnt, &val, locked_state, &waited)) {
-                return true;
-            }
-
-            if (waited) {
-                /* At this point we do not know if there are more waiters.  Assume
-                 * there are.
-                 */
-                locked_state = QEMU_LOCKCNT_STATE_WAITING;
-            }
-        }
-    }
-
-    /* If we were woken by another thread, but we're returning in unlocked
-     * state, we should also wake a thread because we are effectively
-     * releasing the lock that was given to us.  This is the case where
-     * qemu_lockcnt_lock would leave QEMU_LOCKCNT_STATE_WAITING in the low
-     * bits, and qemu_lockcnt_unlock would find it and wake someone.
-     */
-    if (waited) {
-        lockcnt_wake(lockcnt);
-    }
-    return false;
-}
-
 /* If the counter is one, decrement it and return locked.  Otherwise do
  * nothing.
  *

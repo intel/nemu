@@ -234,12 +234,6 @@ void bitmap_clear(unsigned long *map, long start, long nr);
 bool bitmap_test_and_clear_atomic(unsigned long *map, long start, long nr);
 void bitmap_copy_and_clear_atomic(unsigned long *dst, unsigned long *src,
                                   long nr);
-unsigned long bitmap_find_next_zero_area(unsigned long *map,
-                                         unsigned long size,
-                                         unsigned long start,
-                                         unsigned long nr,
-                                         unsigned long align_mask);
-
 static inline unsigned long *bitmap_zero_extend(unsigned long *old,
                                                 long old_nbits, long new_nbits)
 {
@@ -248,10 +242,5 @@ static inline unsigned long *bitmap_zero_extend(unsigned long *old,
     bitmap_clear(new, old_nbits, new_nbits - old_nbits);
     return new;
 }
-
-void bitmap_to_le(unsigned long *dst, const unsigned long *src,
-                  long nbits);
-void bitmap_from_le(unsigned long *dst, const unsigned long *src,
-                    long nbits);
 
 #endif /* BITMAP_H */

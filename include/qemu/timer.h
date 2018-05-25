@@ -112,22 +112,6 @@ static inline int64_t qemu_clock_get_us(QEMUClockType type)
 }
 
 /**
- * qemu_clock_has_timers:
- * @type: the clock type
- *
- * Determines whether a clock's default timer list
- * has timers attached
- *
- * Note that this function should not be used when other threads also access
- * the timer list.  The return value may be outdated by the time it is acted
- * upon.
- *
- * Returns: true if the clock's default timer list
- * has timers attached
- */
-bool qemu_clock_has_timers(QEMUClockType type);
-
-/**
  * qemu_clock_expired:
  * @type: the clock type
  *
@@ -166,16 +150,6 @@ bool qemu_clock_use_for_deadline(QEMUClockType type);
  * Returns: time until expiry in nanoseconds or -1
  */
 int64_t qemu_clock_deadline_ns_all(QEMUClockType type);
-
-/**
- * qemu_clock_get_main_loop_timerlist:
- * @type: the clock type
- *
- * Return the default timer list associated with a clock.
- *
- * Returns: the default timer list
- */
-QEMUTimerList *qemu_clock_get_main_loop_timerlist(QEMUClockType type);
 
 /**
  * qemu_clock_nofify:
@@ -220,17 +194,6 @@ void qemu_clock_register_reset_notifier(QEMUClockType type,
                                         Notifier *notifier);
 
 /**
- * qemu_clock_unregister_reset_notifier:
- * @type: the clock type
- * @notifier: the notifier function
- *
- * Unregister a notifier function to call when the clock
- * concerned is reset.
- */
-void qemu_clock_unregister_reset_notifier(QEMUClockType type,
-                                          Notifier *notifier);
-
-/**
  * qemu_clock_run_timers:
  * @type: clock on which to operate
  *
@@ -250,19 +213,6 @@ bool qemu_clock_run_timers(QEMUClockType type);
  * Returns: true if any timer ran.
  */
 bool qemu_clock_run_all_timers(void);
-
-/**
- * qemu_clock_get_last:
- *
- * Returns last clock query time.
- */
-uint64_t qemu_clock_get_last(QEMUClockType type);
-/**
- * qemu_clock_set_last:
- *
- * Sets last clock query time.
- */
-void qemu_clock_set_last(QEMUClockType type, uint64_t last);
 
 
 /*
@@ -329,17 +279,6 @@ bool timerlist_expired(QEMUTimerList *timer_list);
  * timer expires -1 if none
  */
 int64_t timerlist_deadline_ns(QEMUTimerList *timer_list);
-
-/**
- * timerlist_get_clock:
- * @timer_list: the timer list to operate on
- *
- * Determine the clock type associated with a timer list.
- *
- * Returns: the clock type associated with the
- * timer list.
- */
-QEMUClockType timerlist_get_clock(QEMUTimerList *timer_list);
 
 /**
  * timerlist_run_timers:
@@ -724,17 +663,6 @@ void timer_mod_anticipate(QEMUTimer *ts, int64_t expire_time);
  * Returns: true if the timer is pending
  */
 bool timer_pending(QEMUTimer *ts);
-
-/**
- * timer_expired:
- * @ts: the timer
- * @current_time: the current time
- *
- * Determines whether a timer has expired.
- *
- * Returns: true if the timer has expired
- */
-bool timer_expired(QEMUTimer *timer_head, int64_t current_time);
 
 /**
  * timer_expire_time_ns:

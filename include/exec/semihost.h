@@ -28,7 +28,6 @@ typedef enum SemihostingTarget {
 
 bool semihosting_enabled(void);
 SemihostingTarget semihosting_get_target(void);
-const char *semihosting_get_arg(int i);
 int semihosting_get_argc(void);
 const char *semihosting_get_cmdline(void);
 

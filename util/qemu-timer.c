@@ -175,12 +175,6 @@ bool timerlist_has_timers(QEMUTimerList *timer_list)
     return !!atomic_read(&timer_list->active_timers);
 }
 
-bool qemu_clock_has_timers(QEMUClockType type)
-{
-    return timerlist_has_timers(
-        main_loop_tlg.tl[type]);
-}
-
 bool timerlist_expired(QEMUTimerList *timer_list)
 {
     int64_t expire_time;
@@ -260,16 +254,6 @@ int64_t qemu_clock_deadline_ns_all(QEMUClockType type)
                                         timerlist_deadline_ns(timer_list));
     }
     return deadline;
-}
-
-QEMUClockType timerlist_get_clock(QEMUTimerList *timer_list)
-{
-    return timer_list->clock->type;
-}
-
-QEMUTimerList *qemu_clock_get_main_loop_timerlist(QEMUClockType type)
-{
-    return main_loop_tlg.tl[type];
 }
 
 void timerlist_notify(QEMUTimerList *timer_list)
@@ -469,11 +453,6 @@ bool timer_pending(QEMUTimer *ts)
     return ts->expire_time >= 0;
 }
 
-bool timer_expired(QEMUTimer *timer_head, int64_t current_time)
-{
-    return timer_expired_ns(timer_head, current_time * timer_head->scale);
-}
-
 bool timerlist_run_timers(QEMUTimerList *timer_list)
 {
     QEMUTimer *ts;
@@ -591,29 +570,11 @@ int64_t qemu_clock_get_ns(QEMUClockType type)
     }
 }
 
-uint64_t qemu_clock_get_last(QEMUClockType type)
-{
-    QEMUClock *clock = qemu_clock_ptr(type);
-    return clock->last;
-}
-
-void qemu_clock_set_last(QEMUClockType type, uint64_t last)
-{
-    QEMUClock *clock = qemu_clock_ptr(type);
-    clock->last = last;
-}
-
 void qemu_clock_register_reset_notifier(QEMUClockType type,
                                         Notifier *notifier)
 {
     QEMUClock *clock = qemu_clock_ptr(type);
     notifier_list_add(&clock->reset_notifiers, notifier);
-}
-
-void qemu_clock_unregister_reset_notifier(QEMUClockType type,
-                                          Notifier *notifier)
-{
-    notifier_remove(notifier);
 }
 
 void init_clocks(QEMUTimerListNotifyCB *notify_cb)

@@ -51,9 +51,6 @@ static GHashTable *flat_views;
 
 typedef struct AddrRange AddrRange;
 
-static void memory_region_add_coalescing(MemoryRegion *mr,
-                                  hwaddr offset,
-                                  uint64_t size);
 static void memory_region_clear_coalescing(MemoryRegion *mr);
 
 
@@ -1915,24 +1912,6 @@ int memory_region_iommu_get_attr(IOMMUMemoryRegion *iommu_mr,
     return imrc->get_attr(iommu_mr, attr, data);
 }
 
-void memory_region_set_log(MemoryRegion *mr, bool log, unsigned client)
-{
-    uint8_t mask = 1 << client;
-    uint8_t old_logging;
-
-    assert(client == DIRTY_MEMORY_VGA);
-    old_logging = mr->vga_logging_count;
-    mr->vga_logging_count += log ? 1 : -1;
-    if (!!old_logging == !!mr->vga_logging_count) {
-        return;
-    }
-
-    memory_region_transaction_begin();
-    mr->dirty_log_mask = (mr->dirty_log_mask & ~mask) | (log * mask);
-    memory_region_update_pending |= mr->enabled;
-    memory_region_transaction_commit();
-}
-
 void memory_region_set_dirty(MemoryRegion *mr, hwaddr addr,
                              hwaddr size)
 {
@@ -1968,25 +1947,6 @@ static void memory_region_sync_dirty_bitmap(MemoryRegion *mr)
         }
         flatview_unref(view);
     }
-}
-
-DirtyBitmapSnapshot *memory_region_snapshot_and_clear_dirty(MemoryRegion *mr,
-                                                            hwaddr addr,
-                                                            hwaddr size,
-                                                            unsigned client)
-{
-    assert(mr->ram_block);
-    memory_region_sync_dirty_bitmap(mr);
-    return cpu_physical_memory_snapshot_and_clear_dirty(
-                memory_region_get_ram_addr(mr) + addr, size, client);
-}
-
-bool memory_region_snapshot_get_dirty(MemoryRegion *mr, DirtyBitmapSnapshot *snap,
-                                      hwaddr addr, hwaddr size)
-{
-    assert(mr->ram_block);
-    return cpu_physical_memory_snapshot_get_dirty(snap,
-                memory_region_get_ram_addr(mr) + addr, size);
 }
 
 void memory_region_set_readonly(MemoryRegion *mr, bool readonly)
@@ -2108,24 +2068,6 @@ static void memory_region_update_coalesced_range(MemoryRegion *mr)
     QTAILQ_FOREACH(as, &address_spaces, address_spaces_link) {
         memory_region_update_coalesced_range_as(mr, as);
     }
-}
-
-void memory_region_set_coalescing(MemoryRegion *mr)
-{
-    memory_region_clear_coalescing(mr);
-    memory_region_add_coalescing(mr, 0, int128_get64(mr->size));
-}
-
-static void memory_region_add_coalescing(MemoryRegion *mr,
-                                  hwaddr offset,
-                                  uint64_t size)
-{
-    CoalescedMemoryRange *cmr = g_malloc(sizeof(*cmr));
-
-    cmr->addr = addrrange_make(int128_make64(offset), int128_make64(size));
-    QTAILQ_INSERT_TAIL(&mr->coalesced, cmr, link);
-    memory_region_update_coalesced_range(mr);
-    memory_region_set_flush_coalesced(mr);
 }
 
 static void memory_region_clear_coalescing(MemoryRegion *mr)
@@ -2344,20 +2286,6 @@ void memory_region_set_address(MemoryRegion *mr, hwaddr addr)
         mr->addr = addr;
         memory_region_readd_subregion(mr);
     }
-}
-
-void memory_region_set_alias_offset(MemoryRegion *mr, hwaddr offset)
-{
-    assert(mr->alias);
-
-    if (offset == mr->alias_offset) {
-        return;
-    }
-
-    memory_region_transaction_begin();
-    mr->alias_offset = offset;
-    memory_region_update_pending |= mr->enabled;
-    memory_region_transaction_commit();
 }
 
 uint64_t memory_region_get_alignment(const MemoryRegion *mr)
@@ -2635,68 +2563,6 @@ typedef struct MMIOPtrInvalidate {
 } MMIOPtrInvalidate;
 
 #define MAX_MMIO_INVALIDATE 10
-static MMIOPtrInvalidate mmio_ptr_invalidate_list[MAX_MMIO_INVALIDATE];
-
-static void memory_region_do_invalidate_mmio_ptr(CPUState *cpu,
-                                                 run_on_cpu_data data)
-{
-    MMIOPtrInvalidate *invalidate_data = (MMIOPtrInvalidate *)data.host_ptr;
-    MemoryRegion *mr = invalidate_data->mr;
-    hwaddr offset = invalidate_data->offset;
-    unsigned size = invalidate_data->size;
-    MemoryRegionSection section = memory_region_find(mr, offset, size);
-
-    qemu_mutex_lock_iothread();
-
-    /* Reset dirty so this doesn't happen later. */
-    cpu_physical_memory_test_and_clear_dirty(offset, size, 1);
-
-    if (section.mr != mr) {
-        /* memory_region_find add a ref on section.mr */
-        memory_region_unref(section.mr);
-        if (MMIO_INTERFACE(section.mr->owner)) {
-            /* We found the interface just drop it. */
-            object_property_set_bool(section.mr->owner, false, "realized",
-                                     NULL);
-            object_unref(section.mr->owner);
-            object_unparent(section.mr->owner);
-        }
-    }
-
-    qemu_mutex_unlock_iothread();
-
-    if (invalidate_data->allocated) {
-        g_free(invalidate_data);
-    } else {
-        invalidate_data->busy = 0;
-    }
-}
-
-void memory_region_invalidate_mmio_ptr(MemoryRegion *mr, hwaddr offset,
-                                       unsigned size)
-{
-    size_t i;
-    MMIOPtrInvalidate *invalidate_data = NULL;
-
-    for (i = 0; i < MAX_MMIO_INVALIDATE; i++) {
-        if (atomic_cmpxchg(&(mmio_ptr_invalidate_list[i].busy), 0, 1) == 0) {
-            invalidate_data = &mmio_ptr_invalidate_list[i];
-            break;
-        }
-    }
-
-    if (!invalidate_data) {
-        invalidate_data = g_malloc0(sizeof(MMIOPtrInvalidate));
-        invalidate_data->allocated = 1;
-    }
-
-    invalidate_data->mr = mr;
-    invalidate_data->offset = offset;
-    invalidate_data->size = size;
-
-    async_safe_run_on_cpu(first_cpu, memory_region_do_invalidate_mmio_ptr,
-                          RUN_ON_CPU_HOST_PTR(invalidate_data));
-}
 
 void address_space_init(AddressSpace *as, MemoryRegion *root, const char *name)
 {

@@ -226,17 +226,6 @@ ssize_t qio_channel_write(QIOChannel *ioc,
     return qio_channel_writev_full(ioc, &iov, 1, NULL, 0, errp);
 }
 
-
-int qio_channel_read_all_eof(QIOChannel *ioc,
-                             char *buf,
-                             size_t buflen,
-                             Error **errp)
-{
-    struct iovec iov = { .iov_base = buf, .iov_len = buflen };
-    return qio_channel_readv_all_eof(ioc, &iov, 1, errp);
-}
-
-
 int qio_channel_read_all(QIOChannel *ioc,
                          char *buf,
                          size_t buflen,
@@ -382,23 +371,6 @@ void qio_channel_set_cork(QIOChannel *ioc,
         klass->io_set_cork(ioc, enabled);
     }
 }
-
-
-off_t qio_channel_io_seek(QIOChannel *ioc,
-                          off_t offset,
-                          int whence,
-                          Error **errp)
-{
-    QIOChannelClass *klass = QIO_CHANNEL_GET_CLASS(ioc);
-
-    if (!klass->io_seek) {
-        error_setg(errp, "Channel does not support random access");
-        return -1;
-    }
-
-    return klass->io_seek(ioc, offset, whence, errp);
-}
-
 
 static void qio_channel_set_aio_fd_handlers(QIOChannel *ioc);
 

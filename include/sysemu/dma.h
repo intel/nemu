@@ -68,17 +68,6 @@ static inline void dma_barrier(AddressSpace *as, DMADirection dir)
     smp_mb();
 }
 
-/* Checks that the given range of addresses is valid for DMA.  This is
- * useful for certain cases, but usually you should just use
- * dma_memory_{read,write}() and check for errors */
-static inline bool dma_memory_valid(AddressSpace *as,
-                                    dma_addr_t addr, dma_addr_t len,
-                                    DMADirection dir)
-{
-    return address_space_access_valid(as, addr, len,
-                                      dir == DMA_DIRECTION_FROM_DEVICE);
-}
-
 static inline int dma_memory_rw_relaxed(AddressSpace *as, dma_addr_t addr,
                                         void *buf, dma_addr_t len,
                                         DMADirection dir)
@@ -200,12 +189,6 @@ BlockAIOCB *dma_blk_io(AioContext *ctx,
                        QEMUSGList *sg, uint64_t offset, uint32_t align,
                        DMAIOFunc *io_func, void *io_func_opaque,
                        BlockCompletionFunc *cb, void *opaque, DMADirection dir);
-BlockAIOCB *dma_blk_read(BlockBackend *blk,
-                         QEMUSGList *sg, uint64_t offset, uint32_t align,
-                         BlockCompletionFunc *cb, void *opaque);
-BlockAIOCB *dma_blk_write(BlockBackend *blk,
-                          QEMUSGList *sg, uint64_t offset, uint32_t align,
-                          BlockCompletionFunc *cb, void *opaque);
 uint64_t dma_buf_read(uint8_t *ptr, int32_t len, QEMUSGList *sg);
 uint64_t dma_buf_write(uint8_t *ptr, int32_t len, QEMUSGList *sg);
 

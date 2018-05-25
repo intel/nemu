@@ -676,19 +676,9 @@ static void machine_finalize(Object *obj)
     g_free(ms->firmware);
 }
 
-bool machine_usb(MachineState *machine)
-{
-    return machine->usb;
-}
-
 bool machine_kernel_irqchip_allowed(MachineState *machine)
 {
     return machine->kernel_irqchip_allowed;
-}
-
-bool machine_kernel_irqchip_required(MachineState *machine)
-{
-    return machine->kernel_irqchip_required;
 }
 
 bool machine_kernel_irqchip_split(MachineState *machine)

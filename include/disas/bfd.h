@@ -360,12 +360,6 @@ int generic_symbol_at_address(bfd_vma, struct disassemble_info *);
 #endif
 
 /* from libbfd */
-
-bfd_vma bfd_getl64 (const bfd_byte *addr);
-bfd_vma bfd_getl32 (const bfd_byte *addr);
-bfd_vma bfd_getb32 (const bfd_byte *addr);
-bfd_vma bfd_getl16 (const bfd_byte *addr);
-bfd_vma bfd_getb16 (const bfd_byte *addr);
 typedef bool bfd_boolean;
 
 #endif /* DISAS_BFD_H */

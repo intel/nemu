@@ -22,11 +22,6 @@
 #include "qapi/error.h"
 #include "crypto/pbkdf.h"
 
-bool qcrypto_pbkdf2_supports(QCryptoHashAlgorithm hash G_GNUC_UNUSED)
-{
-    return false;
-}
-
 int qcrypto_pbkdf2(QCryptoHashAlgorithm hash G_GNUC_UNUSED,
                    const uint8_t *key G_GNUC_UNUSED,
                    size_t nkey G_GNUC_UNUSED,

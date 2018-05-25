@@ -166,7 +166,6 @@ int qemu_set_vnet_le(NetClientState *nc, bool is_le);
 int qemu_set_vnet_be(NetClientState *nc, bool is_be);
 void qemu_macaddr_default_if_unset(MACAddr *macaddr);
 int qemu_show_nic_models(const char *arg, const char *const *models);
-void qemu_check_nic_model(NICInfo *nd, const char *model);
 int qemu_find_nic_model(NICInfo *nd, const char * const *models,
                         const char *default_model);
 
@@ -226,8 +225,6 @@ void qdev_set_nic_properties(DeviceState *dev, NICInfo *nd);
 
 #define POLYNOMIAL_BE 0x04c11db6
 #define POLYNOMIAL_LE 0xedb88320
-uint32_t net_crc32(const uint8_t *p, int len);
-uint32_t net_crc32_le(const uint8_t *p, int len);
 
 #define vmstate_offset_macaddr(_state, _field)                       \
     vmstate_offset_array(_state, _field.a, uint8_t,                \

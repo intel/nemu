@@ -100,14 +100,6 @@ ssize_t iov_send_recv(int sockfd, const struct iovec *iov, unsigned iov_cnt,
 #define iov_send(sockfd, iov, iov_cnt, offset, bytes) \
   iov_send_recv(sockfd, iov, iov_cnt, offset, bytes, true)
 
-/**
- * Produce a text hexdump of iovec `iov' with `iov_cnt' number of elements
- * in file `fp', prefixing each line with `prefix' and processing not more
- * than `limit' data bytes.
- */
-void iov_hexdump(const struct iovec *iov, const unsigned int iov_cnt,
-                 FILE *fp, const char *prefix, size_t limit);
-
 /*
  * Partial copy of vector from iov to dst_iov (data is not copied).
  * dst_iov overlaps iov at a specified offset.

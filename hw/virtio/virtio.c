@@ -1466,11 +1466,6 @@ int virtio_queue_get_num(VirtIODevice *vdev, int n)
     return vdev->vq[n].vring.num;
 }
 
-int virtio_queue_get_max_num(VirtIODevice *vdev, int n)
-{
-    return vdev->vq[n].vring.num_default;
-}
-
 int virtio_get_num_queues(VirtIODevice *vdev)
 {
     int i;
@@ -2655,14 +2650,6 @@ static void virtio_device_stop_ioeventfd_impl(VirtIODevice *vdev)
         }
         virtio_bus_cleanup_host_notifier(qbus, n);
     }
-}
-
-void virtio_device_stop_ioeventfd(VirtIODevice *vdev)
-{
-    BusState *qbus = qdev_get_parent_bus(DEVICE(vdev));
-    VirtioBusState *vbus = VIRTIO_BUS(qbus);
-
-    virtio_bus_stop_ioeventfd(vbus);
 }
 
 int virtio_device_grab_ioeventfd(VirtIODevice *vdev)

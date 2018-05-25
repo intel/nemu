@@ -85,12 +85,10 @@ void qemu_thread_create(QemuThread *thread, const char *name,
 void *qemu_thread_join(QemuThread *thread);
 void qemu_thread_get_self(QemuThread *thread);
 bool qemu_thread_is_self(QemuThread *thread);
-void qemu_thread_exit(void *retval);
 void qemu_thread_naming(bool enable);
 
 struct Notifier;
 void qemu_thread_atexit_add(struct Notifier *notifier);
-void qemu_thread_atexit_remove(struct Notifier *notifier);
 
 struct QemuSpin {
     int value;
@@ -173,16 +171,6 @@ void qemu_lockcnt_inc(QemuLockCnt *lockcnt);
  * @lockcnt: the lockcnt to operate on
  */
 void qemu_lockcnt_dec(QemuLockCnt *lockcnt);
-
-/**
- * qemu_lockcnt_dec_and_lock: decrement a QemuLockCnt's counter and
- * possibly lock it.
- * @lockcnt: the lockcnt to operate on
- *
- * Decrement lockcnt's count.  If the new count is zero, lock
- * the mutex and return true.  Otherwise, return false.
- */
-bool qemu_lockcnt_dec_and_lock(QemuLockCnt *lockcnt);
 
 /**
  * qemu_lockcnt_dec_if_lock: possibly decrement a QemuLockCnt's counter and

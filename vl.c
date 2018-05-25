@@ -129,7 +129,6 @@ int acpi_enabled = 1;
 int fd_bootchk = 1;
 static int no_reboot;
 int no_shutdown = 0;
-int cursor_hide = 1;
 int graphic_rotate = 0;
 const char *watchdog;
 QEMUOptionRom option_rom[MAX_OPTION_ROMS];
@@ -466,11 +465,6 @@ static QemuOptsList qemu_fw_cfg_opts = {
 QemuOpts *qemu_get_machine_opts(void)
 {
     return qemu_find_opts_singleton("machine");
-}
-
-const char *qemu_get_vm_name(void)
-{
-    return qemu_name;
 }
 
 static void res_free(void)
@@ -916,11 +910,6 @@ static int parse_name(void *opaque, QemuOpts *opts, Error **errp)
     return 0;
 }
 
-bool defaults_enabled(void)
-{
-    return has_defaults;
-}
-
 static int parse_add_fd(void *opaque, QemuOpts *opts, Error **errp)
 {
     int fd, dupfd, flags;
@@ -1133,14 +1122,6 @@ bool semihosting_enabled(void)
 SemihostingTarget semihosting_get_target(void)
 {
     return semihosting.target;
-}
-
-const char *semihosting_get_arg(int i)
-{
-    if (i >= semihosting.argc) {
-        return NULL;
-    }
-    return semihosting.argv[i];
 }
 
 int semihosting_get_argc(void)
@@ -1358,16 +1339,6 @@ static NotifierList suspend_notifiers =
 static NotifierList wakeup_notifiers =
     NOTIFIER_LIST_INITIALIZER(wakeup_notifiers);
 static uint32_t wakeup_reason_mask = ~(1 << QEMU_WAKEUP_REASON_NONE);
-
-ShutdownCause qemu_shutdown_requested_get(void)
-{
-    return shutdown_requested;
-}
-
-ShutdownCause qemu_reset_requested_get(void)
-{
-    return reset_requested;
-}
 
 static int qemu_shutdown_requested(void)
 {
@@ -3109,9 +3080,6 @@ int main(int argc, char **argv, char **envp)
                 break;
             case QEMU_OPTION_no_shutdown:
                 no_shutdown = 1;
-                break;
-            case QEMU_OPTION_show_cursor:
-                cursor_hide = 0;
                 break;
             case QEMU_OPTION_uuid:
                 if (qemu_uuid_parse(optarg, &qemu_uuid) < 0) {

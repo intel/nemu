@@ -66,14 +66,6 @@ int bdrv_snapshot_delete_by_id_or_name(BlockDriverState *bs,
                                        Error **errp);
 int bdrv_snapshot_list(BlockDriverState *bs,
                        QEMUSnapshotInfo **psn_info);
-int bdrv_snapshot_load_tmp(BlockDriverState *bs,
-                           const char *snapshot_id,
-                           const char *name,
-                           Error **errp);
-int bdrv_snapshot_load_tmp_by_id_or_name(BlockDriverState *bs,
-                                         const char *id_or_name,
-                                         Error **errp);
-
 
 /* Group operations. All block drivers are involved.
  * These functions will properly handle dataplane (take aio_context_acquire

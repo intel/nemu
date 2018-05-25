@@ -400,15 +400,6 @@ static void qht_map_reset__all_locked(struct qht_map *map)
     qht_map_debug__all_locked(map);
 }
 
-void qht_reset(struct qht *ht)
-{
-    struct qht_map *map;
-
-    qht_map_lock_buckets__no_stale(ht, &map);
-    qht_map_reset__all_locked(map);
-    qht_map_unlock_buckets(map);
-}
-
 static inline void qht_do_resize(struct qht *ht, struct qht_map *new)
 {
     qht_do_resize_reset(ht, new, false);

@@ -48,31 +48,6 @@ qemu_acl *qemu_acl_find(const char *aclname)
     return NULL;
 }
 
-qemu_acl *qemu_acl_init(const char *aclname)
-{
-    qemu_acl *acl;
-
-    acl = qemu_acl_find(aclname);
-    if (acl)
-        return acl;
-
-    acl = g_malloc(sizeof(*acl));
-    acl->aclname = g_strdup(aclname);
-    /* Deny by default, so there is no window of "open
-     * access" between QEMU starting, and the user setting
-     * up ACLs in the monitor */
-    acl->defaultDeny = 1;
-
-    acl->nentries = 0;
-    QTAILQ_INIT(&acl->entries);
-
-    acls = g_realloc(acls, sizeof(*acls) * (nacls +1));
-    acls[nacls] = acl;
-    nacls++;
-
-    return acl;
-}
-
 int qemu_acl_party_is_allowed(qemu_acl *acl,
                               const char *party)
 {

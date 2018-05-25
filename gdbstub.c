@@ -454,47 +454,6 @@ static int gdb_write_register(CPUState *cpu, uint8_t *mem_buf, int reg)
     return 0;
 }
 
-/* Register a supplemental set of CPU registers.  If g_pos is nonzero it
-   specifies the first register number and these registers are included in
-   a standard "g" packet.  Direction is relative to gdb, i.e. get_reg is
-   gdb reading a CPU register, and set_reg is gdb modifying a CPU register.
- */
-
-void gdb_register_coprocessor(CPUState *cpu,
-                              gdb_reg_cb get_reg, gdb_reg_cb set_reg,
-                              int num_regs, const char *xml, int g_pos)
-{
-    GDBRegisterState *s;
-    GDBRegisterState **p;
-
-    p = &cpu->gdb_regs;
-    while (*p) {
-        /* Check for duplicates.  */
-        if (strcmp((*p)->xml, xml) == 0)
-            return;
-        p = &(*p)->next;
-    }
-
-    s = g_new0(GDBRegisterState, 1);
-    s->base_reg = cpu->gdb_num_regs;
-    s->num_regs = num_regs;
-    s->get_reg = get_reg;
-    s->set_reg = set_reg;
-    s->xml = xml;
-
-    /* Add to end of list.  */
-    cpu->gdb_num_regs += num_regs;
-    *p = s;
-    if (g_pos) {
-        if (g_pos != s->base_reg) {
-            error_report("Error: Bad gdb register numbering for '%s', "
-                         "expected %d got %d", xml, g_pos, s->base_reg);
-        } else {
-            cpu->gdb_num_g_regs = cpu->gdb_num_regs;
-        }
-    }
-}
-
 /* Translate GDB watchpoint type to a flags value for cpu_watchpoint_* */
 static inline int xlat_gdb_type(CPUState *cpu, int gdbtype)
 {
@@ -1254,15 +1213,6 @@ void gdb_do_syscallv(gdb_syscall_complete_cb cb, const char *fmt, va_list va)
        and state transition 'T' packets to be sent while the syscall is still
        being processed.  */
     qemu_cpu_kick(s->c_cpu);
-}
-
-void gdb_do_syscall(gdb_syscall_complete_cb cb, const char *fmt, ...)
-{
-    va_list va;
-
-    va_start(va, fmt);
-    gdb_do_syscallv(cb, fmt, va);
-    va_end(va);
 }
 
 static void gdb_read_byte(GDBState *s, int ch)

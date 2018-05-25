@@ -29,16 +29,6 @@
 #include "hw/timer/i8254.h"
 #include "hw/timer/i8254_internal.h"
 
-/* val must be 0 or 1 */
-void pit_set_gate(ISADevice *dev, int channel, int val)
-{
-    PITCommonState *pit = PIT_COMMON(dev);
-    PITChannelState *s = &pit->channels[channel];
-    PITCommonClass *c = PIT_COMMON_GET_CLASS(pit);
-
-    c->set_channel_gate(pit, s, val);
-}
-
 /* get pit output bit */
 int pit_get_out(PITChannelState *s, int64_t current_time)
 {
@@ -137,15 +127,6 @@ void pit_get_channel_info_common(PITCommonState *s, PITChannelState *sc,
     info->mode = sc->mode;
     info->initial_count = sc->count;
     info->out = pit_get_out(sc, qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL));
-}
-
-void pit_get_channel_info(ISADevice *dev, int channel, PITChannelInfo *info)
-{
-    PITCommonState *pit = PIT_COMMON(dev);
-    PITChannelState *s = &pit->channels[channel];
-    PITCommonClass *c = PIT_COMMON_GET_CLASS(pit);
-
-    c->get_channel_info(pit, s, info);
 }
 
 void pit_reset_common(PITCommonState *pit)

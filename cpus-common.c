@@ -296,20 +296,6 @@ void cpu_exec_end(CPUState *cpu)
     }
 }
 
-void async_safe_run_on_cpu(CPUState *cpu, run_on_cpu_func func,
-                           run_on_cpu_data data)
-{
-    struct qemu_work_item *wi;
-
-    wi = g_malloc0(sizeof(struct qemu_work_item));
-    wi->func = func;
-    wi->data = data;
-    wi->free = true;
-    wi->exclusive = true;
-
-    queue_work_on_cpu(cpu, wi);
-}
-
 void process_queued_cpu_work(CPUState *cpu)
 {
     struct qemu_work_item *wi;

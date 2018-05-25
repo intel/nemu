@@ -68,42 +68,4 @@ struct QIOChannelWebsock {
     uint8_t opcode;
 };
 
-/**
- * qio_channel_websock_new_server:
- * @master: the underlying channel object
- *
- * Create a new websockets channel that runs the server
- * side of the protocol.
- *
- * After creating the channel, it is mandatory to call
- * the qio_channel_websock_handshake() method before attempting
- * todo any I/O on the channel.
- *
- * Once the handshake has completed, all I/O should be done
- * via the new websocket channel object and not the original
- * master channel
- *
- * Returns: the new websockets channel object
- */
-QIOChannelWebsock *
-qio_channel_websock_new_server(QIOChannel *master);
-
-/**
- * qio_channel_websock_handshake:
- * @ioc: the websocket channel object
- * @func: the callback to invoke when completed
- * @opaque: opaque data to pass to @func
- * @destroy: optional callback to free @opaque
- *
- * Perform the websocket handshake. This method
- * will return immediately and the handshake will
- * continue in the background, provided the main
- * loop is running. When the handshake is complete,
- * or fails, the @func callback will be invoked.
- */
-void qio_channel_websock_handshake(QIOChannelWebsock *ioc,
-                                   QIOTaskFunc func,
-                                   gpointer opaque,
-                                   GDestroyNotify destroy);
-
 #endif /* QIO_CHANNEL_WEBSOCK_H */

@@ -171,18 +171,6 @@ QCryptoIVGenAlgorithm qcrypto_ivgen_get_algorithm(QCryptoIVGen *ivgen);
 
 
 /**
- * qcrypto_ivgen_get_cipher:
- * @ivgen: the IV generator object
- *
- * Get the cipher algorithm used by this IV generator (if
- * applicable)
- *
- * Returns: the cipher algorithm
- */
-QCryptoCipherAlgorithm qcrypto_ivgen_get_cipher(QCryptoIVGen *ivgen);
-
-
-/**
  * qcrypto_ivgen_get_hash:
  * @ivgen: the IV generator object
  *

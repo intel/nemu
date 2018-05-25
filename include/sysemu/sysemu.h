@@ -79,8 +79,6 @@ void qemu_system_debug_request(void);
 void qemu_system_vmstop_request(RunState reason);
 void qemu_system_vmstop_request_prepare(void);
 bool qemu_vmstop_requested(RunState *r);
-ShutdownCause qemu_shutdown_requested_get(void);
-ShutdownCause qemu_reset_requested_get(void);
 void qemu_system_killed(int signal, pid_t pid);
 void qemu_system_reset(ShutdownCause reason);
 void qemu_system_guest_panicked(GuestPanicInformation *info);
@@ -97,9 +95,6 @@ void qemu_announce_self(void);
 
 extern int autostart;
 
-extern int graphic_width;
-extern int graphic_height;
-extern int graphic_depth;
 extern const char *keyboard_layout;
 extern int win2k_install_hack;
 extern int alt_grab;
@@ -107,7 +102,6 @@ extern int ctrl_grab;
 extern int no_frame;
 extern int smp_cpus;
 extern unsigned int max_cpus;
-extern int cursor_hide;
 extern int graphic_rotate;
 extern int no_quit;
 extern int no_shutdown;
@@ -161,7 +155,6 @@ void add_boot_device_path(int32_t bootindex, DeviceState *dev,
                           const char *suffix);
 char *get_boot_devices_list(size_t *size, bool ignore_suffixes);
 
-DeviceState *get_boot_device(uint32_t position);
 void check_boot_index(int32_t bootindex, Error **errp);
 void del_boot_device_path(DeviceState *dev, const char *suffix);
 void device_add_bootindex_property(Object *obj, int32_t *bootindex,
@@ -178,7 +171,6 @@ void qemu_boot_set(const char *boot_order, Error **errp);
 
 QemuOpts *qemu_get_machine_opts(void);
 
-bool defaults_enabled(void);
 
 extern QemuOptsList qemu_legacy_drive_opts;
 extern QemuOptsList qemu_common_drive_opts;

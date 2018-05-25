@@ -84,18 +84,8 @@ extern const MemoryRegionOps serial_io_ops;
 
 void serial_realize_core(SerialState *s, Error **errp);
 void serial_exit_core(SerialState *s);
-void serial_set_frequency(SerialState *s, uint32_t frequency);
-
-/* legacy pre qom */
-SerialState *serial_init(int base, qemu_irq irq, int baudbase,
-                         Chardev *chr, MemoryRegion *system_io);
-SerialState *serial_mm_init(MemoryRegion *address_space,
-                            hwaddr base, int it_shift,
-                            qemu_irq irq, int baudbase,
-                            Chardev *chr, enum device_endian end);
 
 /* serial-isa.c */
 #define TYPE_ISA_SERIAL "isa-serial"
-void serial_hds_isa_init(ISABus *bus, int from, int to);
 
 #endif

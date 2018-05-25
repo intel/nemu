@@ -73,14 +73,6 @@ void buffer_shrink(Buffer *buffer);
  */
 void buffer_reserve(Buffer *buffer, size_t len);
 
-/**
- * buffer_reset:
- * @buffer: the buffer object
- *
- * Reset the length of the stored data to zero, but do
- * not free / reallocate the memory buffer
- */
-void buffer_reset(Buffer *buffer);
 
 /**
  * buffer_free:
@@ -115,47 +107,5 @@ void buffer_append(Buffer *buffer, const void *data, size_t len);
  * call completes
  */
 void buffer_advance(Buffer *buffer, size_t len);
-
-/**
- * buffer_end:
- * @buffer: the buffer object
- *
- * Get a pointer to the tail end of the internal buffer
- * The returned pointer is only valid until the next
- * call to buffer_reserve().
- *
- * Returns: the tail of the buffer
- */
-uint8_t *buffer_end(Buffer *buffer);
-
-/**
- * buffer_empty:
- * @buffer: the buffer object
- *
- * Determine if the buffer contains any current data
- *
- * Returns: true if the buffer holds data, false otherwise
- */
-gboolean buffer_empty(Buffer *buffer);
-
-/**
- * buffer_move_empty:
- * @to: destination buffer object
- * @from: source buffer object
- *
- * Moves buffer, without copying data.  'to' buffer must be empty.
- * 'from' buffer is empty and zero-sized on return.
- */
-void buffer_move_empty(Buffer *to, Buffer *from);
-
-/**
- * buffer_move:
- * @to: destination buffer object
- * @from: source buffer object
- *
- * Moves buffer, copying data (unless 'to' buffer happens to be empty).
- * 'from' buffer is empty and zero-sized on return.
- */
-void buffer_move(Buffer *to, Buffer *from);
 
 #endif /* QEMU_BUFFER_H */

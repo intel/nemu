@@ -410,28 +410,6 @@ ssize_t qio_channel_write(QIOChannel *ioc,
                           Error **errp);
 
 /**
- * qio_channel_read_all_eof:
- * @ioc: the channel object
- * @buf: the memory region to read data into
- * @buflen: the number of bytes to @buf
- * @errp: pointer to a NULL-initialized error object
- *
- * Reads @buflen bytes into @buf, possibly blocking or (if the
- * channel is non-blocking) yielding from the current coroutine
- * multiple times until the entire content is read. If end-of-file
- * occurs immediately it is not an error, but if it occurs after
- * data has been read it will return an error rather than a
- * short-read. Otherwise behaves as qio_channel_read().
- *
- * Returns: 1 if all bytes were read, 0 if end-of-file occurs
- *          without data, or -1 on error
- */
-int qio_channel_read_all_eof(QIOChannel *ioc,
-                             char *buf,
-                             size_t buflen,
-                             Error **errp);
-
-/**
  * qio_channel_read_all:
  * @ioc: the channel object
  * @buf: the memory region to read data into
@@ -594,11 +572,6 @@ void qio_channel_set_cork(QIOChannel *ioc,
  *
  * Returns: the new position on success, (off_t)-1 on failure
  */
-off_t qio_channel_io_seek(QIOChannel *ioc,
-                          off_t offset,
-                          int whence,
-                          Error **errp);
-
 
 /**
  * qio_channel_create_watch:

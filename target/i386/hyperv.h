@@ -31,12 +31,4 @@ struct HvSintRoute {
 };
 
 int kvm_hv_handle_exit(X86CPU *cpu, struct kvm_hyperv_exit *exit);
-
-HvSintRoute *kvm_hv_sint_route_create(uint32_t vcpu_id, uint32_t sint,
-                                      HvSintAckClb sint_ack_clb);
-
-void kvm_hv_sint_route_destroy(HvSintRoute *sint_route);
-
-int kvm_hv_sint_route_set_sint(HvSintRoute *sint_route);
-
 #endif
