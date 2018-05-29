@@ -21,6 +21,6 @@ sudo chmod a+x /usr/sbin/policy-rc.d
 
 sudo apt-get update
 sudo apt-get install -y g++-aarch64-linux-gnu build-essential flex bison git
-
+sudo apt-get install -y mtools dosfstools
 sudo apt-get build-dep -y -aarm64 qemu
 

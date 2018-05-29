@@ -16,6 +16,6 @@ sudo chmod a+x /usr/sbin/policy-rc.d
 
 sudo apt-get update
 sudo apt-get install -y build-essential flex bison git
-
+sudo apt-get install -y mtools dosfstools
 sudo apt-get build-dep -y qemu
 
