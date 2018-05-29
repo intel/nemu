@@ -34,6 +34,7 @@ WORKLOADS_DIR="$HOME/workloads"
 EFI_FIRMWARE_URI="https://download.clearlinux.org/image/OVMF.fd"
 DOWNLOAD_ONLY="false"
 RUN_UNSAFE="false"
+PIIX_TEST="false"
 VERBOSE="false"
 CHECK="false"
 VSOCK="true"
@@ -129,6 +130,9 @@ while [ $# -ge 1 ]; do
     -unsafe)
         RUN_UNSAFE="true"
         shift;;
+    -piix)
+        PIIX_TEST="true"
+        shift;;
     -download)
         DOWNLOAD_ONLY="true"
         shift;;
@@ -164,52 +168,55 @@ done
 #extra args -s => do not test hotplug
 #           -l => enable legacy serial
 #                 Boots with serial enabled, grub sets kernel params to ttyS0 not hvc0
-declare -a testimages_x86_64
-testimages_x86_64=( "clear-22180-cloud.img" "qcow2" "uefi" "x86_64_pc" "-s" \
-                    "https://download.clearlinux.org/releases/22180/clear/clear-22180-cloud.img.xz" \
-                    "CentOS-6-x86_64-GenericCloud-1802.qcow2" "qcow2" "seabios" "x86_64_pc" "-s -l" \
-                    "https://cloud.centos.org/centos/6/images/CentOS-6-x86_64-GenericCloud-1802.qcow2" \
-                    "coreos_production_openstack_image.img" "qcow2" "seabios" "x86_64_pc" "-s" \
-                    "https://stable.release.core-os.net/amd64-usr/current/coreos_production_openstack_image.img.bz2" \
-                    "bionic-server-cloudimg-amd64.img" "qcow2" "seabios" "x86_64_pc" "-s -l" \
-                    "http://cloud-images.ubuntu.com/bionic/current/bionic-server-cloudimg-amd64.img" \
-                    "CentOS-7-x86_64-GenericCloud-1802.qcow2" "qcow2" "seabios" "x86_64_pc" "-s"  \
-                    "https://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud-1802.qcow2" \
-                    "CentOS-Atomic-Host-7-GenericCloud.qcow2" "qcow2" "seabios" "x86_64_pc" "-s" \
-                    "http://cloud.centos.org/centos/7/atomic/images/CentOS-Atomic-Host-7-GenericCloud.qcow2" \
-                    "Fedora-AtomicHost-28-1.1.x86_64.qcow2" "qcow2" "seabios" "x86_64_pc" "-s" \
-                    "https://archives.fedoraproject.org/pub/fedora/linux/releases/28/AtomicHost/x86_64/images/Fedora-AtomicHost-28-1.1.x86_64.qcow2" \
-                    "Fedora-Cloud-Base-27-1.6.x86_64.qcow2" "qcow2" "seabios" "x86_64_pc" "-s" \
-                    "https://archives.fedoraproject.org/pub/fedora/linux/releases/27/CloudImages/x86_64/images/Fedora-Cloud-Base-27-1.6.x86_64.qcow2" \
-                    "Fedora-Cloud-Base-28-1.1.x86_64.qcow2" "qcow2" "seabios" "x86_64_pc" "-s" \
-                    "https://archives.fedoraproject.org/pub/fedora/linux/releases/28/Cloud/x86_64/images/Fedora-Cloud-Base-28-1.1.x86_64.qcow2" \
-                    "coreos_production_openstack_image.img" "qcow2" "seabios" "x86_64_q35" "-s" \
-                    "https://stable.release.core-os.net/amd64-usr/current/coreos_production_openstack_image.img.bz2" \
-                    "CentOS-7-x86_64-GenericCloud-1802.qcow2" "qcow2" "seabios" "x86_64_q35" "-s" \
-                    "https://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud-1802.qcow2" \
-                    "CentOS-Atomic-Host-7-GenericCloud.qcow2" "qcow2" "seabios" "x86_64_q35" "-s" \
-                    "http://cloud.centos.org/centos/7/atomic/images/CentOS-Atomic-Host-7-GenericCloud.qcow2" \
-                    "Fedora-AtomicHost-28-1.1.x86_64.qcow2" "qcow2" "seabios" "x86_64_q35" "-s" \
-                    "https://archives.fedoraproject.org/pub/fedora/linux/releases/28/AtomicHost/x86_64/images/Fedora-AtomicHost-28-1.1.x86_64.qcow2" \
-                    "Fedora-Cloud-Base-27-1.6.x86_64.qcow2" "qcow2" "seabios" "x86_64_q35" "-s" \
-                    "https://archives.fedoraproject.org/pub/fedora/linux/releases/27/CloudImages/x86_64/images/Fedora-Cloud-Base-27-1.6.x86_64.qcow2" \
-                    "Fedora-Cloud-Base-28-1.1.x86_64.qcow2" "qcow2" "seabios" "x86_64_q35" "-s" \
-                    "https://archives.fedoraproject.org/pub/fedora/linux/releases/28/Cloud/x86_64/images/Fedora-Cloud-Base-28-1.1.x86_64.qcow2" )
+declare -a testimages_x86_64_piix
+testimages_x86_64_piix=("clear-22180-cloud.img" "qcow2" "uefi" "x86_64_pc" "-s" \
+                        "https://download.clearlinux.org/releases/22180/clear/clear-22180-cloud.img.xz" \
+                        "CentOS-6-x86_64-GenericCloud-1802.qcow2" "qcow2" "seabios" "x86_64_pc" "-s -l" \
+                        "https://cloud.centos.org/centos/6/images/CentOS-6-x86_64-GenericCloud-1802.qcow2" \
+                        "coreos_production_openstack_image.img" "qcow2" "seabios" "x86_64_pc" "-s" \
+                        "https://stable.release.core-os.net/amd64-usr/current/coreos_production_openstack_image.img.bz2" \
+                        "bionic-server-cloudimg-amd64.img" "qcow2" "seabios" "x86_64_pc" "-s -l" \
+                        "http://cloud-images.ubuntu.com/bionic/current/bionic-server-cloudimg-amd64.img" \
+                        "CentOS-7-x86_64-GenericCloud-1802.qcow2" "qcow2" "seabios" "x86_64_pc" "-s"  \
+                        "https://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud-1802.qcow2" \
+                        "CentOS-Atomic-Host-7-GenericCloud.qcow2" "qcow2" "seabios" "x86_64_pc" "-s" \
+                        "http://cloud.centos.org/centos/7/atomic/images/CentOS-Atomic-Host-7-GenericCloud.qcow2" \
+                        "Fedora-AtomicHost-28-1.1.x86_64.qcow2" "qcow2" "seabios" "x86_64_pc" "-s" \
+                        "https://archives.fedoraproject.org/pub/fedora/linux/releases/28/AtomicHost/x86_64/images/Fedora-AtomicHost-28-1.1.x86_64.qcow2" \
+                        "Fedora-Cloud-Base-27-1.6.x86_64.qcow2" "qcow2" "seabios" "x86_64_pc" "-s" \
+                        "https://archives.fedoraproject.org/pub/fedora/linux/releases/27/CloudImages/x86_64/images/Fedora-Cloud-Base-27-1.6.x86_64.qcow2" \
+                        "Fedora-Cloud-Base-28-1.1.x86_64.qcow2" "qcow2" "seabios" "x86_64_pc" "-s" \
+                        "https://archives.fedoraproject.org/pub/fedora/linux/releases/28/Cloud/x86_64/images/Fedora-Cloud-Base-28-1.1.x86_64.qcow2")
+
+declare -a testimages_x86_64_q35
+testimages_x86_64_q35=("coreos_production_openstack_image.img" "qcow2" "seabios" "x86_64_q35" "-s" \
+                       "https://stable.release.core-os.net/amd64-usr/current/coreos_production_openstack_image.img.bz2" \
+                       "CentOS-7-x86_64-GenericCloud-1802.qcow2" "qcow2" "seabios" "x86_64_q35" "-s" \
+                       "https://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud-1802.qcow2" \
+                       "CentOS-Atomic-Host-7-GenericCloud.qcow2" "qcow2" "seabios" "x86_64_q35" "-s" \
+                       "http://cloud.centos.org/centos/7/atomic/images/CentOS-Atomic-Host-7-GenericCloud.qcow2" \
+                       "Fedora-AtomicHost-28-1.1.x86_64.qcow2" "qcow2" "seabios" "x86_64_q35" "-s" \
+                       "https://archives.fedoraproject.org/pub/fedora/linux/releases/28/AtomicHost/x86_64/images/Fedora-AtomicHost-28-1.1.x86_64.qcow2" \
+                       "Fedora-Cloud-Base-27-1.6.x86_64.qcow2" "qcow2" "seabios" "x86_64_q35" "-s" \
+                       "https://archives.fedoraproject.org/pub/fedora/linux/releases/27/CloudImages/x86_64/images/Fedora-Cloud-Base-27-1.6.x86_64.qcow2" \
+                       "Fedora-Cloud-Base-28-1.1.x86_64.qcow2" "qcow2" "seabios" "x86_64_q35" "-s" \
+                       "https://archives.fedoraproject.org/pub/fedora/linux/releases/28/Cloud/x86_64/images/Fedora-Cloud-Base-28-1.1.x86_64.qcow2")
 
 # Older unpatched images used to ensure backward compatibility is not broken
 # WARNING: These should be run with caution
-declare -a unsafeimages_x86_64
-unsafeimages_x86_64=("ubuntu-12.04-server-cloudimg-amd64-disk1.img" "qcow2" "seabios" "x86_64_pc" "-s -l" \
-                     "http://cloud-images-archive.ubuntu.com/releases/precise/release-20170502/ubuntu-12.04-server-cloudimg-amd64-disk1.img" \
-                     "ubuntu-11.10-server-cloudimg-amd64-disk1.img" "qcow2" "seabios" "x86_64_pc" "-s -l" \
-                     "http://cloud-images-archive.ubuntu.com/releases/oneiric/release-20130509/ubuntu-11.10-server-cloudimg-amd64-disk1.img" \
-                     "core-stable-amd64-disk1.img" "qcow2" "seabios" "x86_64_pc" "-s" \
-                     "https://cloud-images.ubuntu.com/snappy/15.04/core/stable/current/core-stable-amd64-disk1.img" \
-                     "core-stable-amd64-disk1.img" "qcow2" "seabios" "x86_64_q35" "-s" \
-                     "https://cloud-images.ubuntu.com/snappy/15.04/core/stable/current/core-stable-amd64-disk1.img" \
-                     "Fedora-Cloud-Base-20141203-21.x86_64.qcow2" "qcow2" "seabios" "x86_64_pc" "-s -l" \
-                     "https://archives.fedoraproject.org/pub/archive/fedora/linux/releases/21/Cloud/Images/x86_64/Fedora-Cloud-Base-20141203-21.x86_64.qcow2")
+declare -a unsafeimages_x86_64_piix
+unsafeimages_x86_64_piix=("ubuntu-12.04-server-cloudimg-amd64-disk1.img" "qcow2" "seabios" "x86_64_pc" "-s -l" \
+                           "http://cloud-images-archive.ubuntu.com/releases/precise/release-20170502/ubuntu-12.04-server-cloudimg-amd64-disk1.img" \
+                           "ubuntu-11.10-server-cloudimg-amd64-disk1.img" "qcow2" "seabios" "x86_64_pc" "-s -l" \
+                           "http://cloud-images-archive.ubuntu.com/releases/oneiric/release-20130509/ubuntu-11.10-server-cloudimg-amd64-disk1.img" \
+                           "core-stable-amd64-disk1.img" "qcow2" "seabios" "x86_64_pc" "-s" \
+                           "https://cloud-images.ubuntu.com/snappy/15.04/core/stable/current/core-stable-amd64-disk1.img" \
+                           "Fedora-Cloud-Base-20141203-21.x86_64.qcow2" "qcow2" "seabios" "x86_64_pc" "-s -l" \
+                           "https://archives.fedoraproject.org/pub/archive/fedora/linux/releases/21/Cloud/Images/x86_64/Fedora-Cloud-Base-20141203-21.x86_64.qcow2")
 
+declare -a unsafeimages_x86_64_q35
+unsafeimages_x86_64_q35=("core-stable-amd64-disk1.img" "qcow2" "seabios" "x86_64_q35" "-s" \
+                         "https://cloud-images.ubuntu.com/snappy/15.04/core/stable/current/core-stable-amd64-disk1.img")
 
 #Failing images. These fail due to cloud-init issues
 #"cirros-0.4.0-x86_64-disk.img" "qcow2" "seabios" \
@@ -269,14 +276,24 @@ fi
 if [[ "$RUN_UNSAFE" == "false" ]]; then
     echo "Testing safe images"
     if [[ "$IS_AARCH64" == "" ]]; then
-        run_tests "${testimages_x86_64[@]}"
+        if [[ "$PIIX_TEST" == "false" ]]; then
+            run_tests "${testimages_x86_64_q35[@]}"
+        else
+            run_tests "${testimages_x86_64_piix[@]}"
+            run_tests "${testimages_x86_64_q35[@]}"
+        fi
     else
         run_tests "${testimages_aarch64[@]}"
     fi
 else
     echo "Testing unsafe images"
-    run_tests "${unsafeimages_x86_64[@]}"
+    if [[ "$IS_AARCH64" == "" ]]; then
+        if [[ "$PIIX_TEST" == "false" ]]; then
+            run_tests "${unsafeimages_x86_64_q35[@]}"
+        else
+            run_tests "${unsafeimages_x86_64_piix[@]}"
+            run_tests "${unsafeimages_x86_64_q35[@]}"
+        fi
+    fi
 fi
-
 exit
-
