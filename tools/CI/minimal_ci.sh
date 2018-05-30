@@ -31,7 +31,6 @@ CLOUD_INIT_DIR="$SCRIPT_DIR/cloud-init/"
 BUILD_DIR=""
 HYPERVISOR="$HOME/build-x86_64/x86_64-softmmu/qemu-system-x86_64"
 WORKLOADS_DIR="$HOME/workloads"
-EFI_FIRMWARE="$HOME/workloads/OVMF.fd"
 EFI_FIRMWARE_URI="https://download.clearlinux.org/image/OVMF.fd"
 DOWNLOAD_ONLY="false"
 RUN_UNSAFE="false"
@@ -234,6 +233,7 @@ if [ ! -d "$WORKLOADS_DIR" ]; then
   fi
 fi
 
+EFI_FIRMWARE="$WORKLOADS_DIR/OVMF.fd"
 if [ ! -f $EFI_FIRMWARE ]; then
    wget --no-verbose -O "$EFI_FIRMWARE" "$EFI_FIRMWARE_URI"
 fi
