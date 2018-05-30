@@ -118,7 +118,7 @@ bool kvm_has_adjust_clock_stable(void)
 
 bool kvm_allows_irq0_override(void)
 {
-    return !kvm_irqchip_in_kernel() || kvm_has_gsi_routing();
+    return kvm_has_gsi_routing();
 }
 
 static bool kvm_x2apic_api_set_flags(uint64_t flags)
@@ -347,16 +347,8 @@ uint32_t kvm_arch_get_supported_cpuid(KVMState *s, uint32_t function,
          * can be enabled if the kernel has KVM_CAP_TSC_DEADLINE_TIMER,
          * and the irqchip is in the kernel.
          */
-        if (kvm_irqchip_in_kernel() &&
-                kvm_check_extension(s, KVM_CAP_TSC_DEADLINE_TIMER)) {
+        if (kvm_check_extension(s, KVM_CAP_TSC_DEADLINE_TIMER)) {
             ret |= CPUID_EXT_TSC_DEADLINE_TIMER;
-        }
-
-        /* x2apic is reported by GET_SUPPORTED_CPUID, but it can't be enabled
-         * without the in-kernel irqchip
-         */
-        if (!kvm_irqchip_in_kernel()) {
-            ret &= ~CPUID_EXT_X2APIC;
         }
     } else if (function == 6 && reg == R_EAX) {
         ret |= CPUID_6_EAX_ARAT; /* safe to allow because of emulated APIC */
@@ -370,13 +362,6 @@ uint32_t kvm_arch_get_supported_cpuid(KVMState *s, uint32_t function,
          */
         cpuid_1_edx = kvm_arch_get_supported_cpuid(s, 1, 0, R_EDX);
         ret |= cpuid_1_edx & CPUID_EXT2_AMD_ALIASES;
-    } else if (function == KVM_CPUID_FEATURES && reg == R_EAX) {
-        /* kvm_pv_unhalt is reported by GET_SUPPORTED_CPUID, but it can't
-         * be enabled without the in-kernel irqchip
-         */
-        if (!kvm_irqchip_in_kernel()) {
-            ret &= ~(1U << KVM_FEATURE_PV_UNHALT);
-        }
     } else if (function == KVM_CPUID_FEATURES && reg == R_EDX) {
         ret |= KVM_HINTS_DEDICATED;
         found = 1;
@@ -1101,12 +1086,8 @@ void kvm_arch_reset_vcpu(X86CPU *cpu)
     CPUX86State *env = &cpu->env;
 
     env->xcr0 = 1;
-    if (kvm_irqchip_in_kernel()) {
-        env->mp_state = cpu_is_bsp(cpu) ? KVM_MP_STATE_RUNNABLE :
-                                          KVM_MP_STATE_UNINITIALIZED;
-    } else {
-        env->mp_state = KVM_MP_STATE_RUNNABLE;
-    }
+    env->mp_state = cpu_is_bsp(cpu) ? KVM_MP_STATE_RUNNABLE :
+                                      KVM_MP_STATE_UNINITIALIZED;
 
     if (cpu->hyperv_synic) {
         int i;
@@ -2416,9 +2397,7 @@ static int kvm_get_mp_state(X86CPU *cpu)
         return ret;
     }
     env->mp_state = mp_state.mp_state;
-    if (kvm_irqchip_in_kernel()) {
-        cs->halted = (mp_state.mp_state == KVM_MP_STATE_HALTED);
-    }
+    cs->halted = (mp_state.mp_state == KVM_MP_STATE_HALTED);
     return 0;
 }
 
@@ -2428,7 +2407,7 @@ static int kvm_get_apic(X86CPU *cpu)
     struct kvm_lapic_state kapic;
     int ret;
 
-    if (apic && kvm_irqchip_in_kernel()) {
+    if (apic) {
         ret = kvm_vcpu_ioctl(CPU(cpu), KVM_GET_LAPIC, &kapic);
         if (ret < 0) {
             return ret;
@@ -2806,16 +2785,8 @@ MemTxAttrs kvm_arch_post_run(CPUState *cpu, struct kvm_run *run)
         env->eflags &= ~IF_MASK;
     }
 
-    /* We need to protect the apic state against concurrent accesses from
-     * different threads in case the userspace irqchip is used. */
-    if (!kvm_irqchip_in_kernel()) {
-        qemu_mutex_lock_iothread();
-    }
     cpu_set_apic_tpr(x86_cpu->apic_state, run->cr8);
     cpu_set_apic_base(x86_cpu->apic_state, run->apic_base);
-    if (!kvm_irqchip_in_kernel()) {
-        qemu_mutex_unlock_iothread();
-    }
     return cpu_get_mem_attrs(env);
 }
 
@@ -2842,7 +2813,7 @@ int kvm_arch_process_async_events(CPUState *cs)
         env->has_error_code = 0;
 
         cs->halted = 0;
-        if (kvm_irqchip_in_kernel() && env->mp_state == KVM_MP_STATE_HALTED) {
+        if (env->mp_state == KVM_MP_STATE_HALTED) {
             env->mp_state = KVM_MP_STATE_RUNNABLE;
         }
     }
@@ -3144,16 +3115,14 @@ void kvm_arch_init_irq_routing(KVMState *s)
     kvm_msi_via_irqfd_allowed = true;
     kvm_gsi_routing_allowed = true;
 
-    if (kvm_irqchip_is_split()) {
-        int i;
+    int i;
 
-        /* If the ioapic is in QEMU and the lapics are in KVM, reserve
-           MSI routes for signaling interrupts to the local apics. */
-        for (i = 0; i < IOAPIC_NUM_PINS; i++) {
-            if (kvm_irqchip_add_msi_route(s, 0, NULL) < 0) {
-                error_report("Could not enable split IRQ mode.");
-                exit(1);
-            }
+    /* If the ioapic is in QEMU and the lapics are in KVM, reserve
+       MSI routes for signaling interrupts to the local apics. */
+    for (i = 0; i < IOAPIC_NUM_PINS; i++) {
+        if (kvm_irqchip_add_msi_route(s, 0, NULL) < 0) {
+            error_report("Could not enable split IRQ mode.");
+            exit(1);
         }
     }
 }

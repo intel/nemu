@@ -204,7 +204,7 @@ void kvm_arm_pmu_init(CPUState *cs);
 
 static inline const char *gic_class_name(void)
 {
-    return kvm_irqchip_in_kernel() ? "kvm-arm-gic" : "arm_gic";
+    return "kvm-arm-gic";
 }
 
 /**
@@ -217,21 +217,13 @@ static inline const char *gic_class_name(void)
  */
 static inline const char *gicv3_class_name(void)
 {
-    if (kvm_irqchip_in_kernel()) {
 #ifdef TARGET_AARCH64
-        return "kvm-arm-gicv3";
+    return "kvm-arm-gicv3";
 #else
-        error_report("KVM GICv3 acceleration is not supported on this "
-                     "platform");
-        exit(1);
+    error_report("KVM GICv3 acceleration is not supported on this "
+                 "platform");
+    exit(1);
 #endif
-    } else {
-        if (kvm_enabled()) {
-            error_report("Userspace GICv3 is not supported with KVM");
-            exit(1);
-        }
-        return "arm-gicv3";
-    }
 }
 
 /**
@@ -274,13 +266,8 @@ void kvm_arm_copy_hw_debug_data(struct kvm_guest_debug_arch *ptr);
  */
 static inline const char *its_class_name(void)
 {
-    if (kvm_irqchip_in_kernel()) {
-        /* KVM implementation requires this capability */
-        return kvm_direct_msi_enabled() ? "arm-its-kvm" : NULL;
-    } else {
-        /* Software emulation is not implemented yet */
-        return NULL;
-    }
+    /* KVM implementation requires this capability */
+    return kvm_direct_msi_enabled() ? "arm-its-kvm" : NULL;
 }
 
 #endif

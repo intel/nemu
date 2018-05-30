@@ -89,7 +89,6 @@ static void ioapic_entry_parse(uint64_t entry, struct ioapic_entry_info *info)
 
 static void ioapic_service(IOAPICCommonState *s)
 {
-    AddressSpace *ioapic_as = PC_MACHINE(qdev_get_machine())->ioapic_as;
     struct ioapic_entry_info info;
     uint8_t i;
     uint32_t mask;
@@ -118,21 +117,12 @@ static void ioapic_service(IOAPICCommonState *s)
                     continue;
                 }
 
-                if (kvm_irqchip_is_split()) {
-                    if (info.trig_mode == IOAPIC_TRIGGER_EDGE) {
-                        kvm_set_irq(kvm_state, i, 1);
-                        kvm_set_irq(kvm_state, i, 0);
-                    } else {
-                        kvm_set_irq(kvm_state, i, 1);
-                    }
-                    continue;
+                if (info.trig_mode == IOAPIC_TRIGGER_EDGE) {
+                    kvm_set_irq(kvm_state, i, 1);
+                    kvm_set_irq(kvm_state, i, 0);
+                } else {
+                    kvm_set_irq(kvm_state, i, 1);
                 }
-
-                /* No matter whether IR is enabled, we translate
-                 * the IOAPIC message into a MSI one, and its
-                 * address space will decide whether we need a
-                 * translation. */
-                stl_le_phys(ioapic_as, info.addr, info.data);
             }
         }
     }
@@ -180,17 +170,15 @@ static void ioapic_update_kvm_routes(IOAPICCommonState *s)
 {
     int i;
 
-    if (kvm_irqchip_is_split()) {
-        for (i = 0; i < IOAPIC_NUM_PINS; i++) {
-            MSIMessage msg;
-            struct ioapic_entry_info info;
-            ioapic_entry_parse(s->ioredtbl[i], &info);
-            msg.address = info.addr;
-            msg.data = info.data;
-            kvm_irqchip_update_msi_route(kvm_state, i, msg, NULL);
-        }
-        kvm_irqchip_commit_routes(kvm_state);
+    for (i = 0; i < IOAPIC_NUM_PINS; i++) {
+        MSIMessage msg;
+        struct ioapic_entry_info info;
+        ioapic_entry_parse(s->ioredtbl[i], &info);
+        msg.address = info.addr;
+        msg.data = info.data;
+        kvm_irqchip_update_msi_route(kvm_state, i, msg, NULL);
     }
+    kvm_irqchip_commit_routes(kvm_state);
 }
 
 static void ioapic_iec_notifier(void *private, bool global,
@@ -378,14 +366,12 @@ static void ioapic_machine_done_notify(Notifier *notifier, void *data)
     IOAPICCommonState *s = container_of(notifier, IOAPICCommonState,
                                         machine_done);
 
-    if (kvm_irqchip_is_split()) {
-        X86IOMMUState *iommu = x86_iommu_get_default();
-        if (iommu) {
-            /* Register this IOAPIC with IOMMU IEC notifier, so that
-             * when there are IR invalidates, we can be notified to
-             * update kernel IR cache. */
-            x86_iommu_iec_register_notifier(iommu, ioapic_iec_notifier, s);
-        }
+    X86IOMMUState *iommu = x86_iommu_get_default();
+    if (iommu) {
+        /* Register this IOAPIC with IOMMU IEC notifier, so that
+         * when there are IR invalidates, we can be notified to
+         * update kernel IR cache. */
+        x86_iommu_iec_register_notifier(iommu, ioapic_iec_notifier, s);
     }
 }
 

@@ -439,9 +439,7 @@ static void fdt_add_pmu_nodes(const VirtMachineState *vms)
             return;
         }
         if (kvm_enabled()) {
-            if (kvm_irqchip_in_kernel()) {
-                kvm_arm_pmu_set_irq(cpu, PPI(VIRTUAL_PMU_IRQ));
-            }
+            kvm_arm_pmu_set_irq(cpu, PPI(VIRTUAL_PMU_IRQ));
             kvm_arm_pmu_init(cpu);
         }
     }
@@ -519,9 +517,6 @@ static void create_gic(VirtMachineState *vms, qemu_irq *pic)
      * interrupts; there are always 32 of the former (mandated by GIC spec).
      */
     qdev_prop_set_uint32(gicdev, "num-irq", NUM_IRQS + 32);
-    if (!kvm_irqchip_in_kernel()) {
-        qdev_prop_set_bit(gicdev, "has-security-extensions", vms->secure);
-    }
     qdev_init_nofail(gicdev);
     gicbusdev = SYS_BUS_DEVICE(gicdev);
     sysbus_mmio_map(gicbusdev, 0, vms->memmap[VIRT_GIC_DIST].base);

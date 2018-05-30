@@ -1216,10 +1216,6 @@ int kvm_irqchip_update_msi_route(KVMState *s, int virq, MSIMessage msg,
         return 0;
     }
 
-    if (!kvm_irqchip_in_kernel()) {
-        return -ENOSYS;
-    }
-
     kroute.gsi = virq;
     kroute.type = KVM_IRQ_ROUTING_MSI;
     kroute.flags = 0;
