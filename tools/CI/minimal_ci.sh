@@ -66,7 +66,7 @@ run_tests() {
 
        if [ ! -f "$WORKLOADS_DIR"/"$image" ]; then
           pushd "$WORKLOADS_DIR"
-          wget "$uri"
+          wget --no-verbose "$uri"
           popd
        fi
    
@@ -235,7 +235,7 @@ if [ ! -d "$WORKLOADS_DIR" ]; then
 fi
 
 if [ ! -f $EFI_FIRMWARE ]; then
-   wget -O "$EFI_FIRMWARE" "$EFI_FIRMWARE_URI"
+   wget --no-verbose -O "$EFI_FIRMWARE" "$EFI_FIRMWARE_URI"
 fi
 
 IS_AARCH64=`file $HYPERVISOR | grep aarch64`
