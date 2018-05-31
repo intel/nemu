@@ -16,6 +16,9 @@
 #include "hw/mem/pc-dimm.h"
 #include "hw/mem/nvdimm.h"
 #include "hw/acpi/acpi_dev_interface.h"
+#include "hw/acpi/acpi-defs.h"
+#include "hw/acpi/aml-build.h"
+#include "sysemu/tpm.h"
 
 
 /**
@@ -211,43 +214,59 @@ void ioapic_init_gsi(GSIState *gsi_state, const char *parent_name);
 
 #define PORT92_A20_LINE "a20"
 
-
-/* piix_pci.c */
-struct PCII440FXState;
-typedef struct PCII440FXState PCII440FXState;
-
-#define TYPE_I440FX_PCI_HOST_BRIDGE "i440FX-pcihost"
-#define TYPE_I440FX_PCI_DEVICE "i440FX"
-
 /*
  * Reset Control Register: PCI-accessible ISA-Compatible Register at address
  * 0xcf9, provided by the PCI/ISA bridge (PIIX3 PCI function 0, 8086:7000).
  */
 #define RCR_IOPORT 0xcf9
 
-PCIBus *i440fx_init(const char *host_type, const char *pci_type,
-                    PCII440FXState **pi440fx_state, int *piix_devfn,
-                    ISABus **isa_bus, qemu_irq *pic,
-                    MemoryRegion *address_space_mem,
-                    MemoryRegion *address_space_io,
-                    ram_addr_t ram_size,
-                    ram_addr_t below_4g_mem_size,
-                    ram_addr_t above_4g_mem_size,
-                    MemoryRegion *pci_memory,
-                    MemoryRegion *ram_memory);
+/* Default IOAPIC ID */
+#define ACPI_BUILD_IOAPIC_ID 0x0
+typedef struct AcpiMcfgInfo {
+    uint64_t mcfg_base;
+    uint32_t mcfg_size;
+} AcpiMcfgInfo;
 
-PCIBus *find_i440fx(void);
-/* piix4.c */
-extern PCIDevice *piix4_dev;
-int piix4_init(PCIBus *bus, ISABus **isa_bus, int devfn);
+typedef struct AcpiPmInfo {
+    bool s3_disabled;
+    bool s4_disabled;
+    bool pcihp_bridge_en;
+    uint8_t s4_val;
+    AcpiFadtData fadt;
+    uint16_t cpu_hp_io_base;
+    uint16_t pcihp_io_base;
+    uint16_t pcihp_io_len;
+} AcpiPmInfo;
+
+typedef struct AcpiMiscInfo {
+    TPMVersion tpm_version;
+    const unsigned char *dsdt_code;
+    unsigned dsdt_size;
+    uint16_t pvpanic_port;
+    uint16_t applesmc_io_base;
+} AcpiMiscInfo;
+
+/*acpi-build-q35.c*/
+void build_q35_pci0_int(Aml *table);
+void build_q35_isa_bridge(Aml *table);
+Aml *build_q35_osc_method(void);
+void build_mcfg_q35(GArray *table_data, BIOSLinker *linker, AcpiMcfgInfo *info);
+void build_dmar_q35(GArray *table_data, BIOSLinker *linker);
+bool acpi_get_mcfg(AcpiMcfgInfo *mcfg);
+Object *acpi_get_i386_pci_host(void);
+
+
+/*acpi-build-core.c*/
+Aml *build_irq_status_method(void);
+Aml *build_link_dev(const char *name, uint8_t uid, Aml *reg);
+Aml *build_gsi_link_dev(const char *name, uint8_t uid, uint8_t gsi);
+Aml *build_prt(bool is_pci0_prt);
+void pc_madt_cpu_entry(AcpiDeviceIf *adev, int uid,
+                       const CPUArchIdList *apic_ids, GArray *entry);
 
 /* pc_sysfw.c */
 void pc_system_firmware_init(MemoryRegion *rom_memory,
                              bool isapc_ram_fw);
-
-/* acpi-build.c */
-void pc_madt_cpu_entry(AcpiDeviceIf *adev, int uid,
-                       const CPUArchIdList *apic_ids, GArray *entry);
 
 /* e820 types */
 #define E820_RAM        1

@@ -28,7 +28,7 @@
 #include "hw/acpi/pcihp.h"
 
 #include "hw/hw.h"
-#include "hw/i386/pc.h"
+#include "hw/i386/pc_piix.h"
 #include "hw/pci/pci.h"
 #include "hw/acpi/acpi.h"
 #include "sysemu/sysemu.h"
