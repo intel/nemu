@@ -15,6 +15,7 @@
 #include "qemu-common.h"
 #include "hw/smbios/smbios.h"
 #include "qemu/bitmap.h"
+#include "sysemu/kvm.h"
 #include "acpi-utils.h"
 #include "boot-sector.h"
 
@@ -654,6 +655,7 @@ static uint8_t base_required_struct_types[] = {
     0, 1, 3, 4, 16, 17, 19, 32, 127
 };
 
+#ifdef CONFIG_PIIX
 static void test_acpi_piix4_tcg(void)
 {
     test_data data;
@@ -682,6 +684,51 @@ static void test_acpi_piix4_tcg_bridge(void)
     free_test_data(&data);
 }
 
+static void test_acpi_piix4_tcg_cphp(void)
+{
+    test_data data;
+
+    memset(&data, 0, sizeof(data));
+    data.machine = MACHINE_PC;
+    data.variant = ".cphp";
+    test_acpi_one("-smp 2,cores=3,sockets=2,maxcpus=6"
+                  " -numa node -numa node"
+                  " -numa dist,src=0,dst=1,val=21",
+                  &data);
+    free_test_data(&data);
+}
+
+static void test_acpi_piix4_tcg_memhp(void)
+{
+    test_data data;
+
+    memset(&data, 0, sizeof(data));
+    data.machine = MACHINE_PC;
+    data.variant = ".memhp";
+    test_acpi_one(" -m 128,slots=3,maxmem=1G"
+                  " -numa node -numa node"
+                  " -numa dist,src=0,dst=1,val=21",
+                  &data);
+    free_test_data(&data);
+}
+
+static void test_acpi_piix4_tcg_numamem(void)
+{
+    test_data data;
+
+    memset(&data, 0, sizeof(data));
+    data.machine = MACHINE_PC;
+    data.variant = ".numamem";
+    test_acpi_one(" -numa node -numa node,mem=128", &data);
+    free_test_data(&data);
+}
+
+static void test_acpi_piix4_tcg_dimm_pxm(void)
+{
+    test_acpi_tcg_dimm_pxm(MACHINE_PC);
+}
+#endif
+
 static void test_acpi_q35_tcg(void)
 {
     test_data data;
@@ -704,20 +751,6 @@ static void test_acpi_q35_tcg_bridge(void)
     data.required_struct_types = base_required_struct_types;
     data.required_struct_types_len = ARRAY_SIZE(base_required_struct_types);
     test_acpi_one("-device pci-bridge,chassis_nr=1",
-                  &data);
-    free_test_data(&data);
-}
-
-static void test_acpi_piix4_tcg_cphp(void)
-{
-    test_data data;
-
-    memset(&data, 0, sizeof(data));
-    data.machine = MACHINE_PC;
-    data.variant = ".cphp";
-    test_acpi_one("-smp 2,cores=3,sockets=2,maxcpus=6"
-                  " -numa node -numa node"
-                  " -numa dist,src=0,dst=1,val=21",
                   &data);
     free_test_data(&data);
 }
@@ -750,37 +783,12 @@ static void test_acpi_q35_tcg_memhp(void)
     free_test_data(&data);
 }
 
-static void test_acpi_piix4_tcg_memhp(void)
-{
-    test_data data;
-
-    memset(&data, 0, sizeof(data));
-    data.machine = MACHINE_PC;
-    data.variant = ".memhp";
-    test_acpi_one(" -m 128,slots=3,maxmem=1G"
-                  " -numa node -numa node"
-                  " -numa dist,src=0,dst=1,val=21",
-                  &data);
-    free_test_data(&data);
-}
-
 static void test_acpi_q35_tcg_numamem(void)
 {
     test_data data;
 
     memset(&data, 0, sizeof(data));
     data.machine = MACHINE_Q35;
-    data.variant = ".numamem";
-    test_acpi_one(" -numa node -numa node,mem=128", &data);
-    free_test_data(&data);
-}
-
-static void test_acpi_piix4_tcg_numamem(void)
-{
-    test_data data;
-
-    memset(&data, 0, sizeof(data));
-    data.machine = MACHINE_PC;
     data.variant = ".numamem";
     test_acpi_one(" -numa node -numa node,mem=128", &data);
     free_test_data(&data);
@@ -817,11 +825,6 @@ static void test_acpi_q35_tcg_dimm_pxm(void)
     test_acpi_tcg_dimm_pxm(MACHINE_Q35);
 }
 
-static void test_acpi_piix4_tcg_dimm_pxm(void)
-{
-    test_acpi_tcg_dimm_pxm(MACHINE_PC);
-}
-
 int main(int argc, char *argv[])
 {
     const char *arch = qtest_get_arch();
@@ -834,17 +837,19 @@ int main(int argc, char *argv[])
     g_test_init(&argc, &argv, NULL);
 
     if (strcmp(arch, "i386") == 0 || strcmp(arch, "x86_64") == 0) {
-        qtest_add_func("acpi/piix4", test_acpi_piix4_tcg);
-        qtest_add_func("acpi/piix4/bridge", test_acpi_piix4_tcg_bridge);
+        if (piix_enabled()) {
+            qtest_add_func("acpi/piix4", test_acpi_piix4_tcg);
+            qtest_add_func("acpi/piix4/bridge", test_acpi_piix4_tcg_bridge);
+            qtest_add_func("acpi/piix4/cpuhp", test_acpi_piix4_tcg_cphp);
+            qtest_add_func("acpi/piix4/memhp", test_acpi_piix4_tcg_memhp);
+            qtest_add_func("acpi/piix4/numamem", test_acpi_piix4_tcg_numamem);
+            qtest_add_func("acpi/piix4/dimmpxm", test_acpi_piix4_tcg_dimm_pxm);
+        }
         qtest_add_func("acpi/q35", test_acpi_q35_tcg);
         qtest_add_func("acpi/q35/bridge", test_acpi_q35_tcg_bridge);
-        qtest_add_func("acpi/piix4/cpuhp", test_acpi_piix4_tcg_cphp);
         qtest_add_func("acpi/q35/cpuhp", test_acpi_q35_tcg_cphp);
-        qtest_add_func("acpi/piix4/memhp", test_acpi_piix4_tcg_memhp);
         qtest_add_func("acpi/q35/memhp", test_acpi_q35_tcg_memhp);
-        qtest_add_func("acpi/piix4/numamem", test_acpi_piix4_tcg_numamem);
         qtest_add_func("acpi/q35/numamem", test_acpi_q35_tcg_numamem);
-        qtest_add_func("acpi/piix4/dimmpxm", test_acpi_piix4_tcg_dimm_pxm);
         qtest_add_func("acpi/q35/dimmpxm", test_acpi_q35_tcg_dimm_pxm);
     }
     ret = g_test_run();
