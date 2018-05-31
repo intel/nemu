@@ -2,7 +2,7 @@ common-obj-y += pam.o
 
 # ARM devices
 
-common-obj-$(CONFIG_PCI_PIIX) += piix.o
+common-obj-$(CONFIG_PIIX) += piix.o
 common-obj-$(CONFIG_PCI_Q35) += q35.o
 common-obj-$(CONFIG_PCI_GENERIC) += gpex.o
 

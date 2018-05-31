@@ -44,10 +44,12 @@
 #include "sysemu/tpm_backend.h"
 #include "hw/timer/mc146818rtc_regs.h"
 #include "sysemu/numa.h"
+#include "sysemu/kvm.h"
 
 /* Supported chipsets: */
 #include "hw/acpi/piix4.h"
 #include "hw/acpi/pcihp.h"
+
 #include "hw/i386/ich9.h"
 #include "hw/pci/pci_bus.h"
 #include "hw/pci-host/q35.h"
@@ -58,6 +60,7 @@
 #include "qom/qom-qobject.h"
 #include "hw/i386/amd_iommu.h"
 #include "hw/i386/intel_iommu.h"
+#include "hw/i386/pc_piix.h"
 
 /* These are used to size the ACPI tables for -M pc-i440fx-1.7 and
  * -M pc-i440fx-2.0.  Even if the actual amount of AML generated grows
@@ -76,41 +79,6 @@
 #else
 #define ACPI_BUILD_DPRINTF(fmt, ...)
 #endif
-
-/* Default IOAPIC ID */
-#define ACPI_BUILD_IOAPIC_ID 0x0
-
-typedef struct AcpiMcfgInfo {
-    uint64_t mcfg_base;
-    uint32_t mcfg_size;
-} AcpiMcfgInfo;
-
-typedef struct AcpiPmInfo {
-    bool s3_disabled;
-    bool s4_disabled;
-    bool pcihp_bridge_en;
-    uint8_t s4_val;
-    AcpiFadtData fadt;
-    uint16_t cpu_hp_io_base;
-    uint16_t pcihp_io_base;
-    uint16_t pcihp_io_len;
-} AcpiPmInfo;
-
-typedef struct AcpiMiscInfo {
-    bool is_piix4;
-    TPMVersion tpm_version;
-    const unsigned char *dsdt_code;
-    unsigned dsdt_size;
-    uint16_t pvpanic_port;
-    uint16_t applesmc_io_base;
-} AcpiMiscInfo;
-
-typedef struct AcpiBuildPciBusHotplugState {
-    GArray *device_table;
-    GArray *notify_table;
-    struct AcpiBuildPciBusHotplugState *parent;
-    bool pcihp_bridge_en;
-} AcpiBuildPciBusHotplugState;
 
 static void init_common_fadt_data(Object *o, AcpiFadtData *data)
 {
@@ -162,7 +130,7 @@ static void acpi_get_pm_info(AcpiPmInfo *pm)
     pm->pcihp_io_len = 0;
 
     init_common_fadt_data(obj, &pm->fadt);
-    if (piix) {
+    if (piix_enabled()) {
         /* w2k requires FADT(rev1) or it won't boot, keep PC compatible */
         pm->fadt.rev = 1;
         pm->cpu_hp_io_base = PIIX4_CPU_HOTPLUG_IO_BASE;
@@ -215,17 +183,6 @@ static void acpi_get_pm_info(AcpiPmInfo *pm)
 
 static void acpi_get_misc_info(AcpiMiscInfo *info)
 {
-    Object *piix = piix4_pm_find();
-    Object *lpc = ich9_lpc_find();
-    assert(!!piix != !!lpc);
-
-    if (piix) {
-        info->is_piix4 = true;
-    }
-    if (lpc) {
-        info->is_piix4 = false;
-    }
-
     info->tpm_version = tpm_get_version(tpm_find());
     info->applesmc_io_base = applesmc_port();
 }
@@ -234,7 +191,7 @@ static void acpi_get_misc_info(AcpiMiscInfo *info)
  * Because of the PXB hosts we cannot simply query TYPE_PCI_HOST_BRIDGE.
  * On i386 arch we only have two pci hosts, so we can look only for them.
  */
-static Object *acpi_get_i386_pci_host(void)
+Object *acpi_get_i386_pci_host(void)
 {
     PCIHostState *host;
 
@@ -408,30 +365,23 @@ build_madt(GArray *table_data, BIOSLinker *linker, PCMachineState *pcms)
                  table_data->len - madt_start, 1, NULL, NULL);
 }
 
-static void build_append_pcihp_notify_entry(Aml *method, int slot)
-{
-    Aml *if_ctx;
-    int32_t devfn = PCI_DEVFN(slot, 0);
-
-    if_ctx = aml_if(aml_and(aml_arg(0), aml_int(0x1U << slot), NULL));
-    aml_append(if_ctx, aml_notify(aml_name("S%.02X", devfn), aml_arg(1)));
-    aml_append(method, if_ctx);
-}
 
 static void build_append_pci_bus_devices(Aml *parent_scope, PCIBus *bus,
                                          bool pcihp_bridge_en)
 {
     Aml *dev, *notify_method = NULL, *method;
-    QObject *bsel;
+    QObject *bsel=NULL;
     PCIBus *sec;
     int i;
 
-    bsel = object_property_get_qobject(OBJECT(bus), ACPI_PCIHP_PROP_BSEL, NULL);
-    if (bsel) {
-        uint64_t bsel_val = qnum_get_uint(qobject_to(QNum, bsel));
+    if (piix_enabled()) {
+        bsel = object_property_get_qobject(OBJECT(bus), ACPI_PCIHP_PROP_BSEL, NULL);
+        if (bsel) {
+            uint64_t bsel_val = qnum_get_uint(qobject_to(QNum, bsel));
 
-        aml_append(parent_scope, aml_name_decl("BSEL", aml_int(bsel_val)));
-        notify_method = aml_method("DVNT", 2, AML_NOTSERIALIZED);
+            aml_append(parent_scope, aml_name_decl("BSEL", aml_int(bsel_val)));
+            notify_method = aml_method("DVNT", 2, AML_NOTSERIALIZED);
+        }
     }
 
     for (i = 0; i < ARRAY_SIZE(bus->devices); i += PCI_FUNC_MAX) {
@@ -443,7 +393,7 @@ static void build_append_pci_bus_devices(Aml *parent_scope, PCIBus *bus,
         bool bridge_in_acpi;
 
         if (!pdev) {
-            if (bsel) { /* add hotplug slots for non present devices */
+            if (piix_enabled() && bsel) { /* add hotplug slots for non present devices */
                 dev = aml_device("S%.02X", PCI_DEVFN(slot, 0));
                 aml_append(dev, aml_name_decl("_SUN", aml_int(slot)));
                 aml_append(dev, aml_name_decl("_ADR", aml_int(slot << 16)));
@@ -511,7 +461,7 @@ static void build_append_pci_bus_devices(Aml *parent_scope, PCIBus *bus,
             );
             aml_append(dev, method);
 
-            if (bsel) {
+            if (piix_enabled() && bsel) {
                 build_append_pcihp_notify_entry(notify_method, slot);
             }
         } else if (bridge_in_acpi) {
@@ -527,7 +477,7 @@ static void build_append_pci_bus_devices(Aml *parent_scope, PCIBus *bus,
         aml_append(parent_scope, dev);
     }
 
-    if (bsel) {
+    if (piix_enabled() && bsel) {
         aml_append(parent_scope, notify_method);
     }
 
@@ -537,7 +487,7 @@ static void build_append_pci_bus_devices(Aml *parent_scope, PCIBus *bus,
     method = aml_method("PCNT", 0, AML_NOTSERIALIZED);
 
     /* If bus supports hotplug select it and notify about local events */
-    if (bsel) {
+    if (piix_enabled() && bsel) {
         uint64_t bsel_val = qnum_get_uint(qobject_to(QNum, bsel));
 
         aml_append(method, aml_store(aml_int(bsel_val), aml_name("BNUM")));
@@ -562,7 +512,9 @@ static void build_append_pci_bus_devices(Aml *parent_scope, PCIBus *bus,
         }
     }
     aml_append(parent_scope, method);
-    qobject_decref(bsel);
+    if (piix_enabled()) {
+        qobject_decref(bsel);
+    }
 }
 
 /**
@@ -609,7 +561,7 @@ static Aml *initialize_route(Aml *route, const char *link_name,
  * The hash function is  (slot + pin) & 3 -> "LNK[D|A|B|C]".
  *
  */
-static Aml *build_prt(bool is_pci0_prt)
+Aml *build_prt(bool is_pci0_prt)
 {
     Aml *method, *while_ctx, *pin, *res;
 
@@ -1150,7 +1102,7 @@ static void build_dbg_aml(Aml *table)
     aml_append(table, scope);
 }
 
-static Aml *build_link_dev(const char *name, uint8_t uid, Aml *reg)
+Aml *build_link_dev(const char *name, uint8_t uid, Aml *reg)
 {
     Aml *dev;
     Aml *crs;
@@ -1186,7 +1138,7 @@ static Aml *build_link_dev(const char *name, uint8_t uid, Aml *reg)
     return dev;
  }
 
-static Aml *build_gsi_link_dev(const char *name, uint8_t uid, uint8_t gsi)
+Aml *build_gsi_link_dev(const char *name, uint8_t uid, uint8_t gsi)
 {
     Aml *dev;
     Aml *crs;
@@ -1217,38 +1169,7 @@ static Aml *build_gsi_link_dev(const char *name, uint8_t uid, uint8_t gsi)
     return dev;
 }
 
-/* _CRS method - get current settings */
-static Aml *build_iqcr_method(bool is_piix4)
-{
-    Aml *if_ctx;
-    uint32_t irqs;
-    Aml *method = aml_method("IQCR", 1, AML_SERIALIZED);
-    Aml *crs = aml_resource_template();
-
-    irqs = 0;
-    aml_append(crs, aml_interrupt(AML_CONSUMER, AML_LEVEL,
-                                  AML_ACTIVE_HIGH, AML_SHARED, &irqs, 1));
-    aml_append(method, aml_name_decl("PRR0", crs));
-
-    aml_append(method,
-        aml_create_dword_field(aml_name("PRR0"), aml_int(5), "PRRI"));
-
-    if (is_piix4) {
-        if_ctx = aml_if(aml_lless(aml_arg(0), aml_int(0x80)));
-        aml_append(if_ctx, aml_store(aml_arg(0), aml_name("PRRI")));
-        aml_append(method, if_ctx);
-    } else {
-        aml_append(method,
-            aml_store(aml_and(aml_arg(0), aml_int(0xF), NULL),
-                      aml_name("PRRI")));
-    }
-
-    aml_append(method, aml_return(aml_name("PRR0")));
-    return method;
-}
-
-/* _STA method - get status */
-static Aml *build_irq_status_method(void)
+Aml *build_irq_status_method(void)
 {
     Aml *if_ctx;
     Aml *method = aml_method("IQST", 1, AML_NOTSERIALIZED);
@@ -1257,374 +1178,6 @@ static Aml *build_irq_status_method(void)
     aml_append(if_ctx, aml_return(aml_int(0x09)));
     aml_append(method, if_ctx);
     aml_append(method, aml_return(aml_int(0x0B)));
-    return method;
-}
-
-static void build_piix4_pci0_int(Aml *table)
-{
-    Aml *dev;
-    Aml *crs;
-    Aml *field;
-    Aml *method;
-    uint32_t irqs;
-    Aml *sb_scope = aml_scope("_SB");
-    Aml *pci0_scope = aml_scope("PCI0");
-
-    aml_append(pci0_scope, build_prt(true));
-    aml_append(sb_scope, pci0_scope);
-
-    field = aml_field("PCI0.ISA.P40C", AML_BYTE_ACC, AML_NOLOCK, AML_PRESERVE);
-    aml_append(field, aml_named_field("PRQ0", 8));
-    aml_append(field, aml_named_field("PRQ1", 8));
-    aml_append(field, aml_named_field("PRQ2", 8));
-    aml_append(field, aml_named_field("PRQ3", 8));
-    aml_append(sb_scope, field);
-
-    aml_append(sb_scope, build_irq_status_method());
-    aml_append(sb_scope, build_iqcr_method(true));
-
-    aml_append(sb_scope, build_link_dev("LNKA", 0, aml_name("PRQ0")));
-    aml_append(sb_scope, build_link_dev("LNKB", 1, aml_name("PRQ1")));
-    aml_append(sb_scope, build_link_dev("LNKC", 2, aml_name("PRQ2")));
-    aml_append(sb_scope, build_link_dev("LNKD", 3, aml_name("PRQ3")));
-
-    dev = aml_device("LNKS");
-    {
-        aml_append(dev, aml_name_decl("_HID", aml_eisaid("PNP0C0F")));
-        aml_append(dev, aml_name_decl("_UID", aml_int(4)));
-
-        crs = aml_resource_template();
-        irqs = 9;
-        aml_append(crs, aml_interrupt(AML_CONSUMER, AML_LEVEL,
-                                      AML_ACTIVE_HIGH, AML_SHARED,
-                                      &irqs, 1));
-        aml_append(dev, aml_name_decl("_PRS", crs));
-
-        /* The SCI cannot be disabled and is always attached to GSI 9,
-         * so these are no-ops.  We only need this link to override the
-         * polarity to active high and match the content of the MADT.
-         */
-        method = aml_method("_STA", 0, AML_NOTSERIALIZED);
-        aml_append(method, aml_return(aml_int(0x0b)));
-        aml_append(dev, method);
-
-        method = aml_method("_DIS", 0, AML_NOTSERIALIZED);
-        aml_append(dev, method);
-
-        method = aml_method("_CRS", 0, AML_NOTSERIALIZED);
-        aml_append(method, aml_return(aml_name("_PRS")));
-        aml_append(dev, method);
-
-        method = aml_method("_SRS", 1, AML_NOTSERIALIZED);
-        aml_append(dev, method);
-    }
-    aml_append(sb_scope, dev);
-
-    aml_append(table, sb_scope);
-}
-
-static void append_q35_prt_entry(Aml *ctx, uint32_t nr, const char *name)
-{
-    int i;
-    int head;
-    Aml *pkg;
-    char base = name[3] < 'E' ? 'A' : 'E';
-    char *s = g_strdup(name);
-    Aml *a_nr = aml_int((nr << 16) | 0xffff);
-
-    assert(strlen(s) == 4);
-
-    head = name[3] - base;
-    for (i = 0; i < 4; i++) {
-        if (head + i > 3) {
-            head = i * -1;
-        }
-        s[3] = base + head + i;
-        pkg = aml_package(4);
-        aml_append(pkg, a_nr);
-        aml_append(pkg, aml_int(i));
-        aml_append(pkg, aml_name("%s", s));
-        aml_append(pkg, aml_int(0));
-        aml_append(ctx, pkg);
-    }
-    g_free(s);
-}
-
-static Aml *build_q35_routing_table(const char *str)
-{
-    int i;
-    Aml *pkg;
-    char *name = g_strdup_printf("%s ", str);
-
-    pkg = aml_package(128);
-    for (i = 0; i < 0x18; i++) {
-            name[3] = 'E' + (i & 0x3);
-            append_q35_prt_entry(pkg, i, name);
-    }
-
-    name[3] = 'E';
-    append_q35_prt_entry(pkg, 0x18, name);
-
-    /* INTA -> PIRQA for slot 25 - 31, see the default value of D<N>IR */
-    for (i = 0x0019; i < 0x1e; i++) {
-        name[3] = 'A';
-        append_q35_prt_entry(pkg, i, name);
-    }
-
-    /* PCIe->PCI bridge. use PIRQ[E-H] */
-    name[3] = 'E';
-    append_q35_prt_entry(pkg, 0x1e, name);
-    name[3] = 'A';
-    append_q35_prt_entry(pkg, 0x1f, name);
-
-    g_free(name);
-    return pkg;
-}
-
-static void build_q35_pci0_int(Aml *table)
-{
-    Aml *field;
-    Aml *method;
-    Aml *sb_scope = aml_scope("_SB");
-    Aml *pci0_scope = aml_scope("PCI0");
-
-    /* Zero => PIC mode, One => APIC Mode */
-    aml_append(table, aml_name_decl("PICF", aml_int(0)));
-    method = aml_method("_PIC", 1, AML_NOTSERIALIZED);
-    {
-        aml_append(method, aml_store(aml_arg(0), aml_name("PICF")));
-    }
-    aml_append(table, method);
-
-    aml_append(pci0_scope,
-        aml_name_decl("PRTP", build_q35_routing_table("LNK")));
-    aml_append(pci0_scope,
-        aml_name_decl("PRTA", build_q35_routing_table("GSI")));
-
-    method = aml_method("_PRT", 0, AML_NOTSERIALIZED);
-    {
-        Aml *if_ctx;
-        Aml *else_ctx;
-
-        /* PCI IRQ routing table, example from ACPI 2.0a specification,
-           section 6.2.8.1 */
-        /* Note: we provide the same info as the PCI routing
-           table of the Bochs BIOS */
-        if_ctx = aml_if(aml_equal(aml_name("PICF"), aml_int(0)));
-        aml_append(if_ctx, aml_return(aml_name("PRTP")));
-        aml_append(method, if_ctx);
-        else_ctx = aml_else();
-        aml_append(else_ctx, aml_return(aml_name("PRTA")));
-        aml_append(method, else_ctx);
-    }
-    aml_append(pci0_scope, method);
-    aml_append(sb_scope, pci0_scope);
-
-    field = aml_field("PCI0.ISA.PIRQ", AML_BYTE_ACC, AML_NOLOCK, AML_PRESERVE);
-    aml_append(field, aml_named_field("PRQA", 8));
-    aml_append(field, aml_named_field("PRQB", 8));
-    aml_append(field, aml_named_field("PRQC", 8));
-    aml_append(field, aml_named_field("PRQD", 8));
-    aml_append(field, aml_reserved_field(0x20));
-    aml_append(field, aml_named_field("PRQE", 8));
-    aml_append(field, aml_named_field("PRQF", 8));
-    aml_append(field, aml_named_field("PRQG", 8));
-    aml_append(field, aml_named_field("PRQH", 8));
-    aml_append(sb_scope, field);
-
-    aml_append(sb_scope, build_irq_status_method());
-    aml_append(sb_scope, build_iqcr_method(false));
-
-    aml_append(sb_scope, build_link_dev("LNKA", 0, aml_name("PRQA")));
-    aml_append(sb_scope, build_link_dev("LNKB", 1, aml_name("PRQB")));
-    aml_append(sb_scope, build_link_dev("LNKC", 2, aml_name("PRQC")));
-    aml_append(sb_scope, build_link_dev("LNKD", 3, aml_name("PRQD")));
-    aml_append(sb_scope, build_link_dev("LNKE", 4, aml_name("PRQE")));
-    aml_append(sb_scope, build_link_dev("LNKF", 5, aml_name("PRQF")));
-    aml_append(sb_scope, build_link_dev("LNKG", 6, aml_name("PRQG")));
-    aml_append(sb_scope, build_link_dev("LNKH", 7, aml_name("PRQH")));
-
-    aml_append(sb_scope, build_gsi_link_dev("GSIA", 0x10, 0x10));
-    aml_append(sb_scope, build_gsi_link_dev("GSIB", 0x11, 0x11));
-    aml_append(sb_scope, build_gsi_link_dev("GSIC", 0x12, 0x12));
-    aml_append(sb_scope, build_gsi_link_dev("GSID", 0x13, 0x13));
-    aml_append(sb_scope, build_gsi_link_dev("GSIE", 0x14, 0x14));
-    aml_append(sb_scope, build_gsi_link_dev("GSIF", 0x15, 0x15));
-    aml_append(sb_scope, build_gsi_link_dev("GSIG", 0x16, 0x16));
-    aml_append(sb_scope, build_gsi_link_dev("GSIH", 0x17, 0x17));
-
-    aml_append(table, sb_scope);
-}
-
-static void build_q35_isa_bridge(Aml *table)
-{
-    Aml *dev;
-    Aml *scope;
-    Aml *field;
-
-    scope =  aml_scope("_SB.PCI0");
-    dev = aml_device("ISA");
-    aml_append(dev, aml_name_decl("_ADR", aml_int(0x001F0000)));
-
-    /* ICH9 PCI to ISA irq remapping */
-    aml_append(dev, aml_operation_region("PIRQ", AML_PCI_CONFIG,
-                                         aml_int(0x60), 0x0C));
-
-    aml_append(dev, aml_operation_region("LPCD", AML_PCI_CONFIG,
-                                         aml_int(0x80), 0x02));
-    field = aml_field("LPCD", AML_ANY_ACC, AML_NOLOCK, AML_PRESERVE);
-    aml_append(field, aml_named_field("COMA", 3));
-    aml_append(field, aml_reserved_field(1));
-    aml_append(field, aml_named_field("COMB", 3));
-    aml_append(field, aml_reserved_field(1));
-    aml_append(field, aml_named_field("LPTD", 2));
-    aml_append(dev, field);
-
-    aml_append(dev, aml_operation_region("LPCE", AML_PCI_CONFIG,
-                                         aml_int(0x82), 0x02));
-    /* enable bits */
-    field = aml_field("LPCE", AML_ANY_ACC, AML_NOLOCK, AML_PRESERVE);
-    aml_append(field, aml_named_field("CAEN", 1));
-    aml_append(field, aml_named_field("CBEN", 1));
-    aml_append(field, aml_named_field("LPEN", 1));
-    aml_append(dev, field);
-
-    aml_append(scope, dev);
-    aml_append(table, scope);
-}
-
-static void build_piix4_pm(Aml *table)
-{
-    Aml *dev;
-    Aml *scope;
-
-    scope =  aml_scope("_SB.PCI0");
-    dev = aml_device("PX13");
-    aml_append(dev, aml_name_decl("_ADR", aml_int(0x00010003)));
-
-    aml_append(dev, aml_operation_region("P13C", AML_PCI_CONFIG,
-                                         aml_int(0x00), 0xff));
-    aml_append(scope, dev);
-    aml_append(table, scope);
-}
-
-static void build_piix4_isa_bridge(Aml *table)
-{
-    Aml *dev;
-    Aml *scope;
-    Aml *field;
-
-    scope =  aml_scope("_SB.PCI0");
-    dev = aml_device("ISA");
-    aml_append(dev, aml_name_decl("_ADR", aml_int(0x00010000)));
-
-    /* PIIX PCI to ISA irq remapping */
-    aml_append(dev, aml_operation_region("P40C", AML_PCI_CONFIG,
-                                         aml_int(0x60), 0x04));
-    /* enable bits */
-    field = aml_field("^PX13.P13C", AML_ANY_ACC, AML_NOLOCK, AML_PRESERVE);
-    /* Offset(0x5f),, 7, */
-    aml_append(field, aml_reserved_field(0x2f8));
-    aml_append(field, aml_reserved_field(7));
-    aml_append(field, aml_named_field("LPEN", 1));
-    /* Offset(0x67),, 3, */
-    aml_append(field, aml_reserved_field(0x38));
-    aml_append(field, aml_reserved_field(3));
-    aml_append(field, aml_named_field("CAEN", 1));
-    aml_append(field, aml_reserved_field(3));
-    aml_append(field, aml_named_field("CBEN", 1));
-    aml_append(dev, field);
-
-    aml_append(scope, dev);
-    aml_append(table, scope);
-}
-
-static void build_piix4_pci_hotplug(Aml *table)
-{
-    Aml *scope;
-    Aml *field;
-    Aml *method;
-
-    scope =  aml_scope("_SB.PCI0");
-
-    aml_append(scope,
-        aml_operation_region("PCST", AML_SYSTEM_IO, aml_int(0xae00), 0x08));
-    field = aml_field("PCST", AML_DWORD_ACC, AML_NOLOCK, AML_WRITE_AS_ZEROS);
-    aml_append(field, aml_named_field("PCIU", 32));
-    aml_append(field, aml_named_field("PCID", 32));
-    aml_append(scope, field);
-
-    aml_append(scope,
-        aml_operation_region("SEJ", AML_SYSTEM_IO, aml_int(0xae08), 0x04));
-    field = aml_field("SEJ", AML_DWORD_ACC, AML_NOLOCK, AML_WRITE_AS_ZEROS);
-    aml_append(field, aml_named_field("B0EJ", 32));
-    aml_append(scope, field);
-
-    aml_append(scope,
-        aml_operation_region("BNMR", AML_SYSTEM_IO, aml_int(0xae10), 0x04));
-    field = aml_field("BNMR", AML_DWORD_ACC, AML_NOLOCK, AML_WRITE_AS_ZEROS);
-    aml_append(field, aml_named_field("BNUM", 32));
-    aml_append(scope, field);
-
-    aml_append(scope, aml_mutex("BLCK", 0));
-
-    method = aml_method("PCEJ", 2, AML_NOTSERIALIZED);
-    aml_append(method, aml_acquire(aml_name("BLCK"), 0xFFFF));
-    aml_append(method, aml_store(aml_arg(0), aml_name("BNUM")));
-    aml_append(method,
-        aml_store(aml_shiftleft(aml_int(1), aml_arg(1)), aml_name("B0EJ")));
-    aml_append(method, aml_release(aml_name("BLCK")));
-    aml_append(method, aml_return(aml_int(0)));
-    aml_append(scope, method);
-
-    aml_append(table, scope);
-}
-
-static Aml *build_q35_osc_method(void)
-{
-    Aml *if_ctx;
-    Aml *if_ctx2;
-    Aml *else_ctx;
-    Aml *method;
-    Aml *a_cwd1 = aml_name("CDW1");
-    Aml *a_ctrl = aml_local(0);
-
-    method = aml_method("_OSC", 4, AML_NOTSERIALIZED);
-    aml_append(method, aml_create_dword_field(aml_arg(3), aml_int(0), "CDW1"));
-
-    if_ctx = aml_if(aml_equal(
-        aml_arg(0), aml_touuid("33DB4D5B-1FF7-401C-9657-7441C03DD766")));
-    aml_append(if_ctx, aml_create_dword_field(aml_arg(3), aml_int(4), "CDW2"));
-    aml_append(if_ctx, aml_create_dword_field(aml_arg(3), aml_int(8), "CDW3"));
-
-    aml_append(if_ctx, aml_store(aml_name("CDW3"), a_ctrl));
-
-    /*
-     * Always allow native PME, AER (no dependencies)
-     * Allow SHPC (PCI bridges can have SHPC controller)
-     */
-    aml_append(if_ctx, aml_and(a_ctrl, aml_int(0x1F), a_ctrl));
-
-    if_ctx2 = aml_if(aml_lnot(aml_equal(aml_arg(1), aml_int(1))));
-    /* Unknown revision */
-    aml_append(if_ctx2, aml_or(a_cwd1, aml_int(0x08), a_cwd1));
-    aml_append(if_ctx, if_ctx2);
-
-    if_ctx2 = aml_if(aml_lnot(aml_equal(aml_name("CDW3"), a_ctrl)));
-    /* Capabilities bits were masked */
-    aml_append(if_ctx2, aml_or(a_cwd1, aml_int(0x10), a_cwd1));
-    aml_append(if_ctx, if_ctx2);
-
-    /* Update DWORD3 in the buffer */
-    aml_append(if_ctx, aml_store(a_ctrl, aml_name("CDW3")));
-    aml_append(method, if_ctx);
-
-    else_ctx = aml_else();
-    /* Unrecognized UUID */
-    aml_append(else_ctx, aml_or(a_cwd1, aml_int(4), a_cwd1));
-    aml_append(method, else_ctx);
-
-    aml_append(method, aml_return(aml_arg(3)));
     return method;
 }
 
@@ -1649,7 +1202,7 @@ build_dsdt(GArray *table_data, BIOSLinker *linker,
     acpi_data_push(dsdt->buf, sizeof(AcpiTableHeader));
 
     build_dbg_aml(dsdt);
-    if (misc->is_piix4) {
+    if (piix_enabled()) {
         sb_scope = aml_scope("_SB");
         dev = aml_device("PCI0");
         aml_append(dev, aml_name_decl("_HID", aml_eisaid("PNP0A03")));
@@ -1694,7 +1247,7 @@ build_dsdt(GArray *table_data, BIOSLinker *linker,
     {
         aml_append(scope, aml_name_decl("_HID", aml_string("ACPI0006")));
 
-        if (misc->is_piix4) {
+        if (piix_enabled()) {
             method = aml_method("_E01", 0, AML_NOTSERIALIZED);
             aml_append(method,
                 aml_acquire(aml_name("\\_SB.PCI0.BLCK"), 0xFFFF));
@@ -2250,92 +1803,6 @@ build_srat(GArray *table_data, BIOSLinker *linker, MachineState *machine)
                  table_data->len - srat_start, 1, NULL, NULL);
 }
 
-static void
-build_mcfg_q35(GArray *table_data, BIOSLinker *linker, AcpiMcfgInfo *info)
-{
-    AcpiTableMcfg *mcfg;
-    const char *sig;
-    int len = sizeof(*mcfg) + 1 * sizeof(mcfg->allocation[0]);
-
-    mcfg = acpi_data_push(table_data, len);
-    mcfg->allocation[0].address = cpu_to_le64(info->mcfg_base);
-    /* Only a single allocation so no need to play with segments */
-    mcfg->allocation[0].pci_segment = cpu_to_le16(0);
-    mcfg->allocation[0].start_bus_number = 0;
-    mcfg->allocation[0].end_bus_number = PCIE_MMCFG_BUS(info->mcfg_size - 1);
-
-    /* MCFG is used for ECAM which can be enabled or disabled by guest.
-     * To avoid table size changes (which create migration issues),
-     * always create the table even if there are no allocations,
-     * but set the signature to a reserved value in this case.
-     * ACPI spec requires OSPMs to ignore such tables.
-     */
-    if (info->mcfg_base == PCIE_BASE_ADDR_UNMAPPED) {
-        /* Reserved signature: ignored by OSPM */
-        sig = "QEMU";
-    } else {
-        sig = "MCFG";
-    }
-    build_header(linker, table_data, (void *)mcfg, sig, len, 1, NULL, NULL);
-}
-
-/*
- * VT-d spec 8.1 DMA Remapping Reporting Structure
- * (version Oct. 2014 or later)
- */
-static void
-build_dmar_q35(GArray *table_data, BIOSLinker *linker)
-{
-    int dmar_start = table_data->len;
-
-    AcpiTableDmar *dmar;
-    AcpiDmarHardwareUnit *drhd;
-    AcpiDmarRootPortATS *atsr;
-    uint8_t dmar_flags = 0;
-    X86IOMMUState *iommu = x86_iommu_get_default();
-    AcpiDmarDeviceScope *scope = NULL;
-    /* Root complex IOAPIC use one path[0] only */
-    size_t ioapic_scope_size = sizeof(*scope) + sizeof(scope->path[0]);
-    IntelIOMMUState *intel_iommu = INTEL_IOMMU_DEVICE(iommu);
-
-    assert(iommu);
-    if (iommu->intr_supported) {
-        dmar_flags |= 0x1;      /* Flags: 0x1: INT_REMAP */
-    }
-
-    dmar = acpi_data_push(table_data, sizeof(*dmar));
-    dmar->host_address_width = intel_iommu->aw_bits - 1;
-    dmar->flags = dmar_flags;
-
-    /* DMAR Remapping Hardware Unit Definition structure */
-    drhd = acpi_data_push(table_data, sizeof(*drhd) + ioapic_scope_size);
-    drhd->type = cpu_to_le16(ACPI_DMAR_TYPE_HARDWARE_UNIT);
-    drhd->length = cpu_to_le16(sizeof(*drhd) + ioapic_scope_size);
-    drhd->flags = ACPI_DMAR_INCLUDE_PCI_ALL;
-    drhd->pci_segment = cpu_to_le16(0);
-    drhd->address = cpu_to_le64(Q35_HOST_BRIDGE_IOMMU_ADDR);
-
-    /* Scope definition for the root-complex IOAPIC. See VT-d spec
-     * 8.3.1 (version Oct. 2014 or later). */
-    scope = &drhd->scope[0];
-    scope->entry_type = 0x03;   /* Type: 0x03 for IOAPIC */
-    scope->length = ioapic_scope_size;
-    scope->enumeration_id = ACPI_BUILD_IOAPIC_ID;
-    scope->bus = Q35_PSEUDO_BUS_PLATFORM;
-    scope->path[0].device = PCI_SLOT(Q35_PSEUDO_DEVFN_IOAPIC);
-    scope->path[0].function = PCI_FUNC(Q35_PSEUDO_DEVFN_IOAPIC);
-
-    if (iommu->dt_supported) {
-        atsr = acpi_data_push(table_data, sizeof(*atsr));
-        atsr->type = cpu_to_le16(ACPI_DMAR_TYPE_ATSR);
-        atsr->length = cpu_to_le16(sizeof(*atsr));
-        atsr->flags = ACPI_DMAR_ATSR_ALL_PORTS;
-        atsr->pci_segment = cpu_to_le16(0);
-    }
-
-    build_header(linker, table_data, (void *)(table_data->data + dmar_start),
-                 "DMAR", table_data->len - dmar_start, 1, NULL, NULL);
-}
 /*
  *   IVRS table as specified in AMD IOMMU Specification v2.62, Section 5.2
  *   accessible here http://support.amd.com/TechDocs/48882_IOMMU.pdf
@@ -2429,28 +1896,6 @@ struct AcpiBuildState {
     MemoryRegion *rsdp_mr;
     MemoryRegion *linker_mr;
 } AcpiBuildState;
-
-static bool acpi_get_mcfg(AcpiMcfgInfo *mcfg)
-{
-    Object *pci_host;
-    QObject *o;
-
-    pci_host = acpi_get_i386_pci_host();
-    g_assert(pci_host);
-
-    o = object_property_get_qobject(pci_host, PCIE_HOST_MCFG_BASE, NULL);
-    if (!o) {
-        return false;
-    }
-    mcfg->mcfg_base = qnum_get_uint(qobject_to(QNum, o));
-    qobject_decref(o);
-
-    o = object_property_get_qobject(pci_host, PCIE_HOST_MCFG_SIZE, NULL);
-    assert(o);
-    mcfg->mcfg_size = qnum_get_uint(qobject_to(QNum, o));
-    qobject_decref(o);
-    return true;
-}
 
 static
 void acpi_build(AcpiBuildTables *tables, MachineState *machine)

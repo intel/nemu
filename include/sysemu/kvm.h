@@ -29,6 +29,12 @@
 
 #ifdef CONFIG_KVM_IS_POSSIBLE
 
+#ifdef CONFIG_PIIX
+#define piix_enabled() 1
+#else
+#define piix_enabled() 0
+#endif
+
 extern bool kvm_allowed;
 extern bool kvm_kernel_irqchip;
 extern bool kvm_split_irqchip;

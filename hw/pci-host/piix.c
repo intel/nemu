@@ -24,6 +24,7 @@
 
 #include "qemu/osdep.h"
 #include "hw/hw.h"
+#include "hw/i386/pc_piix.h"
 #include "hw/i386/pc.h"
 #include "hw/pci/pci.h"
 #include "hw/pci/pci_host.h"
