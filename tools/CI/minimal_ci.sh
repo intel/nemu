@@ -231,8 +231,9 @@ unsafeimages_x86_64_q35=("core-stable-amd64-disk1.img" "qcow2" "seabios" "x86_64
 declare -a testimages_aarch64
 testimages_aarch64=( "bionic-server-cloudimg-arm64.img" "qcow2" "flash" "aarch64" "-s" \
                      "https://cloud-images.ubuntu.com/bionic/current/bionic-server-cloudimg-arm64.img" \
-                     "Fedora-Cloud-Base-28-1.1.aarch64.qcow2" "qcow2" "flash" "aarch64" "-s" \
-                     "https://archives.fedoraproject.org/pub/fedora/linux/releases/28/Cloud/aarch64/images/Fedora-Cloud-Base-28-1.1.aarch64.qcow2")
+#                     "Fedora-Cloud-Base-28-1.1.aarch64.qcow2" "qcow2" "flash" "aarch64" "-s" \
+#                     "https://archives.fedoraproject.org/pub/fedora/linux/releases/28/Cloud/aarch64/images/Fedora-Cloud-Base-28-1.1.aarch64.qcow2" \
+)
 
 if ! [ $(id -u) = 0 ]; then
    die "Needs to be run with effective UID of zero"
