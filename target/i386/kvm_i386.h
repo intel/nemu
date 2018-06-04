@@ -18,6 +18,10 @@
 
 #define kvm_pit_in_kernel() \
     (kvm_irqchip_in_kernel() && !kvm_irqchip_is_split())
+#define kvm_pic_in_kernel()  \
+    (kvm_irqchip_in_kernel() && !kvm_irqchip_is_split())
+#define kvm_ioapic_in_kernel() \
+    (kvm_irqchip_in_kernel() && !kvm_irqchip_is_split())
 
 
 bool kvm_allows_irq0_override(void);

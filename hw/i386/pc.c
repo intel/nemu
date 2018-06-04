@@ -97,6 +97,17 @@ static struct e820_table e820_reserve;
 static struct e820_entry *e820_table;
 static unsigned e820_entries;
 
+void gsi_handler(void *opaque, int n, int level)
+{
+    GSIState *s = opaque;
+
+    DPRINTF("pc: %s GSI %d\n", level ? "raising" : "lowering", n);
+    if (n < ISA_NUM_IRQS) {
+        qemu_set_irq(s->i8259_irq[n], level);
+    }
+    qemu_set_irq(s->ioapic_irq[n], level);
+}
+
 static void ioport80_write(void *opaque, hwaddr addr, uint64_t data,
                            unsigned size)
 {
@@ -124,6 +135,49 @@ static void ioportF0_write(void *opaque, hwaddr addr, uint64_t data,
 static uint64_t ioportF0_read(void *opaque, hwaddr addr, unsigned size)
 {
     return 0xffffffffffffffffULL;
+}
+
+/* IRQ handling */
+int cpu_get_pic_interrupt(CPUX86State *env)
+{
+    X86CPU *cpu = x86_env_get_cpu(env);
+    int intno;
+
+    if (!kvm_irqchip_in_kernel()) {
+        intno = apic_get_interrupt(cpu->apic_state);
+        if (intno >= 0) {
+            return intno;
+        }
+        /* read the irq from the PIC */
+        if (!apic_accept_pic_intr(cpu->apic_state)) {
+            return -1;
+        }
+    }
+
+    intno = pic_read_irq(isa_pic);
+    return intno;
+}
+
+static void pic_irq_request(void *opaque, int irq, int level)
+{
+    CPUState *cs = first_cpu;
+    X86CPU *cpu = X86_CPU(cs);
+
+    DPRINTF("pic_irqs: %s irq %d\n", level? "raise" : "lower", irq);
+    if (cpu->apic_state && !kvm_irqchip_in_kernel()) {
+        CPU_FOREACH(cs) {
+            cpu = X86_CPU(cs);
+            if (apic_accept_pic_intr(cpu->apic_state)) {
+                apic_deliver_pic_intr(cpu->apic_state, level);
+            }
+        }
+    } else {
+        if (level) {
+            cpu_interrupt(cs, CPU_INTERRUPT_HARD);
+        } else {
+            cpu_reset_interrupt(cs, CPU_INTERRUPT_HARD);
+        }
+    }
 }
 
 /* PC cmos mappings */
@@ -646,6 +700,16 @@ static void load_linux(PCMachineState *pcms,
     nb_option_roms++;
 }
 
+DeviceState *cpu_get_current_apic(void)
+{
+    if (current_cpu) {
+        X86CPU *cpu = X86_CPU(current_cpu);
+        return cpu->apic_state;
+    } else {
+        return NULL;
+    }
+}
+
 static void pc_new_cpu(const char *typename, int64_t apic_id, Error **errp)
 {
     Object *cpu = NULL;
@@ -978,6 +1042,11 @@ uint64_t pc_pci_hole64_start(void)
     return ROUND_UP(hole64_start, 1ULL << 30);
 }
 
+qemu_irq pc_allocate_cpu_irq(void)
+{
+    return qemu_allocate_irq(pic_irq_request, NULL, 0);
+}
+
 static const MemoryRegionOps ioport80_io_ops = {
     .write = ioport80_write,
     .read = ioport80_read,
@@ -1034,7 +1103,11 @@ void ioapic_init_gsi(GSIState *gsi_state, const char *parent_name)
     SysBusDevice *d;
     unsigned int i;
 
-    dev = qdev_create(NULL, "kvm-ioapic");
+    if (kvm_ioapic_in_kernel()) {
+        dev = qdev_create(NULL, "kvm-ioapic");
+    } else {
+        dev = qdev_create(NULL, "ioapic");
+    }
     if (parent_name) {
         object_property_add_child(object_resolve_path(parent_name, NULL),
                                   "ioapic", OBJECT(dev), NULL);

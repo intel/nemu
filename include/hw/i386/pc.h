@@ -169,6 +169,7 @@ typedef struct GSIState {
     qemu_irq ioapic_irq[IOAPIC_NUM_PINS];
 } GSIState;
 
+void gsi_handler(void *opaque, int n, int level);
 
 /* pc.c */
 extern int fd_bootchk;
@@ -198,6 +199,7 @@ void pc_memory_init(PCMachineState *pcms,
                     MemoryRegion *rom_memory,
                     MemoryRegion **ram_memory);
 uint64_t pc_pci_hole64_start(void);
+qemu_irq pc_allocate_cpu_irq(void);
 void pc_basic_device_init(ISABus *isa_bus, qemu_irq *gsi,
                           ISADevice **rtc_state,
                           bool create_fdctrl,
