@@ -191,6 +191,7 @@ static void pc_init1(MachineState *machine,
     pc_register_ferr_irq(pcms->gsi[13]);
 
     /* init basic PC hardware */
+    pcms->pit = true;
     pc_basic_device_init(isa_bus, pcms->gsi, &rtc_state, true,
                          pcms->pit);
 

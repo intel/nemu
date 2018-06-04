@@ -1566,6 +1566,7 @@ static void pc_machine_set_smbus(Object *obj, bool value, Error **errp)
     pcms->smbus = value;
 }
 
+#ifdef CONFIG_PIIX
 static bool pc_machine_get_pit(Object *obj, Error **errp)
 {
     PCMachineState *pcms = PC_MACHINE(obj);
@@ -1579,6 +1580,7 @@ static void pc_machine_set_pit(Object *obj, bool value, Error **errp)
 
     pcms->pit = value;
 }
+#endif
 
 static void pc_machine_initfn(Object *obj)
 {
@@ -1590,7 +1592,6 @@ static void pc_machine_initfn(Object *obj)
     /* acpi build is enabled by default if machine supports it */
     pcms->acpi_build_enabled = PC_MACHINE_GET_CLASS(pcms)->has_acpi_build;
     pcms->smbus = true;
-    pcms->pit = true;
 }
 
 static void pc_machine_reset(void)
@@ -1740,8 +1741,10 @@ static void pc_machine_class_init(ObjectClass *oc, void *data)
     object_class_property_add_bool(oc, PC_MACHINE_SMBUS,
         pc_machine_get_smbus, pc_machine_set_smbus, &error_abort);
 
+#ifdef CONFIG_PIIX
     object_class_property_add_bool(oc, PC_MACHINE_PIT,
         pc_machine_get_pit, pc_machine_set_pit, &error_abort);
+#endif
 }
 
 static const TypeInfo pc_machine_info = {

@@ -50,7 +50,9 @@ struct PCMachineState {
 
     bool acpi_build_enabled;
     bool smbus;
+#ifdef CONFIG_PIIX
     bool pit;
+#endif
 
     /* RAM information (sizes, addresses, configuration): */
     ram_addr_t below_4g_mem_size, above_4g_mem_size;
