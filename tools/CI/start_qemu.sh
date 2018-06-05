@@ -45,7 +45,7 @@ loop=""
 firmware=""
 vmimagetmp='testvm.img'
 machine='pc'
-accel='kvm,kernel_irqchip,nvdimm'
+accel='kvm,kernel_irqchip=split,nvdimm'
 bootindex=1
 addr=1
 serial=serial.sock
@@ -245,11 +245,11 @@ fi
 case "$PLATFORM" in
     x86_64_pc)
        machine='pc'
-       accel='kvm,kernel_irqchip,nvdimm'
+       accel='kvm,kernel_irqchip=split,nvdimm'
        ;;
     x86_64_q35)
        machine='q35'
-       accel='kvm,kernel_irqchip,nvdimm'
+       accel='kvm,kernel_irqchip=split,nvdimm'
        pci_bus='pcie.0'
        SIMPLE_LAUNCH="true"
        ;;
