@@ -268,6 +268,14 @@ void pc_madt_cpu_entry(AcpiDeviceIf *adev, int uid,
 void pc_system_firmware_init(MemoryRegion *rom_memory,
                              bool isapc_ram_fw);
 
+/* pm_lite.c */
+DeviceState *pm_lite_init(PCIBus *bus, int devfn, qemu_irq sci_irq);
+
+/* pci_lite.c */
+PCIBus *pci_lite_init(MemoryRegion *address_space_mem,
+                              MemoryRegion *address_space_io,
+                              MemoryRegion *pci_memory);
+
 /* e820 types */
 #define E820_RAM        1
 #define E820_RESERVED   2

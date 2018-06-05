@@ -35,6 +35,11 @@
 #define piix_enabled() 0
 #endif
 
+#ifdef CONFIG_PC_LITE
+#define pc_lite_enabled() 1
+#else
+#define pc_lite_enabled() 0
+#endif
 extern bool kvm_allowed;
 extern bool kvm_kernel_irqchip;
 extern bool kvm_split_irqchip;

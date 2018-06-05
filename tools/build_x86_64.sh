@@ -27,6 +27,7 @@ $SRCDIR/configure \
  --enable-attr \
  --enable-cap-ng \
  --enable-kvm \
+ --enable-pc_lite \
  --enable-rbd \
  --enable-vhost-crypto \
  --enable-vhost-net \

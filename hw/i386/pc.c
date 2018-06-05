@@ -757,7 +757,9 @@ void pc_machine_done(Notifier *notifier, void *data)
     PCIBus *bus = pcms->bus;
 
     /* set the number of CPUs */
-    rtc_set_cpus_count(pcms->rtc, pcms->boot_cpus);
+    if (pcms->rtc) {
+        rtc_set_cpus_count(pcms->rtc, pcms->boot_cpus);
+    }
 
     if (bus) {
         int extra_hosts = 0;
@@ -1275,7 +1277,9 @@ static void pc_cpu_unplug_cb(HotplugHandler *hotplug_dev,
     /* decrement the number of CPUs */
     pcms->boot_cpus--;
     /* Update the number of CPUs in CMOS */
-    rtc_set_cpus_count(pcms->rtc, pcms->boot_cpus);
+    if (pcms->rtc) {
+        rtc_set_cpus_count(pcms->rtc, pcms->boot_cpus);
+    }
     fw_cfg_modify_i16(pcms->fw_cfg, FW_CFG_NB_CPUS, pcms->boot_cpus);
  out:
     error_propagate(errp, local_err);

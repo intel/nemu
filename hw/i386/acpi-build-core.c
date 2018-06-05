@@ -49,7 +49,7 @@
 /* Supported chipsets: */
 #include "hw/acpi/piix4.h"
 #include "hw/acpi/pcihp.h"
-
+#include "hw/acpi/pm_lite.h"
 #include "hw/i386/ich9.h"
 #include "hw/pci/pci_bus.h"
 #include "hw/pci-host/q35.h"
@@ -121,9 +121,9 @@ static void init_common_fadt_data(Object *o, AcpiFadtData *data)
 
 static void acpi_get_pm_info(AcpiPmInfo *pm)
 {
-    Object *piix = piix4_pm_find();
+    Object *pm_lite = pm_lite_find();
     Object *lpc = ich9_lpc_find();
-    Object *obj = piix ? piix : lpc;
+    Object *obj = pm_lite ? pm_lite : lpc;
     QObject *o;
     pm->cpu_hp_io_base = 0;
     pm->pcihp_io_base = 0;
@@ -146,6 +146,10 @@ static void acpi_get_pm_info(AcpiPmInfo *pm)
         pm->fadt.reset_val = 0xf;
         pm->fadt.flags |= 1 << ACPI_FADT_F_RESET_REG_SUP;
         pm->cpu_hp_io_base = ICH9_CPU_HOTPLUG_IO_BASE;
+    }
+
+    if (pc_lite_enabled()) {
+         pm->cpu_hp_io_base = PM_LITE_CPU_HOTPLUG_IO_BASE;
     }
     assert(obj);
 
@@ -201,6 +205,12 @@ Object *acpi_get_i386_pci_host(void)
     if (!host) {
         host = OBJECT_CHECK(PCIHostState,
                             object_resolve_path("/machine/q35", NULL),
+                            TYPE_PCI_HOST_BRIDGE);
+    }
+
+    if (!host) {
+        host = OBJECT_CHECK(PCIHostState,
+                            object_resolve_path("/machine/pcilite", NULL),
                             TYPE_PCI_HOST_BRIDGE);
     }
 
@@ -1181,6 +1191,62 @@ Aml *build_irq_status_method(void)
     return method;
 }
 
+static void build_lite_pci0_int(Aml *table)
+{
+    Aml *sb_scope = aml_scope("_SB");
+    Aml *pci0_scope = aml_scope("PCI0");
+
+    aml_append(pci0_scope, build_prt(false));
+    aml_append(sb_scope, pci0_scope);
+
+    aml_append(sb_scope, build_gsi_link_dev("LNKA", 0x10, 0x10));
+    aml_append(sb_scope, build_gsi_link_dev("LNKB", 0x11, 0x11));
+    aml_append(sb_scope, build_gsi_link_dev("LNKC", 0x12, 0x12));
+    aml_append(sb_scope, build_gsi_link_dev("LNKD", 0x13, 0x13));
+    aml_append(table, sb_scope);
+}
+
+static void build_pc_lite_pci_hotplug(Aml *table)
+{
+    Aml *scope;
+    Aml *field;
+    Aml *method;
+
+    scope =  aml_scope("_SB.PCI0");
+
+    aml_append(scope,
+        aml_operation_region("PCST", AML_SYSTEM_IO, aml_int(0xae00), 0x08));
+    field = aml_field("PCST", AML_DWORD_ACC, AML_NOLOCK, AML_WRITE_AS_ZEROS);
+    aml_append(field, aml_named_field("PCIU", 32));
+    aml_append(field, aml_named_field("PCID", 32));
+    aml_append(scope, field);
+
+    aml_append(scope,
+        aml_operation_region("SEJ", AML_SYSTEM_IO, aml_int(0xae08), 0x04));
+    field = aml_field("SEJ", AML_DWORD_ACC, AML_NOLOCK, AML_WRITE_AS_ZEROS);
+    aml_append(field, aml_named_field("B0EJ", 32));
+    aml_append(scope, field);
+
+    aml_append(scope,
+        aml_operation_region("BNMR", AML_SYSTEM_IO, aml_int(0xae10), 0x04));
+    field = aml_field("BNMR", AML_DWORD_ACC, AML_NOLOCK, AML_WRITE_AS_ZEROS);
+    aml_append(field, aml_named_field("BNUM", 32));
+    aml_append(scope, field);
+
+    aml_append(scope, aml_mutex("BLCK", 0));
+
+    method = aml_method("PCEJ", 2, AML_NOTSERIALIZED);
+    aml_append(method, aml_acquire(aml_name("BLCK"), 0xFFFF));
+    aml_append(method, aml_store(aml_arg(0), aml_name("BNUM")));
+    aml_append(method,
+        aml_store(aml_shiftleft(aml_int(1), aml_arg(1)), aml_name("B0EJ")));
+    aml_append(method, aml_release(aml_name("BLCK")));
+    aml_append(method, aml_return(aml_int(0)));
+    aml_append(scope, method);
+
+    aml_append(table, scope);
+}
+
 static void
 build_dsdt(GArray *table_data, BIOSLinker *linker,
            AcpiPmInfo *pm, AcpiMiscInfo *misc,
@@ -1216,7 +1282,7 @@ build_dsdt(GArray *table_data, BIOSLinker *linker,
         build_isa_devices_aml(dsdt);
         build_piix4_pci_hotplug(dsdt);
         build_piix4_pci0_int(dsdt);
-    } else {
+    } else if (ich9_lpc_find()){
         sb_scope = aml_scope("_SB");
         dev = aml_device("PCI0");
         aml_append(dev, aml_name_decl("_HID", aml_eisaid("PNP0A08")));
@@ -1230,6 +1296,21 @@ build_dsdt(GArray *table_data, BIOSLinker *linker,
         build_q35_isa_bridge(dsdt);
         build_isa_devices_aml(dsdt);
         build_q35_pci0_int(dsdt);
+    } else { /* misc->pm_type == PMTYPE_LITE */
+        sb_scope = aml_scope("_SB");
+        dev = aml_device("PCI0");
+        aml_append(dev, aml_name_decl("_HID", aml_eisaid("PNP0A08")));
+        aml_append(dev, aml_name_decl("_CID", aml_eisaid("PNP0A03")));
+        aml_append(dev, aml_name_decl("_ADR", aml_int(0)));
+        aml_append(dev, aml_name_decl("_UID", aml_int(1)));
+        aml_append(dev, aml_name_decl("SUPP", aml_int(0)));
+        aml_append(dev, aml_name_decl("CTRL", aml_int(0)));
+        aml_append(dev, build_q35_osc_method());
+        aml_append(sb_scope, dev);
+        aml_append(dsdt, sb_scope);
+
+        build_pc_lite_pci_hotplug(dsdt);
+        build_lite_pci0_int(dsdt);
     }
 
     if (pcmc->legacy_cpu_hotplug) {
@@ -1247,7 +1328,7 @@ build_dsdt(GArray *table_data, BIOSLinker *linker,
     {
         aml_append(scope, aml_name_decl("_HID", aml_string("ACPI0006")));
 
-        if (piix_enabled()) {
+        if (piix_enabled()|| pc_lite_enabled()) {
             method = aml_method("_E01", 0, AML_NOTSERIALIZED);
             aml_append(method,
                 aml_acquire(aml_name("\\_SB.PCI0.BLCK"), 0xFFFF));

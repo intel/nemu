@@ -4,5 +4,6 @@ common-obj-y += pam.o
 
 common-obj-$(CONFIG_PIIX) += piix.o
 common-obj-$(CONFIG_PCI_Q35) += q35.o
+common-obj-$(CONFIG_PC_LITE) += pci_lite.o
 common-obj-$(CONFIG_PCI_GENERIC) += gpex.o
 

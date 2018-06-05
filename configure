@@ -263,6 +263,7 @@ vhost_vsock="no"
 vhost_user=""
 kvm="no"
 piix="no"
+pc_lite="no"
 gprof="no"
 debug="no"
 sanitizers="no"
@@ -666,6 +667,10 @@ for opt do
   ;;
   --enable-piix) piix="yes"
   ;;
+  --disable-pc_lite) pc_lite="no"
+  ;;
+  --enable-pc_lite) pc_lite="yes"
+  ;;
   --disable-cap-ng)  cap_ng="no"
   ;;
   --enable-cap-ng) cap_ng="yes"
@@ -973,6 +978,7 @@ disabled with --disable-FEATURE, default is enabled if available:
   fdt             fdt device tree
   kvm             KVM acceleration support
   piix            support I440FX platform in kvm for x86
+  pc_lite         support pc_lite platform in kvm for x86
   vde             support for vde network
   netmap          support for netmap network
   linux-aio       Linux AIO support
@@ -3481,6 +3487,7 @@ echo "ATTR/XATTR support $attr"
 echo "Install blobs     $blobs"
 echo "KVM support       $kvm"
 echo "I440FX support    $piix"
+echo "PC-LITE support   $pc_lite"
 echo "malloc trim support $malloc_trim"
 echo "fdt support       $fdt"
 echo "membarrier        $membarrier"
@@ -4175,6 +4182,9 @@ if supported_kvm_target $target; then
     fi
     if test "$piix" = "yes" && test "$target_name" = "x86_64"; then
         echo "CONFIG_PIIX=y" >> $config_host_mak
+    fi
+    if test "$pc_lite" = "yes" && test "$target_name" = "x86_64"; then
+        echo "CONFIG_PC_LITE=y" >> $config_host_mak
     fi
 fi
 if test "$target_bigendian" = "yes" ; then
