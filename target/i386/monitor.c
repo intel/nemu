@@ -658,12 +658,7 @@ void hmp_info_local_apic(Monitor *mon, const QDict *qdict)
 
 void hmp_info_io_apic(Monitor *mon, const QDict *qdict)
 {
-    if (kvm_irqchip_in_kernel() &&
-        !kvm_irqchip_is_split()) {
-        kvm_ioapic_dump_state(mon, qdict);
-    } else {
-        ioapic_dump_state(mon, qdict);
-    }
+    ioapic_dump_state(mon, qdict);
 }
 
 SevInfo *qmp_query_sev(Error **errp)

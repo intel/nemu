@@ -2736,9 +2736,7 @@ void kvm_arch_pre_run(CPUState *cpu, struct kvm_run *run)
         }
     }
 
-    if (!kvm_pic_in_kernel()) {
-        qemu_mutex_lock_iothread();
-    }
+    qemu_mutex_lock_iothread();
 
     /* Force the VCPU out of its inner loop to process any INIT requests
      * or (for userspace APIC, but it is cheap to combine the checks here)
@@ -2754,44 +2752,42 @@ void kvm_arch_pre_run(CPUState *cpu, struct kvm_run *run)
         }
     }
 
-    if (!kvm_pic_in_kernel()) {
-        /* Try to inject an interrupt if the guest can accept it */
-        if (run->ready_for_interrupt_injection &&
-            (cpu->interrupt_request & CPU_INTERRUPT_HARD) &&
-            (env->eflags & IF_MASK)) {
-            int irq;
+    /* Try to inject an interrupt if the guest can accept it */
+    if (run->ready_for_interrupt_injection &&
+        (cpu->interrupt_request & CPU_INTERRUPT_HARD) &&
+        (env->eflags & IF_MASK)) {
+        int irq;
 
-            cpu->interrupt_request &= ~CPU_INTERRUPT_HARD;
-            irq = cpu_get_pic_interrupt(env);
-            if (irq >= 0) {
-                struct kvm_interrupt intr;
+        cpu->interrupt_request &= ~CPU_INTERRUPT_HARD;
+        irq = cpu_get_pic_interrupt(env);
+        if (irq >= 0) {
+            struct kvm_interrupt intr;
 
-                intr.irq = irq;
-                DPRINTF("injected interrupt %d\n", irq);
-                ret = kvm_vcpu_ioctl(cpu, KVM_INTERRUPT, &intr);
-                if (ret < 0) {
-                    fprintf(stderr,
-                            "KVM: injection failed, interrupt lost (%s)\n",
-                            strerror(-ret));
-                }
+            intr.irq = irq;
+            DPRINTF("injected interrupt %d\n", irq);
+            ret = kvm_vcpu_ioctl(cpu, KVM_INTERRUPT, &intr);
+            if (ret < 0) {
+                fprintf(stderr,
+                        "KVM: injection failed, interrupt lost (%s)\n",
+                        strerror(-ret));
             }
         }
-
-        /* If we have an interrupt but the guest is not ready to receive an
-         * interrupt, request an interrupt window exit.  This will
-         * cause a return to userspace as soon as the guest is ready to
-         * receive interrupts. */
-        if ((cpu->interrupt_request & CPU_INTERRUPT_HARD)) {
-            run->request_interrupt_window = 1;
-        } else {
-            run->request_interrupt_window = 0;
-        }
-
-        DPRINTF("setting tpr\n");
-        run->cr8 = cpu_get_apic_tpr(x86_cpu->apic_state);
-
-        qemu_mutex_unlock_iothread();
     }
+
+    /* If we have an interrupt but the guest is not ready to receive an
+     * interrupt, request an interrupt window exit.  This will
+     * cause a return to userspace as soon as the guest is ready to
+     * receive interrupts. */
+    if ((cpu->interrupt_request & CPU_INTERRUPT_HARD)) {
+        run->request_interrupt_window = 1;
+    } else {
+        run->request_interrupt_window = 0;
+    }
+
+    DPRINTF("setting tpr\n");
+    run->cr8 = cpu_get_apic_tpr(x86_cpu->apic_state);
+
+    qemu_mutex_unlock_iothread();
 }
 
 MemTxAttrs kvm_arch_post_run(CPUState *cpu, struct kvm_run *run)
@@ -2857,25 +2853,7 @@ int kvm_arch_process_async_events(CPUState *cs)
         do_cpu_init(cpu);
     }
 
-    if (kvm_irqchip_in_kernel()) {
-        return 0;
-    }
-
-    if (cs->interrupt_request & CPU_INTERRUPT_POLL) {
-        cs->interrupt_request &= ~CPU_INTERRUPT_POLL;
-        apic_poll_irq(cpu->apic_state);
-    }
-    if (((cs->interrupt_request & CPU_INTERRUPT_HARD) &&
-         (env->eflags & IF_MASK)) ||
-        (cs->interrupt_request & CPU_INTERRUPT_NMI)) {
-        cs->halted = 0;
-    }
-    if (cs->interrupt_request & CPU_INTERRUPT_SIPI) {
-        kvm_cpu_synchronize_state(cs);
-        do_cpu_sipi(cpu);
-    }
-
-    return cs->halted;
+    return 0;
 }
 
 static int kvm_handle_halt(X86CPU *cpu)
