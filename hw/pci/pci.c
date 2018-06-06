@@ -25,6 +25,7 @@
 #include "qemu/osdep.h"
 #include "hw/hw.h"
 #include "hw/pci/pci.h"
+#include "hw/i386/pc.h"
 #include "hw/pci/pci_bridge.h"
 #include "hw/pci/pci_bus.h"
 #include "hw/pci/pci_host.h"
@@ -2119,6 +2120,12 @@ static void pci_add_option_rom(PCIDevice *pdev, bool is_default_rom,
     void *ptr;
     char name[32];
     const VMStateDescription *vmsd;
+    PCMachineState *pcms = PC_MACHINE(qdev_get_machine());
+
+    /* don't need to add option rom if guest BIOS is skipped */
+    if (!pcms->fw) {
+        return;
+    }
 
     if (!pdev->romfile)
         return;
