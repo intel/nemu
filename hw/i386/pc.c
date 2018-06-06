@@ -80,6 +80,31 @@
 #define FW_CFG_IRQ0_OVERRIDE (FW_CFG_ARCH_LOCAL + 2)
 #define FW_CFG_E820_TABLE (FW_CFG_ARCH_LOCAL + 3)
 
+#define BOOT_GDT                0x500
+#define BOOT_IDT                0x520
+#define BOOT_GDT_NULL           0
+#define BOOT_GDT_CODE           1
+#define BOOT_GDT_DATA           2
+#define BOOT_GDT_TSS            3
+#define BOOT_GDT_MAX            4
+#define BOOT_GDT_FLAGS_CODE     (DESC_P_MASK | DESC_S_MASK | DESC_CS_MASK | \
+                                 DESC_R_MASK | DESC_A_MASK | DESC_G_MASK )
+#define BOOT_GDT_FLAGS_DATA     (DESC_P_MASK | DESC_S_MASK | DESC_W_MASK |  \
+                                 DESC_A_MASK | DESC_B_MASK | DESC_G_MASK)
+#define BOOT_GDT_FLAGS_TSS      DESC_P_MASK | (11 << DESC_TYPE_SHIFT)
+#define BOOT_PML4               0x9000
+#define BOOT_PDPTE              0xA000
+#define BOOT_LOADER_SP          0x8000
+#define BOOT_CMDLINE_OFFSET     0x20000
+#define BOOT_ZEROPAGE_OFFSET    0x7000
+
+#define GDT_ENTRY(flags, base, limit)               \
+       ((((base)  & 0xff000000ULL) << (56-24)) |    \
+       (((flags) & 0x0000f0ffULL) << 40) |          \
+       (((limit) & 0x000f0000ULL) << (48-16)) |     \
+       (((base)  & 0x00ffffffULL) << 16) |          \
+       (((limit) & 0x0000ffffULL)))
+
 #define E820_NR_ENTRIES		16
 
 struct e820_entry {
@@ -93,6 +118,13 @@ struct e820_table {
     struct e820_entry entry[E820_NR_ENTRIES];
 } QEMU_PACKED __attribute((__aligned__(4)));
 
+struct kernel_boot_info {
+    uint64_t entry;
+    bool protected_mode;
+    bool long_mode;
+};
+
+static struct kernel_boot_info boot_info;
 static struct e820_table e820_reserve;
 static struct e820_entry *e820_table;
 static unsigned e820_entries;
@@ -271,6 +303,124 @@ bool e820_get_entry(int idx, uint32_t type, uint64_t *address, uint64_t *length)
         return true;
     }
     return false;
+}
+
+static void reset_cpu(CPUX86State *env)
+{
+    unsigned int flags = BOOT_GDT_FLAGS_CODE;
+
+    if (boot_info.long_mode) {
+        flags |= DESC_L_MASK;
+    }
+    cpu_x86_load_seg_cache(env, R_CS, BOOT_GDT_CODE * 8, 0, 0xfffff, flags);
+
+    cpu_x86_load_seg_cache(env, R_DS, BOOT_GDT_DATA * 8, 0, 0xfffff,
+                           BOOT_GDT_FLAGS_DATA);
+    cpu_x86_load_seg_cache(env, R_ES, BOOT_GDT_DATA * 8, 0, 0xfffff,
+                           BOOT_GDT_FLAGS_DATA);
+    cpu_x86_load_seg_cache(env, R_FS, BOOT_GDT_DATA * 8, 0, 0xfffff,
+                           BOOT_GDT_FLAGS_DATA);
+    cpu_x86_load_seg_cache(env, R_GS, BOOT_GDT_DATA * 8, 0, 0xfffff,
+                           BOOT_GDT_FLAGS_DATA);
+    cpu_x86_load_seg_cache(env, R_SS, BOOT_GDT_DATA * 8, 0, 0xfffff,
+                           BOOT_GDT_FLAGS_DATA);
+
+    env->gdt.base = BOOT_GDT;
+    env->gdt.limit = BOOT_GDT_MAX * 8 - 1;
+
+    env->idt.base = BOOT_IDT;
+
+    env->tr.selector = BOOT_GDT_TSS * 8;
+    env->tr.flags = BOOT_GDT_FLAGS_TSS;
+
+    env->cr[3] = BOOT_PML4;
+    env->cr[0] |= (CR0_PG_MASK | CR0_PE_MASK);
+
+    if (boot_info.long_mode) {
+        env->cr[4] |= CR4_PAE_MASK;
+        cpu_load_efer(env, env->efer | MSR_EFER_LME | MSR_EFER_LMA);
+    }
+
+    env->regs[R_ESP] = BOOT_LOADER_SP;
+    env->regs[R_ESI] = BOOT_ZEROPAGE_OFFSET;
+    env->eip = boot_info.entry;
+}
+
+static void setup_seg_desc_tables(void)
+{
+    uint64_t idt = 0;
+    uint64_t gdt[BOOT_GDT_MAX] = {
+             [BOOT_GDT_NULL] = GDT_ENTRY(0, 0, 0),
+             [BOOT_GDT_CODE] = GDT_ENTRY(BOOT_GDT_FLAGS_CODE, 0, 0xFFFFF),
+             [BOOT_GDT_DATA] = GDT_ENTRY(BOOT_GDT_FLAGS_DATA, 0, 0xFFFFF),
+             [BOOT_GDT_TSS ] = GDT_ENTRY(BOOT_GDT_FLAGS_TSS, 0, 0xFFFFF)
+            };
+
+    if (boot_info.long_mode) {
+        gdt[BOOT_GDT_CODE] |= (1UL << (32 + DESC_L_SHIFT));
+    }
+
+    cpu_physical_memory_write((hwaddr)BOOT_GDT, gdt, sizeof(gdt));
+    cpu_physical_memory_write((hwaddr)BOOT_IDT, &idt, sizeof(idt));
+}
+
+static void setup_page_tables(void)
+{
+    void *p;
+    size_t len = 4096;
+
+    p = cpu_physical_memory_map(BOOT_PML4, &len, 1);
+    memset(p, 0, 4096);
+    *(uint64_t*)p = (uint64_t)(BOOT_PDPTE | 3);
+    cpu_physical_memory_unmap(p, len, 1, len);
+
+    len = 4096;
+    p = cpu_physical_memory_map(BOOT_PDPTE, &len, 1);
+    memset(p, 0, 4096);
+    *(uint64_t*)p = 0x83;
+    cpu_physical_memory_unmap(p, len, 1, len);
+}
+
+static void setup_kernel_zero_page(void)
+{
+    int i;
+    uint8_t *zero_page;
+    void *e820_map;
+    size_t zero_page_size = 4096;
+    MachineState *machine = MACHINE(qdev_get_machine());
+    size_t cmdline_size = strlen(machine->kernel_cmdline) + 1;
+
+    cpu_physical_memory_write((hwaddr)BOOT_CMDLINE_OFFSET,
+                               machine->kernel_cmdline, cmdline_size);
+
+    zero_page = cpu_physical_memory_map((hwaddr)BOOT_ZEROPAGE_OFFSET,
+                                        &zero_page_size, 1);
+    memset(zero_page, 0, zero_page_size);
+
+    /* hdr.type_of_loader */
+    zero_page[0x210] = 0xFF;
+    /* hdr.boot_flag */
+    stw_p(zero_page + 0x1fe, 0xAA55);
+    /* hdr.header */
+    stl_p(zero_page + 0x202, 0x53726448);
+    /* hdr.cmd_line_ptr */
+    stl_p(zero_page + 0x228, BOOT_CMDLINE_OFFSET);
+    /* hdr.cmdline_size */
+    stl_p(zero_page + 0x238, cmdline_size);
+    /* e820_entries */
+    zero_page[0x1e8] = e820_entries;
+    /* e820_map */
+    e820_map = zero_page + 0x2d0;
+    for (i = 0; i < e820_entries; i++) {
+        stq_p(e820_map, e820_table[i].address);
+        e820_map += 8;
+        stq_p(e820_map, e820_table[i].length);
+        e820_map += 8;
+        stl_p(e820_map, e820_table[i].type);
+        e820_map += 4;
+    }
+
+    cpu_physical_memory_unmap(zero_page, zero_page_size, 1, zero_page_size);
 }
 
 /* Enables contiguous-apic-ID mode, for compatibility */
@@ -1575,15 +1725,25 @@ static void pc_machine_reset(void)
 
     qemu_devices_reset();
 
-    /* Reset APIC after devices have been reset to cancel
-     * any changes that qemu_devices_reset() might have done.
-     */
     CPU_FOREACH(cs) {
         cpu = X86_CPU(cs);
 
+        /* Reset APIC after devices have been reset to cancel
+         * any changes that qemu_devices_reset() might have done.
+         */
         if (cpu->apic_state) {
             device_reset(cpu->apic_state);
         }
+
+        if (boot_info.protected_mode && cpu_is_bsp(cpu)) {
+            reset_cpu(&cpu->env);
+        }
+    }
+
+    if (boot_info.protected_mode) {
+        setup_seg_desc_tables();
+        setup_page_tables();
+        setup_kernel_zero_page();
     }
 }
 
