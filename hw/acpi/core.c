@@ -72,7 +72,7 @@ static void acpi_register_config(void)
 
 opts_init(acpi_register_config);
 
-static int acpi_checksum(const uint8_t *data, int len)
+int acpi_checksum(const uint8_t *data, int len)
 {
     int sum, i;
     sum = 0;
