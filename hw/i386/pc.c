@@ -594,8 +594,8 @@ static void load_linux_efi(PCMachineState *pcms)
     }
     fclose(file);
 
-    if (load_elf(machine->kernel_filename, NULL, NULL, &boot_info.entry,
-                   NULL, NULL, 0, EM_X86_64, 0, 0) < 0) {
+    if (load_elf_shared(machine->kernel_filename, NULL, NULL, &boot_info.entry,
+                        NULL, NULL, 0, EM_X86_64, 0, 0, 1) < 0) {
         goto err;
     }
 
