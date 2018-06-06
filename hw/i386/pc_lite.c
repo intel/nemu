@@ -80,6 +80,10 @@ static void pc_lite_init(MachineState *machine)
     /* Handle the machine opt max-ram-below-4g.  It is basically doing
      * min(qemu limit, user limit).
      */
+    if (!pcms->max_ram_below_4g) {
+        pcms->max_ram_below_4g = 1ULL << 32; /* default: 4G */;
+    }
+
     if (lowmem > pcms->max_ram_below_4g) {
         lowmem = pcms->max_ram_below_4g;
         if (machine->ram_size - lowmem > lowmem &&
@@ -97,7 +101,7 @@ static void pc_lite_init(MachineState *machine)
         pcms->above_4g_mem_size = 0;
         pcms->below_4g_mem_size = machine->ram_size;
     }
-
+    
     pc_cpus_init(pcms);
 
     kvmclock_create();
