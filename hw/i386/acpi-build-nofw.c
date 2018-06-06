@@ -23,9 +23,9 @@
 
 typedef
 struct AcpiZone {
-    MemoryRegion *mr;
-    hwaddr       start;
-    hwaddr       offset;
+    hwaddr      start;
+    hwaddr      offset;
+    uint64_t    size;
 } AcpiZone;
 static AcpiZone acpi_himem_zone;
 static AcpiZone acpi_fseg_zone;
@@ -47,21 +47,10 @@ static AcpiZone *acpi_get_zone(uint8_t zone)
 static int acpi_zone_init(AcpiZone *zone, const char *name,
                                   hwaddr start, uint64_t size)
 {
-    void *buf;
-    MemoryRegion *mr;
-
-    buf = qemu_ram_mmap(-1, size, 0x1000, true);
-    if (buf == MAP_FAILED) {
-        return -1;
-    }
-
-    mr = g_malloc(sizeof(*mr));
-    memory_region_init_ram_ptr(mr, NULL, name, size, buf);
-    memory_region_add_subregion_overlap(get_system_memory(), start, mr, 0);
     e820_add_entry(start, size, E820_RESERVED);
 
-    zone->mr = mr;
     zone->start = start;
+    zone->size = size;
     zone->offset = 0;
 
     return 0;
@@ -86,7 +75,7 @@ static hwaddr acpi_zone_alloc(AcpiZone *zone,
 {
     hwaddr start = zone->start;
     hwaddr offset = zone->offset;
-    uint64_t max_size = memory_region_size(zone->mr);
+    uint64_t max_size = zone->size;
     uint64_t addr;
     Error *local_err = NULL;
 
@@ -107,7 +96,7 @@ static hwaddr acpi_zone_alloc(AcpiZone *zone,
 typedef
 struct PCLiteAcpiFileEntry {
     char         *name;
-    MemoryRegion *mr;
+    AcpiZone     *zone;
     hwaddr       offset;
 } PCLiteAcpiFileEntry;
 
@@ -141,22 +130,16 @@ static PCLiteAcpiFileEntry *acpi_file_search(const char *name)
 }
 
 static void acpi_file_add(const char *name,
-                                  MemoryRegion *mr, hwaddr offset)
+                                  AcpiZone *zone, hwaddr offset)
 {
-    PCLiteAcpiFileEntry file = { g_strdup(name), mr, offset };
+    PCLiteAcpiFileEntry file = { g_strdup(name), zone, offset };
     assert(!acpi_file_search(name));
     g_array_append_val(acpi_files->file_list, file);
 }
 
-static void *acpi_file_get_ptr(PCLiteAcpiFileEntry *file)
-{
-    void *ptr = memory_region_get_ram_ptr(file->mr);
-    return ptr + file->offset;
-}
-
 static hwaddr acpi_file_get_addr(PCLiteAcpiFileEntry *file)
 {
-    return file->mr->addr + file->offset;
+    return file->zone->start + file->offset;
 }
 
 static void acpi_patch_allocate(const BiosLinkerLoaderEntry *cmd,
@@ -164,11 +147,10 @@ static void acpi_patch_allocate(const BiosLinkerLoaderEntry *cmd,
                                         Error **errp)
 {
     AcpiZone *zone = acpi_get_zone(cmd->alloc.zone);
-    MemoryRegion *zone_mr = zone->mr;
     GArray *data = file->blob;
     unsigned size = acpi_data_len(data);
     hwaddr offset;
-    void *dest;
+    hwaddr dest;
     Error *local_err = NULL;
 
     assert(!strncmp(cmd->alloc.file, file->name, BIOS_LINKER_LOADER_FILESZ));
@@ -184,11 +166,12 @@ static void acpi_patch_allocate(const BiosLinkerLoaderEntry *cmd,
         goto out;
     }
 
-    dest = memory_region_get_ram_ptr(zone_mr);
-    memcpy(dest + offset, data->data, size);
-    memory_region_set_dirty(zone_mr, offset, size);
+    dest = zone->start + offset;
+    acpi_dprintf(" ACPI allocate, name %s, offset  %lx, size %x\n", file->name,
+offset, size);
+    cpu_physical_memory_write(dest, data->data, size);
 
-    acpi_file_add(cmd->alloc.file, zone_mr, offset);
+    acpi_file_add(cmd->alloc.file, zone, offset);
 
  out:
     error_propagate(errp, local_err);
@@ -198,7 +181,7 @@ static void acpi_patch_add_pointer(const BiosLinkerLoaderEntry *cmd,
                                            Error **errp)
 {
     PCLiteAcpiFileEntry *dest_file, *src_file;
-    void *dest;
+    hwaddr dest;
     uint64_t pointer = 0;
     uint32_t offset = cmd->pointer.offset;
     uint32_t size = cmd->pointer.size;
@@ -217,11 +200,10 @@ static void acpi_patch_add_pointer(const BiosLinkerLoaderEntry *cmd,
         goto out;
     }
 
-    dest = acpi_file_get_ptr(dest_file);
-    memcpy(&pointer, dest + offset, size);
+    dest = acpi_file_get_addr(dest_file);
+    cpu_physical_memory_read(dest + offset, &pointer, size);
     pointer += acpi_file_get_addr(src_file);
-    memcpy(dest + offset, &pointer, size);
-    memory_region_set_dirty(dest_file->mr, dest_file->offset + offset, size);
+    cpu_physical_memory_write(dest + offset, &pointer, size);
 
  out:
     error_propagate(errp, local_err);
@@ -231,19 +213,23 @@ static void acpi_patch_add_checksum(const BiosLinkerLoaderEntry *cmd,
                                             Error **errp)
 {
     PCLiteAcpiFileEntry *file = acpi_file_search(cmd->cksum.file);
+    uint32_t start = cmd->cksum.start;
     uint32_t offset = cmd->cksum.offset;
-    uint8_t *dest, *cksum;
+    uint32_t length = cmd->cksum.length;
+    hwaddr dest;
+    uint8_t cksum, *buffer;
     Error *local_err = NULL;
 
     if (!file) {
         error_setg(&local_err, "Not found file %s", cmd->cksum.file);
         goto out;
     }
-
-    dest = acpi_file_get_ptr(file);
-    cksum = dest + offset;
-    *cksum = acpi_checksum(dest + cmd->cksum.start, cmd->cksum.length);
-    memory_region_set_dirty(file->mr, file->offset + offset, sizeof(*cksum));
+    buffer = g_malloc0(length);
+    dest = acpi_file_get_addr(file);
+    cpu_physical_memory_read(dest + start, buffer, length);
+    cksum = acpi_checksum(buffer, length);
+    cpu_physical_memory_write(dest + offset, &cksum, 1);
+    g_free(buffer);
 
  out:
     error_propagate(errp, local_err);
