@@ -1541,7 +1541,7 @@ build_dsdt(GArray *table_data, BIOSLinker *linker,
     aml_append(dsdt, scope);
 
     /* create fw_cfg node, unconditionally */
-    {
+    if (pcms->fw_cfg){
         /* when using port i/o, the 8-bit data register *always* overlaps
          * with half of the 16-bit control register. Hence, the total size
          * of the i/o region used is FW_CFG_CTL_SIZE; when using DMA, the
@@ -2252,11 +2252,6 @@ void acpi_setup(void)
     AcpiBuildState *build_state;
     Object *vmgenid_dev;
 
-    if (!pcms->fw_cfg) {
-        ACPI_BUILD_DPRINTF("No fw cfg. Bailing out.\n");
-        return;
-    }
-
     if (!pcms->acpi_build_enabled) {
         ACPI_BUILD_DPRINTF("ACPI build disabled. Bailing out.\n");
         return;
@@ -2273,46 +2268,53 @@ void acpi_setup(void)
     acpi_build(&tables, MACHINE(pcms));
 
     /* Now expose it all to Guest */
-    build_state->table_mr = acpi_add_rom_blob(build_state, tables.table_data,
-                                               ACPI_BUILD_TABLE_FILE,
-                                               ACPI_BUILD_TABLE_MAX_SIZE);
-    assert(build_state->table_mr != NULL);
+    if (pcms->fw_cfg) {
+        build_state->table_mr = acpi_add_rom_blob(build_state, tables.table_data,
+                                                  ACPI_BUILD_TABLE_FILE,
+                                                  ACPI_BUILD_TABLE_MAX_SIZE);
+        assert(build_state->table_mr != NULL);
 
-    build_state->linker_mr =
-        acpi_add_rom_blob(build_state, tables.linker->cmd_blob,
-                          "etc/table-loader", 0);
+        build_state->linker_mr =
+            acpi_add_rom_blob(build_state, tables.linker->cmd_blob,
+                              "etc/table-loader", 0);
 
-    fw_cfg_add_file(pcms->fw_cfg, ACPI_BUILD_TPMLOG_FILE,
-                    tables.tcpalog->data, acpi_data_len(tables.tcpalog));
+        fw_cfg_add_file(pcms->fw_cfg, ACPI_BUILD_TPMLOG_FILE,
+                        tables.tcpalog->data, acpi_data_len(tables.tcpalog));
 
-    vmgenid_dev = find_vmgenid_dev();
-    if (vmgenid_dev) {
-        vmgenid_add_fw_cfg(VMGENID(vmgenid_dev), pcms->fw_cfg,
-                           tables.vmgenid);
-    }
+        vmgenid_dev = find_vmgenid_dev();
+        if (vmgenid_dev) {
+            vmgenid_add_fw_cfg(VMGENID(vmgenid_dev), pcms->fw_cfg,
+                               tables.vmgenid);
+        }
 
-    if (!pcmc->rsdp_in_ram) {
-        /*
-         * Keep for compatibility with old machine types.
-         * Though RSDP is small, its contents isn't immutable, so
-         * we'll update it along with the rest of tables on guest access.
-         */
-        uint32_t rsdp_size = acpi_data_len(tables.rsdp);
+        if (!pcmc->rsdp_in_ram) {
+            /*
+             * Keep for compatibility with old machine types.
+             * Though RSDP is small, its contents isn't immutable, so
+             * we'll update it along with the rest of tables on guest access.
+             */
+            uint32_t rsdp_size = acpi_data_len(tables.rsdp);
 
-        build_state->rsdp = g_memdup(tables.rsdp->data, rsdp_size);
-        fw_cfg_add_file_callback(pcms->fw_cfg, ACPI_BUILD_RSDP_FILE,
-                                 acpi_build_update, NULL, build_state,
-                                 build_state->rsdp, rsdp_size, true);
-        build_state->rsdp_mr = NULL;
-    } else {
-        build_state->rsdp = NULL;
-        build_state->rsdp_mr = acpi_add_rom_blob(build_state, tables.rsdp,
-                                                  ACPI_BUILD_RSDP_FILE, 0);
+            build_state->rsdp = g_memdup(tables.rsdp->data, rsdp_size);
+            fw_cfg_add_file_callback(pcms->fw_cfg, ACPI_BUILD_RSDP_FILE,
+                                     acpi_build_update, NULL, build_state,
+                                     build_state->rsdp, rsdp_size, true);
+            build_state->rsdp_mr = NULL;
+        } else {
+            build_state->rsdp = NULL;
+            build_state->rsdp_mr = acpi_add_rom_blob(build_state, tables.rsdp,
+                                                      ACPI_BUILD_RSDP_FILE, 0);
+        }
     }
 
     qemu_register_reset(acpi_build_reset, build_state);
     acpi_build_reset(build_state);
     vmstate_register(NULL, 0, &vmstate_acpi_build, build_state);
+
+    if (!pcms->fw_cfg) {
+        acpi_build_nofw(pcms, tables.linker, &error_abort);
+        build_state->patched = 1;
+    }
 
     /* Cleanup tables but don't free the memory: we track it
      * in build_state.
