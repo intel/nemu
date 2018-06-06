@@ -658,7 +658,7 @@ void hmp_info_local_apic(Monitor *mon, const QDict *qdict)
 
 void hmp_info_io_apic(Monitor *mon, const QDict *qdict)
 {
-    kvm_ioapic_dump_state(mon, qdict);
+    ioapic_dump_state(mon, qdict);
 }
 
 SevInfo *qmp_query_sev(Error **errp)

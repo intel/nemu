@@ -85,7 +85,9 @@ extern const MemoryRegionOps serial_io_ops;
 void serial_realize_core(SerialState *s, Error **errp);
 void serial_exit_core(SerialState *s);
 
+#ifdef CONFIG_PIIX
 /* serial-isa.c */
 #define TYPE_ISA_SERIAL "isa-serial"
+#endif
 
 #endif

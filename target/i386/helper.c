@@ -932,6 +932,18 @@ void cpu_x86_inject_mce(Monitor *mon, X86CPU *cpu, int bank,
     }
 }
 
+void cpu_report_tpr_access(CPUX86State *env, TPRAccess access)
+{
+    X86CPU *cpu = x86_env_get_cpu(env);
+    CPUState *cs = CPU(cpu);
+
+    if (kvm_enabled()) {
+        env->tpr_access_type = access;
+
+        cpu_interrupt(cs, CPU_INTERRUPT_TPR);
+    }
+}
+
 int cpu_x86_get_descr_debug(CPUX86State *env, unsigned int selector,
                             target_ulong *base, unsigned int *limit,
                             unsigned int *flags)

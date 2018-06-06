@@ -159,9 +159,7 @@ static void pc_init1(MachineState *machine,
                    rom_memory, &ram_memory);
 
     gsi_state = g_malloc0(sizeof(*gsi_state));
-    kvm_pc_setup_irq_routing(pcmc->pci_enabled);
-    pcms->gsi = qemu_allocate_irqs(kvm_pc_gsi_handler, gsi_state,
-                                   GSI_NUM_PINS);
+    pcms->gsi = qemu_allocate_irqs(gsi_handler, gsi_state, GSI_NUM_PINS);
 
     if (pcmc->pci_enabled) {
         pci_bus = i440fx_init(host_type,
@@ -180,7 +178,7 @@ static void pc_init1(MachineState *machine,
     }
     isa_bus_irqs(isa_bus, pcms->gsi);
 
-    i8259 = kvm_i8259_init(isa_bus);
+    i8259 = i8259_init(isa_bus, pc_allocate_cpu_irq());
 
     for (i = 0; i < ISA_NUM_IRQS; i++) {
         gsi_state->i8259_irq[i] = i8259[i];
@@ -193,6 +191,7 @@ static void pc_init1(MachineState *machine,
     pc_register_ferr_irq(pcms->gsi[13]);
 
     /* init basic PC hardware */
+    pcms->pit = true;
     pc_basic_device_init(isa_bus, pcms->gsi, &rtc_state, true,
                          pcms->pit);
 

@@ -140,9 +140,7 @@ static void pc_q35_init(MachineState *machine)
 
     /* irq lines */
     gsi_state = g_malloc0(sizeof(*gsi_state));
-    kvm_pc_setup_irq_routing(pcmc->pci_enabled);
-    pcms->gsi = qemu_allocate_irqs(kvm_pc_gsi_handler, gsi_state,
-                                   GSI_NUM_PINS);
+    pcms->gsi = qemu_allocate_irqs(gsi_handler, gsi_state, GSI_NUM_PINS);
 
     /* create pci host bus */
     q35_host = Q35_HOST_DEVICE(qdev_create(NULL, TYPE_Q35_HOST_DEVICE));
@@ -187,7 +185,7 @@ static void pc_q35_init(MachineState *machine)
     pci_bus_set_route_irq_fn(host_bus, ich9_route_intx_pin_to_irq);
     isa_bus = ich9_lpc->isa_bus;
 
-    i8259 = kvm_i8259_init(isa_bus);
+    i8259 = i8259_init(isa_bus, pc_allocate_cpu_irq());
 
     for (i = 0; i < ISA_NUM_IRQS; i++) {
         gsi_state->i8259_irq[i] = i8259[i];
@@ -202,7 +200,7 @@ static void pc_q35_init(MachineState *machine)
 
     /* init basic PC hardware */
     pc_basic_device_init(isa_bus, pcms->gsi, &rtc_state, !mc->no_floppy,
-                         pcms->pit);
+                         false);
 
     /* connect pm stuff to lpc */
     ich9_lpc_pm_init(lpc, false);

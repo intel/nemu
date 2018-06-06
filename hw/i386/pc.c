@@ -97,6 +97,17 @@ static struct e820_table e820_reserve;
 static struct e820_entry *e820_table;
 static unsigned e820_entries;
 
+void gsi_handler(void *opaque, int n, int level)
+{
+    GSIState *s = opaque;
+
+    DPRINTF("pc: %s GSI %d\n", level ? "raising" : "lowering", n);
+    if (n < ISA_NUM_IRQS) {
+        qemu_set_irq(s->i8259_irq[n], level);
+    }
+    qemu_set_irq(s->ioapic_irq[n], level);
+}
+
 static void ioport80_write(void *opaque, hwaddr addr, uint64_t data,
                            unsigned size)
 {
@@ -124,6 +135,24 @@ static void ioportF0_write(void *opaque, hwaddr addr, uint64_t data,
 static uint64_t ioportF0_read(void *opaque, hwaddr addr, unsigned size)
 {
     return 0xffffffffffffffffULL;
+}
+
+/* IRQ handling */
+int cpu_get_pic_interrupt(CPUX86State *env)
+{
+    return pic_read_irq(isa_pic);
+}
+
+static void pic_irq_request(void *opaque, int irq, int level)
+{
+    CPUState *cs = first_cpu;
+
+    DPRINTF("pic_irqs: %s irq %d\n", level? "raise" : "lower", irq);
+    if (level) {
+        cpu_interrupt(cs, CPU_INTERRUPT_HARD);
+    } else {
+        cpu_reset_interrupt(cs, CPU_INTERRUPT_HARD);
+    }
 }
 
 /* PC cmos mappings */
@@ -646,6 +675,16 @@ static void load_linux(PCMachineState *pcms,
     nb_option_roms++;
 }
 
+DeviceState *cpu_get_current_apic(void)
+{
+    if (current_cpu) {
+        X86CPU *cpu = X86_CPU(current_cpu);
+        return cpu->apic_state;
+    } else {
+        return NULL;
+    }
+}
+
 static void pc_new_cpu(const char *typename, int64_t apic_id, Error **errp)
 {
     Object *cpu = NULL;
@@ -978,6 +1017,11 @@ uint64_t pc_pci_hole64_start(void)
     return ROUND_UP(hole64_start, 1ULL << 30);
 }
 
+qemu_irq pc_allocate_cpu_irq(void)
+{
+    return qemu_allocate_irq(pic_irq_request, NULL, 0);
+}
+
 static const MemoryRegionOps ioport80_io_ops = {
     .write = ioport80_write,
     .read = ioport80_read,
@@ -1034,7 +1078,7 @@ void ioapic_init_gsi(GSIState *gsi_state, const char *parent_name)
     SysBusDevice *d;
     unsigned int i;
 
-    dev = qdev_create(NULL, "kvm-ioapic");
+    dev = qdev_create(NULL, "ioapic");
     if (parent_name) {
         object_property_add_child(object_resolve_path(parent_name, NULL),
                                   "ioapic", OBJECT(dev), NULL);
@@ -1522,6 +1566,7 @@ static void pc_machine_set_smbus(Object *obj, bool value, Error **errp)
     pcms->smbus = value;
 }
 
+#ifdef CONFIG_PIIX
 static bool pc_machine_get_pit(Object *obj, Error **errp)
 {
     PCMachineState *pcms = PC_MACHINE(obj);
@@ -1535,6 +1580,7 @@ static void pc_machine_set_pit(Object *obj, bool value, Error **errp)
 
     pcms->pit = value;
 }
+#endif
 
 static void pc_machine_initfn(Object *obj)
 {
@@ -1546,7 +1592,6 @@ static void pc_machine_initfn(Object *obj)
     /* acpi build is enabled by default if machine supports it */
     pcms->acpi_build_enabled = PC_MACHINE_GET_CLASS(pcms)->has_acpi_build;
     pcms->smbus = true;
-    pcms->pit = true;
 }
 
 static void pc_machine_reset(void)
@@ -1696,8 +1741,10 @@ static void pc_machine_class_init(ObjectClass *oc, void *data)
     object_class_property_add_bool(oc, PC_MACHINE_SMBUS,
         pc_machine_get_smbus, pc_machine_set_smbus, &error_abort);
 
+#ifdef CONFIG_PIIX
     object_class_property_add_bool(oc, PC_MACHINE_PIT,
         pc_machine_get_pit, pc_machine_set_pit, &error_abort);
+#endif
 }
 
 static const TypeInfo pc_machine_info = {

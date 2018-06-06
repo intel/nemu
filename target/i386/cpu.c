@@ -2843,10 +2843,6 @@ static void x86_cpu_load_def(X86CPU *cpu, X86CPUDefinition *def, Error **errp)
 
     /* Special cases not set in the X86CPUDefinition structs: */
     if (kvm_enabled()) {
-        if (!kvm_irqchip_in_kernel()) {
-            x86_cpu_change_kvm_default("x2apic", "off");
-        }
-
         x86_cpu_apply_props(cpu, kvm_default_props);
     }
 
@@ -3117,6 +3113,10 @@ static void x86_register_cpudef_type(X86CPUDefinition *def)
     g_free(typename);
 }
 
+void cpu_clear_apic_feature(CPUX86State *env)
+{
+    env->features[FEAT_1_EDX] &= ~CPUID_APIC;
+}
 
 void cpu_x86_cpuid(CPUX86State *env, uint32_t index, uint32_t count,
                    uint32_t *eax, uint32_t *ebx,
@@ -3692,7 +3692,13 @@ static void mce_init(X86CPU *cpu)
 
 APICCommonClass *apic_get_class(void)
 {
-    return APIC_COMMON_CLASS(object_class_by_name("kvm-apic"));
+    const char *apic_type = "apic";
+
+    if (kvm_apic_in_kernel()) {
+        apic_type = "kvm-apic";
+    }
+
+    return APIC_COMMON_CLASS(object_class_by_name(apic_type));
 }
 
 static void x86_cpu_apic_create(X86CPU *cpu, Error **errp)
