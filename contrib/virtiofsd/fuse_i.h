@@ -6,6 +6,9 @@
   See the file COPYING.LIB
 */
 
+#ifndef FUSE_I_H
+#define FUSE_I_H
+
 #include "fuse.h"
 #include "fuse_lowlevel.h"
 
@@ -110,3 +113,4 @@ void fuse_free_req(fuse_req_t req);
 void fuse_session_process_buf_int(struct fuse_session *se,
 				  const struct fuse_buf *buf, struct fuse_chan *ch);
 
+#endif
