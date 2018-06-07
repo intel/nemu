@@ -64,8 +64,9 @@ typedef struct PMLiteState {
     uint8_t disable_s3;
     uint8_t disable_s4;
     uint8_t s4_val;
-
+    bool cpu_hotplug_legacy;
     AcpiCpuHotplug gpe_cpu;
+    CPUHotplugState cpuhp_state;
 
     MemHotplugState acpi_memory_hotplug;
 } PMLiteState;
@@ -147,6 +148,32 @@ static const VMStateDescription vmstate_memhp_state = {
     }
 };
 
+static bool vmstate_test_use_cpuhp(void *opaque)
+{
+    PMLiteState *s = opaque;
+    return !s->cpu_hotplug_legacy;
+}
+
+static int vmstate_cpuhp_pre_load(void *opaque)
+{
+    Object *obj = OBJECT(opaque);
+    object_property_set_bool(obj, false, "cpu-hotplug-legacy", &error_abort);
+    return 0;
+}
+
+static const VMStateDescription vmstate_cpuhp_state = {
+    .name = "pm_lite/cpuhp",
+    .version_id = 1,
+    .minimum_version_id = 1,
+    .minimum_version_id_old = 1,
+    .needed = vmstate_test_use_cpuhp,
+    .pre_load = vmstate_cpuhp_pre_load,
+    .fields      = (VMStateField[]) {
+        VMSTATE_CPU_HOTPLUG(cpuhp_state, PMLiteState),
+        VMSTATE_END_OF_LIST()
+    }
+};
+
 static const VMStateDescription vmstate_acpi = {
     .name = "pm_lite",
     .version_id = 1,
@@ -171,6 +198,7 @@ static const VMStateDescription vmstate_acpi = {
     },
     .subsections = (const VMStateDescription*[]) {
          &vmstate_memhp_state,
+         &vmstate_cpuhp_state,
          NULL
     }
 };
@@ -200,7 +228,11 @@ static void pm_lite_device_plug_cb(HotplugHandler *hotplug_dev,
     } else if (object_dynamic_cast(OBJECT(dev), TYPE_PCI_DEVICE)) {
         acpi_pcihp_device_plug_cb(hotplug_dev, &s->acpi_pci_hotplug, dev, errp);
     } else if (object_dynamic_cast(OBJECT(dev), TYPE_CPU)) {
-        legacy_acpi_cpu_plug_cb(hotplug_dev, &s->gpe_cpu, dev, errp);
+        if (s->cpu_hotplug_legacy) {
+            legacy_acpi_cpu_plug_cb(hotplug_dev, &s->gpe_cpu, dev, errp);
+        } else {
+            acpi_cpu_plug_cb(hotplug_dev, &s->cpuhp_state, dev, errp);
+        }
     } else {
         error_setg(errp, "acpi: device plug request for not supported device"
                    " type: %s", object_get_typename(OBJECT(dev)));
@@ -219,6 +251,9 @@ static void pm_lite_device_unplug_request_cb(HotplugHandler *hotplug_dev,
     } else if (object_dynamic_cast(OBJECT(dev), TYPE_PCI_DEVICE)) {
         acpi_pcihp_device_unplug_cb(hotplug_dev, &s->acpi_pci_hotplug, dev,
                                     errp);
+    } else if (object_dynamic_cast(OBJECT(dev), TYPE_CPU) &&
+               !s->cpu_hotplug_legacy) {
+        acpi_cpu_unplug_request_cb(hotplug_dev, &s->cpuhp_state, dev, errp);
     } else {
         error_setg(errp, "acpi: device unplug request for not supported device"
                    " type: %s", object_get_typename(OBJECT(dev)));
@@ -233,6 +268,9 @@ static void pm_lite_device_unplug_cb(HotplugHandler *hotplug_dev,
     if (s->acpi_memory_hotplug.is_enabled &&
         object_dynamic_cast(OBJECT(dev), TYPE_PC_DIMM)) {
         acpi_memory_unplug_cb(&s->acpi_memory_hotplug, dev, errp);
+    } else if (object_dynamic_cast(OBJECT(dev), TYPE_CPU) &&
+               !s->cpu_hotplug_legacy) {
+        acpi_cpu_unplug_cb(&s->cpuhp_state, dev, errp);
     } else {
         error_setg(errp, "acpi: device unplug for not supported device"
                    " type: %s", object_get_typename(OBJECT(dev)));
@@ -334,6 +372,25 @@ static const MemoryRegionOps pm_lite_gpe_ops = {
     .endianness = DEVICE_LITTLE_ENDIAN,
 };
 
+static bool pm_lite_get_cpu_hotplug_legacy(Object *obj, Error **errp)
+{
+    PMLiteState *s = PM_LITE(obj);
+
+    return s->cpu_hotplug_legacy;
+}
+
+static void pm_lite_set_cpu_hotplug_legacy(Object *obj, bool value, Error **errp)
+{
+    PMLiteState *s = PM_LITE(obj);
+
+    assert(!value);
+    if (s->cpu_hotplug_legacy && value == false) {
+        acpi_switch_to_modern_cphp(&s->gpe_cpu, &s->cpuhp_state,
+                                   PM_LITE_CPU_HOTPLUG_IO_BASE);
+    }
+    s->cpu_hotplug_legacy = value;
+}
+
 static void pm_lite_acpi_system_hot_add_init(MemoryRegion *parent,
                                              PCIBus *bus, PMLiteState *s)
 {
@@ -343,6 +400,12 @@ static void pm_lite_acpi_system_hot_add_init(MemoryRegion *parent,
 
     acpi_pcihp_init(OBJECT(s), &s->acpi_pci_hotplug, bus, parent,
                     s->use_acpi_pci_hotplug);
+
+    s->cpu_hotplug_legacy = true;
+    object_property_add_bool(OBJECT(s), "cpu-hotplug-legacy",
+                             pm_lite_get_cpu_hotplug_legacy,
+                             pm_lite_set_cpu_hotplug_legacy,
+                             NULL);
 
     legacy_acpi_cpu_hotplug_init(parent, OBJECT(s), &s->gpe_cpu,
                                  PM_LITE_CPU_HOTPLUG_IO_BASE);
@@ -357,6 +420,9 @@ static void pm_lite_ospm_status(AcpiDeviceIf *adev, ACPIOSTInfoList ***list)
     PMLiteState *s = PM_LITE(adev);
 
     acpi_memory_ospm_status(&s->acpi_memory_hotplug, list);
+    if (!s->cpu_hotplug_legacy) {
+        acpi_cpu_ospm_status(&s->cpuhp_state, list);
+    }
 }
 
 static void pm_lite_send_gpe(AcpiDeviceIf *adev, AcpiEventStatusBits ev)

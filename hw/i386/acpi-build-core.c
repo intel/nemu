@@ -101,7 +101,7 @@ static void init_common_fadt_data(Object *o, AcpiFadtData *data)
         .rtc_century = RTC_CENTURY,
         .plvl2_lat = 0xfff /* C2 state not supported */,
         .plvl3_lat = 0xfff /* C3 state not supported */,
-        .smi_cmd = ACPI_PORT_SMI_CMD,
+        .smi_cmd = 0,
         .sci_int = object_property_get_uint(o, ACPI_PM_PROP_SCI_INT, NULL),
         .acpi_enable_cmd =
             object_property_get_uint(o, ACPI_PM_PROP_ACPI_ENABLE_CMD, NULL),
