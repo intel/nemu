@@ -121,6 +121,7 @@ static void init_common_fadt_data(Object *o, AcpiFadtData *data)
 
 static void acpi_get_pm_info(AcpiPmInfo *pm)
 {
+    Object *piix = piix4_pm_find();
     Object *pm_lite = pm_lite_find();
     Object *lpc = ich9_lpc_find();
     Object *obj = pm_lite ? pm_lite : lpc;
@@ -130,7 +131,7 @@ static void acpi_get_pm_info(AcpiPmInfo *pm)
     pm->pcihp_io_len = 0;
 
     init_common_fadt_data(obj, &pm->fadt);
-    if (piix_enabled()) {
+    if (piix) {
         /* w2k requires FADT(rev1) or it won't boot, keep PC compatible */
         pm->fadt.rev = 1;
         pm->cpu_hp_io_base = PIIX4_CPU_HOTPLUG_IO_BASE;
@@ -150,6 +151,10 @@ static void acpi_get_pm_info(AcpiPmInfo *pm)
 
     if (pc_lite_enabled()) {
          pm->cpu_hp_io_base = PM_LITE_CPU_HOTPLUG_IO_BASE;
+         pm->pcihp_io_base =
+             object_property_get_uint(obj, ACPI_PCIHP_IO_BASE_PROP, NULL);
+        pm->pcihp_io_len =
+             object_property_get_uint(obj, ACPI_PCIHP_IO_LEN_PROP, NULL);
     }
     assert(obj);
 
@@ -384,7 +389,6 @@ static void build_append_pci_bus_devices(Aml *parent_scope, PCIBus *bus,
     PCIBus *sec;
     int i;
 
-    if (piix_enabled()) {
         bsel = object_property_get_qobject(OBJECT(bus), ACPI_PCIHP_PROP_BSEL, NULL);
         if (bsel) {
             uint64_t bsel_val = qnum_get_uint(qobject_to(QNum, bsel));
@@ -392,7 +396,6 @@ static void build_append_pci_bus_devices(Aml *parent_scope, PCIBus *bus,
             aml_append(parent_scope, aml_name_decl("BSEL", aml_int(bsel_val)));
             notify_method = aml_method("DVNT", 2, AML_NOTSERIALIZED);
         }
-    }
 
     for (i = 0; i < ARRAY_SIZE(bus->devices); i += PCI_FUNC_MAX) {
         DeviceClass *dc;
@@ -403,7 +406,7 @@ static void build_append_pci_bus_devices(Aml *parent_scope, PCIBus *bus,
         bool bridge_in_acpi;
 
         if (!pdev) {
-            if (piix_enabled() && bsel) { /* add hotplug slots for non present devices */
+            if (bsel) { /* add hotplug slots for non present devices */
                 dev = aml_device("S%.02X", PCI_DEVFN(slot, 0));
                 aml_append(dev, aml_name_decl("_SUN", aml_int(slot)));
                 aml_append(dev, aml_name_decl("_ADR", aml_int(slot << 16)));
@@ -471,7 +474,7 @@ static void build_append_pci_bus_devices(Aml *parent_scope, PCIBus *bus,
             );
             aml_append(dev, method);
 
-            if (piix_enabled() && bsel) {
+            if (bsel) {
                 build_append_pcihp_notify_entry(notify_method, slot);
             }
         } else if (bridge_in_acpi) {
@@ -487,7 +490,7 @@ static void build_append_pci_bus_devices(Aml *parent_scope, PCIBus *bus,
         aml_append(parent_scope, dev);
     }
 
-    if (piix_enabled() && bsel) {
+    if (bsel) {
         aml_append(parent_scope, notify_method);
     }
 
@@ -497,7 +500,7 @@ static void build_append_pci_bus_devices(Aml *parent_scope, PCIBus *bus,
     method = aml_method("PCNT", 0, AML_NOTSERIALIZED);
 
     /* If bus supports hotplug select it and notify about local events */
-    if (piix_enabled() && bsel) {
+    if (bsel) {
         uint64_t bsel_val = qnum_get_uint(qobject_to(QNum, bsel));
 
         aml_append(method, aml_store(aml_int(bsel_val), aml_name("BNUM")));
@@ -522,9 +525,9 @@ static void build_append_pci_bus_devices(Aml *parent_scope, PCIBus *bus,
         }
     }
     aml_append(parent_scope, method);
-    if (piix_enabled()) {
+    //if (piix_enabled()) {
         qobject_decref(bsel);
-    }
+    //}
 }
 
 /**
@@ -1278,6 +1281,7 @@ build_dsdt(GArray *table_data, BIOSLinker *linker,
            AcpiPmInfo *pm, AcpiMiscInfo *misc,
            Range *pci_hole, Range *pci_hole64, MachineState *machine)
 {
+    Object *piix = piix4_pm_find();
     CrsRangeEntry *entry;
     Aml *dsdt, *sb_scope, *scope, *dev, *method, *field, *pkg, *crs;
     CrsRangeSet crs_range_set;
@@ -1294,7 +1298,7 @@ build_dsdt(GArray *table_data, BIOSLinker *linker,
     acpi_data_push(dsdt->buf, sizeof(AcpiTableHeader));
 
     build_dbg_aml(dsdt);
-    if (piix_enabled()) {
+    if (piix) {
         sb_scope = aml_scope("_SB");
         dev = aml_device("PCI0");
         aml_append(dev, aml_name_decl("_HID", aml_eisaid("PNP0A03")));
@@ -1357,7 +1361,7 @@ build_dsdt(GArray *table_data, BIOSLinker *linker,
     {
         aml_append(scope, aml_name_decl("_HID", aml_string("ACPI0006")));
 
-        if (piix_enabled()|| pc_lite_enabled()) {
+        if (piix || pc_lite_enabled()) {
             method = aml_method("_E01", 0, AML_NOTSERIALIZED);
             aml_append(method,
                 aml_acquire(aml_name("\\_SB.PCI0.BLCK"), 0xFFFF));

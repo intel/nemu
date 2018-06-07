@@ -116,7 +116,7 @@ static const VMStateDescription vmstate_pci_status = {
     }
 };
 
-#if 0
+#if 1
 static bool vmstate_test_use_acpi_pci_hotplug(void *opaque, int version_id)
 {
     PMLiteState *s = opaque;
@@ -165,8 +165,8 @@ static const VMStateDescription vmstate_acpi = {
             vmstate_test_no_use_acpi_pci_hotplug,
             2, vmstate_pci_status,
             struct AcpiPciHpPciStatus),
-        //VMSTATE_PCI_HOTPLUG(acpi_pci_hotplug, PMLiteState,
-        //                    vmstate_test_use_acpi_pci_hotplug),
+        VMSTATE_PCI_HOTPLUG(acpi_pci_hotplug, PMLiteState,
+                            vmstate_test_use_acpi_pci_hotplug),
         VMSTATE_END_OF_LIST()
     },
     .subsections = (const VMStateDescription*[]) {
@@ -177,8 +177,8 @@ static const VMStateDescription vmstate_acpi = {
 
 static void pm_lite_reset(void *opaque)
 {
-    //PMLiteState *s = opaque;
-    //acpi_pcihp_reset(&s->acpi_pci_hotplug);
+    PMLiteState *s = opaque;
+    acpi_pcihp_reset(&s->acpi_pci_hotplug);
 }
 
 static void pm_lite_powerdown_req(Notifier *n, void *opaque)
@@ -198,7 +198,7 @@ static void pm_lite_device_plug_cb(HotplugHandler *hotplug_dev,
         object_dynamic_cast(OBJECT(dev), TYPE_PC_DIMM)) {
         acpi_memory_plug_cb(hotplug_dev, &s->acpi_memory_hotplug, dev, errp);
     } else if (object_dynamic_cast(OBJECT(dev), TYPE_PCI_DEVICE)) {
-        //acpi_pcihp_device_plug_cb(hotplug_dev, &s->acpi_pci_hotplug, dev, errp);
+        acpi_pcihp_device_plug_cb(hotplug_dev, &s->acpi_pci_hotplug, dev, errp);
     } else if (object_dynamic_cast(OBJECT(dev), TYPE_CPU)) {
         legacy_acpi_cpu_plug_cb(hotplug_dev, &s->gpe_cpu, dev, errp);
     } else {
@@ -217,8 +217,8 @@ static void pm_lite_device_unplug_request_cb(HotplugHandler *hotplug_dev,
         acpi_memory_unplug_request_cb(hotplug_dev, &s->acpi_memory_hotplug,
                                       dev, errp);
     } else if (object_dynamic_cast(OBJECT(dev), TYPE_PCI_DEVICE)) {
-        //acpi_pcihp_device_unplug_cb(hotplug_dev, &s->acpi_pci_hotplug, dev,
-        //                            errp);
+        acpi_pcihp_device_unplug_cb(hotplug_dev, &s->acpi_pci_hotplug, dev,
+                                    errp);
     } else {
         error_setg(errp, "acpi: device unplug request for not supported device"
                    " type: %s", object_get_typename(OBJECT(dev)));
@@ -341,8 +341,8 @@ static void pm_lite_acpi_system_hot_add_init(MemoryRegion *parent,
                           "acpi-gpe0", GPE_LEN);
     memory_region_add_subregion(parent, GPE_BASE, &s->io_gpe);
 
-    //acpi_pcihp_init(OBJECT(s), &s->acpi_pci_hotplug, bus, parent,
-                    //s->use_acpi_pci_hotplug);
+    acpi_pcihp_init(OBJECT(s), &s->acpi_pci_hotplug, bus, parent,
+                    s->use_acpi_pci_hotplug);
 
     legacy_acpi_cpu_hotplug_init(parent, OBJECT(s), &s->gpe_cpu,
                                  PM_LITE_CPU_HOTPLUG_IO_BASE);
