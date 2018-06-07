@@ -126,15 +126,15 @@ static const struct fuse_opt conn_info_opt_spec[] = {
 
 void fuse_cmdline_help(void)
 {
-	printf("    -h   --help            print help\n"
-	       "    -V   --version         print version\n"
-	       "    -d   -o debug          enable debug output (implies -f)\n"
-	       "    -f                     foreground operation\n"
-	       "    -s                     disable multi-threaded operation\n"
-	       "    -o clone_fd            use separate fuse device fd for each thread\n"
-	       "                           (may improve performance)\n"
-	       "    -o max_idle_threads    the maximum number of idle worker threads\n"
-	       "                           allowed (default: 10)\n");
+	printf("    -h   --help                print help\n"
+	       "    -V   --version             print version\n"
+	       "    -d   -o debug              enable debug output (implies -f)\n"
+	       "    -f                         foreground operation\n"
+	       "    -s                         disable multi-threaded operation\n"
+	       "    -o clone_fd                use separate fuse device fd for each thread\n"
+	       "                               (may improve performance)\n"
+	       "    -o max_idle_threads        the maximum number of idle worker threads\n"
+	       "                               allowed (default: 10)\n");
 }
 
 static int fuse_helper_opt_proc(void *data, const char *arg, int key,
