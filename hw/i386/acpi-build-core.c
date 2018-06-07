@@ -1336,9 +1336,10 @@ build_dsdt(GArray *table_data, BIOSLinker *linker,
         aml_append(dsdt, sb_scope);
         if (pcms->static_prt) {
             build_static_pci0_prt(dsdt);
+        } else {
+            build_lite_pci0_int(dsdt);
         }
         build_pc_lite_pci_hotplug(dsdt);
-        build_lite_pci0_int(dsdt);
     }
 
     if (pcmc->legacy_cpu_hotplug) {
