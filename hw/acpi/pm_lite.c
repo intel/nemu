@@ -475,6 +475,9 @@ static void pm_lite_class_init(ObjectClass *klass, void *data)
     AcpiDeviceIfClass *adevc = ACPI_DEVICE_IF_CLASS(klass);
 
     k->realize = pm_lite_realize;
+    k->vendor_id = PCI_VENDOR_ID_INTEL;
+    k->device_id = PCI_DEVICE_ID_INTEL_82371AB_3;
+    k->revision = 0x03;
     k->class_id = PCI_CLASS_BRIDGE_OTHER;
     dc->desc = "PM LITE";
     dc->vmsd = &vmstate_acpi;

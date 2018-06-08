@@ -255,6 +255,10 @@ static void pci_lite_device_class_init(ObjectClass *klass, void *data)
     PCIDeviceClass *k = PCI_DEVICE_CLASS(klass);
 
     k->class_id = PCI_CLASS_BRIDGE_HOST;
+    k->vendor_id = PCI_VENDOR_ID_INTEL;
+    k->device_id = PCI_DEVICE_ID_INTEL_PC_LITE;
+    k->revision = 0x02;
+    k->class_id = PCI_CLASS_BRIDGE_HOST;
     dc->desc = "Host bridge";
     /*
      * PCI-facing part of the host bridge, not usable without the
