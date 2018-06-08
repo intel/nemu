@@ -12,6 +12,7 @@
 #include "fuse_lowlevel.h"
 #include "fuse_misc.h"
 #include "fuse_kernel.h"
+#include "fuse_virtio.h"
 
 #include <stdio.h>
 #include <stdlib.h>

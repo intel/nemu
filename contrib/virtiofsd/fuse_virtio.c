@@ -19,17 +19,74 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 
+#include "contrib/libvhost-user/libvhost-user.h"
+
+/* We pass the dev element into libvhost-user
+ * and then use it to get back to the outer
+ * container for other data.
+ */
+struct fv_VuDev {
+        VuDev dev;
+        struct fuse_session *se;
+};
+
 /* From spec */
 struct virtio_fs_config {
         char tag[36];
         uint32_t num_queues;
 };
+
+/* Callback from libvhost-user if there's a new fd we're supposed to listen
+ * to, typically a queue kick?
+ */
+static void fv_set_watch(VuDev *dev, int fd, int condition, vu_watch_cb cb,
+                         void *data)
+{
+        fprintf(stderr, "%s: TODO! fd=%d\n", __func__, fd);
+}
+
+/* Callback from libvhost-user if we're no longer supposed to listen on an fd
+ */
+static void fv_remove_watch(VuDev *dev, int fd)
+{
+        fprintf(stderr, "%s: TODO! fd=%d\n", __func__, fd);
+}
+
+/* Callback from libvhost-user to panic */
+static void fv_panic(VuDev *dev, const char *err)
+{
+        fprintf(stderr, "%s: libvhost-user: %s\n", __func__, err);
+        /* TODO: Allow reconnects?? */
+        exit(EXIT_FAILURE);
+}
+
+static bool fv_queue_order(VuDev *dev, int qidx)
+{
+        return false;
+}
+
+static const VuDevIface fv_iface = {
+        /* TODO: Add other callbacks */
+        .queue_is_processed_in_order = fv_queue_order,
+};
+
+int virtio_loop(struct fuse_session *se)
+{
+       fprintf(stderr, "%s: Entry\n", __func__);
+
+       while (1) {
+           /* TODO: Add stuffing */
+       }
+
+       fprintf(stderr, "%s: Exit\n", __func__);
+}
 
 int virtio_session_mount(struct fuse_session *se)
 {
@@ -69,7 +126,26 @@ int virtio_session_mount(struct fuse_session *se)
                 return -1;
         }
 
-        return -1;
+        fprintf(stderr, "%s: Waiting for QEMU socket connection...\n", __func__);
+        int data_sock = accept(listen_sock, NULL, NULL);
+        if (data_sock == -1) {
+                perror("vhost socket accept");
+                close(listen_sock);
+                return -1;
+        }
+        close(listen_sock);
+        fprintf(stderr, "%s: Received QEMU socket connection\n", __func__);
+        se->vu_socketfd = data_sock;
+
+        /* TODO: Some cleanup/deallocation! */
+        se->virtio_dev = calloc(sizeof(struct fv_VuDev), 1);
+        se->virtio_dev->se = se;
+        vu_init(&se->virtio_dev->dev, se->vu_socketfd,
+                fv_panic,
+                fv_set_watch, fv_remove_watch,
+                &fv_iface);
+
+        return 0;
 }
 
 
