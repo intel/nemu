@@ -35,6 +35,7 @@ EFI_FIRMWARE_URI="https://download.clearlinux.org/image/OVMF.fd"
 DOWNLOAD_ONLY="false"
 RUN_UNSAFE="false"
 PIIX_TEST="false"
+PC_LITE_TEST="false"
 VERBOSE="false"
 CHECK="false"
 VSOCK="true"
@@ -88,7 +89,7 @@ run_tests() {
            if [[ "$firmware" == "uefi" ]]; then
                "$CI_SCRIPT" -hypervisor "$HYPERVISOR" -imagetype "$format" -image "$WORKLOADS_DIR"/"$image" -cloudinit "$CLOUD_INIT_DIR" -bios "$WORKLOADS_DIR"/OVMF.fd -platform "$platform" -vsock "$VSOCK" $extra_args  | grep "SUCCESS"
            else
-               "$CI_SCRIPT" -hypervisor "$HYPERVISOR" -imagetype "$format" -image "$WORKLOADS_DIR"/"$image" -cloudinit "$CLOUD_INIT_DIR" -platform "$platform" -vsock "$VSOCK" $extra_args | grep "SUCCESS"
+               "$CI_SCRIPT" -hypervisor "$HYPERVISOR" -imagetype "$format" -image "$WORKLOADS_DIR"/"$image" -cloudinit "$CLOUD_INIT_DIR" -kernel "$WORKLOADS_DIR"/vmlinux -platform "$platform" -vsock "$VSOCK" $extra_args | grep "SUCCESS"
            fi
            if [ $? -ne 0 ]; then
              echo "FAILED: Test failed for $image"
@@ -133,6 +134,9 @@ while [ $# -ge 1 ]; do
     -piix)
         PIIX_TEST="true"
         shift;;
+    -pc-lite)
+        PC_LITE_TEST="true"
+        shift;;
     -download)
         DOWNLOAD_ONLY="true"
         shift;;
@@ -168,6 +172,11 @@ done
 #extra args -s => do not test hotplug
 #           -l => enable legacy serial
 #                 Boots with serial enabled, grub sets kernel params to ttyS0 not hvc0
+
+declare -a testimages_x86_64_pclite
+testimages_x86_64_pclite=("clear-22180-cloud.img" "qcow2" "seabios" "x86_64_pc-lite" "-s" \
+                          "https://download.clearlinux.org/releases/22180/clear/clear-22180-cloud.img.xz")
+
 declare -a testimages_x86_64_piix
 testimages_x86_64_piix=("clear-22180-cloud.img" "qcow2" "uefi" "x86_64_pc" "-s" \
                         "https://download.clearlinux.org/releases/22180/clear/clear-22180-cloud.img.xz" \
@@ -277,7 +286,11 @@ if [[ "$RUN_UNSAFE" == "false" ]]; then
     echo "Testing safe images"
     if [[ "$IS_AARCH64" == "" ]]; then
         if [[ "$PIIX_TEST" == "false" ]]; then
-            run_tests "${testimages_x86_64_q35[@]}"
+            if [[ "$PC_LITE_TEST" == "true" ]]; then
+                run_tests "${testimages_x86_64_pclite[@]}"
+            else
+                run_tests "${testimages_x86_64_q35[@]}"
+            fi
         else
             run_tests "${testimages_x86_64_piix[@]}"
             run_tests "${testimages_x86_64_q35[@]}"

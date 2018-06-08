@@ -47,6 +47,7 @@ firmware=""
 vmimagetmp='testvm.img'
 machine='pc'
 accel='kvm,kernel_irqchip,nvdimm'
+cmdline=("root=/dev/pmem0p3 rw rootfstype=ext4 rootflags=dax data=ordered rcupdate.rcu_expedited=1 pci=lastbus=0 tsc=reliable no_timer_check reboot=t noapictimer earlyprintk=serial console=hvc0")
 bootindex=1
 addr=1
 serial=serial.sock
@@ -194,6 +195,9 @@ while [ $# -ge 1 ]; do
     -bios)
         firmware="$2"
         shift 2 ;;
+    -kernel)
+        kernel="$2"
+        shift 2 ;;
     -image)
         vmimage="$2"
         shift 2 ;;
@@ -252,6 +256,12 @@ case "$PLATFORM" in
        machine='pc'
        accel='kvm,kernel_irqchip,nvdimm'
        ;;
+    x86_64_pc-lite)
+       machine='pc-lite'
+       accel='kvm,kernel_irqchip,nvdimm,nopit,static-prt,nofw'
+       pci_bus='pcie.0'
+       SIMPLE_LAUNCH="true"
+       ;;
     x86_64_q35)
        machine='q35'
        accel='kvm,kernel_irqchip,nvdimm'
@@ -299,6 +309,13 @@ if [ "$firmware" != "" ]; then
       qemu_args+=" -bios $firmware"
 fi
 
+if [ "$kernel" != "" ]; then
+    if [ ! -f "$kernel" ]; then
+        die $"kernel not found"
+    fi
+    qemu_args+=" -kernel $kernel"
+fi
+
 qemu_args+=" -smp $VM_NCPUS,cores=1,threads=1,sockets=$VM_NCPUS,maxcpus=32" 
 qemu_args+=" -m $VM_MEMORY,slots=4,maxmem=16384M"
 qemu_args+=" -cpu host -nographic -no-user-config"
@@ -307,6 +324,7 @@ qemu_args+=" -daemonize"
 
 if [ "$PLATFORM" != "aarch64" ]; then
    qemu_args+=" -device pci-bridge,bus=$pci_bus,id=bridge0,addr=2,chassis_nr=1,shpc=on"
+   qemu_args+=" -device pcie-root-port,id=root1"
 
    qemu_args+=" -drive file=$vmimagetmp,if=none,id=drive-virtio-disk0,format=$VM_IMAGE_TYPE \
          -device virtio-blk-pci,scsi=off,drive=drive-virtio-disk0,id=virtio-disk0,bootindex=$bootindex"
@@ -369,7 +387,8 @@ fi
 
 
 # Launch with all virtio devices
-$hypervisor $qemu_args "$@"
+$hypervisor $qemu_args "$@" -append "${cmdline[@]}"
+#$hypervisor $qemu_args "$@"
 
 if [ "$SIMPLE_LAUNCH" = "false" ]; then
    hotplug_check
