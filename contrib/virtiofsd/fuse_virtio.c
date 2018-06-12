@@ -17,6 +17,8 @@
 #include "fuse_misc.h"
 #include "fuse_virtio.h"
 
+#include <assert.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -77,15 +79,49 @@ static const VuDevIface fv_iface = {
         .queue_is_processed_in_order = fv_queue_order,
 };
 
+/* Main loop; this mostly deals with events on the vhost-user
+ * socket itself, and not actual fuse data.
+ */
 int virtio_loop(struct fuse_session *se)
 {
        fprintf(stderr, "%s: Entry\n", __func__);
 
-       while (1) {
-           /* TODO: Add stuffing */
+       while (!fuse_session_exited(se)) {
+               struct pollfd pf[1];
+               pf[0].fd = se->vu_socketfd;
+               pf[0].events = POLLIN;
+               pf[0].revents = 0;
+
+               if (se->debug)
+                       fprintf(stderr, "%s: Waiting for VU event\n", __func__);
+               int poll_res = ppoll(pf, 1, NULL, NULL);
+
+               if (poll_res == -1) {
+                       if (errno == EINTR) {
+                               fprintf(stderr, "%s: ppoll interrupted, going around\n", __func__);
+                               continue;
+                       }
+                       perror("virtio_loop ppoll");
+                       break;
+               }
+               assert(poll_res == 1);
+               if (pf[0].revents & (POLLERR | POLLHUP | POLLNVAL)) {
+                       fprintf(stderr, "%s: Unexpected poll revents %x\n",
+                                __func__, pf[0].revents);
+                       break;
+               }
+               assert(pf[0].revents & POLLIN);
+               if (se->debug)
+                       fprintf(stderr, "%s: Got VU event\n", __func__);
+               if (!vu_dispatch(&se->virtio_dev->dev)) {
+                       fprintf(stderr, "%s: vu_dispatch failed\n", __func__);
+                       break;
+               }
        }
 
        fprintf(stderr, "%s: Exit\n", __func__);
+
+       return 0;
 }
 
 int virtio_session_mount(struct fuse_session *se)
