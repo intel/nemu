@@ -30,6 +30,19 @@
 
 #include "contrib/libvhost-user/libvhost-user.h"
 
+#define container_of(ptr, type, member) ({                              \
+                        const typeof( ((type *)0)->member ) *__mptr = (ptr); \
+                        (type *)( (char *)__mptr - offsetof(type,member) );})
+
+struct fv_QueueInfo {
+        pthread_t thread;
+        struct fv_VuDev *virtio_dev;
+
+        /* Our queue index, corresponds to array position */
+        int       qidx;
+        int       kick_fd;
+};
+
 /* We pass the dev element into libvhost-user
  * and then use it to get back to the outer
  * container for other data.
@@ -37,6 +50,11 @@
 struct fv_VuDev {
         VuDev dev;
         struct fuse_session *se;
+
+        /* The following pair of fields are only accessed in the main
+         * virtio_loop */
+        size_t nqueues;
+        struct fv_QueueInfo **qi;
 };
 
 /* From spec */
@@ -80,6 +98,71 @@ static void fv_panic(VuDev *dev, const char *err)
         exit(EXIT_FAILURE);
 }
 
+static void *fv_queue_thread(void *opaque)
+{
+        struct fv_QueueInfo *qi = opaque;
+        fprintf(stderr, "%s: Start for queue %d kick_fd %d\n",
+                __func__, qi->qidx, qi->kick_fd);
+        while (1) {
+                /* TODO */
+        }
+
+        return NULL;
+}
+
+/* Callback from libvhost-user on start or stop of a queue */
+static void fv_queue_set_started(VuDev *dev, int qidx, bool started)
+{
+        struct fv_VuDev *vud = container_of(dev, struct fv_VuDev, dev);
+        struct fv_QueueInfo *ourqi;
+
+        fprintf(stderr, "%s: qidx=%d started=%d\n", __func__, qidx, started);
+        assert(qidx>=0);
+
+        if (qidx == 0) {
+                /* This is a notification queue for us to tell the guest things
+                 *  we don't expect
+                 * any incoming from the guest here.
+                 */
+                return;
+        }
+
+        if (started) {
+                /* Fire up a thread to watch this queue */
+                if (qidx >= vud->nqueues) {
+                        vud->qi = realloc(vud->qi, (qidx + 1) *
+                                                   sizeof(vud->qi[0]));
+                        assert(vud->qi);
+                        memset(vud->qi + vud->nqueues, 0,
+                               sizeof(vud->qi[0]) *
+                                 (1 + (qidx - vud->nqueues)));
+                        vud->nqueues = qidx + 1;
+                }
+                if (!vud->qi[qidx]) {
+                        vud->qi[qidx] = calloc(sizeof(struct fv_QueueInfo), 1);
+                        vud->qi[qidx]->virtio_dev = vud;
+                        vud->qi[qidx]->qidx = qidx;
+                        assert(vud->qi[qidx]);
+                } else {
+                        /* Shouldn't have been started */
+                        assert(vud->qi[qidx]->kick_fd == -1);
+                }
+                ourqi = vud->qi[qidx];
+                ourqi->kick_fd = dev->vq[qidx].kick_fd;
+                if (pthread_create(&ourqi->thread, NULL,  fv_queue_thread,
+                                   ourqi)) {
+                        fprintf(stderr, "%s: Failed to create thread for queue %d\n",
+                                __func__, qidx);
+                        assert(0);
+                }
+        } else {
+                /* TODO: Kill the thread */
+                assert(qidx < vud->nqueues);
+                ourqi = vud->qi[qidx];
+                ourqi->kick_fd = -1;
+        }
+}
+
 static bool fv_queue_order(VuDev *dev, int qidx)
 {
         return false;
@@ -88,6 +171,9 @@ static bool fv_queue_order(VuDev *dev, int qidx)
 static const VuDevIface fv_iface = {
         .get_features = fv_get_features,
         .set_features = fv_set_features,
+
+        /* Don't need process message, we've not got any at vhost-user level */
+        .queue_set_started = fv_queue_set_started,
 
         .queue_is_processed_in_order = fv_queue_order,
 };
