@@ -1978,6 +1978,15 @@ void fuse_session_process_buf(struct fuse_session *se,
  */
 int fuse_session_receive_buf(struct fuse_session *se, struct fuse_buf *buf);
 
+/**
+ * General utility to get the length of an iov, not Fuse specific
+ *
+ * @param iov The iovec to get the length of
+ * @param count Number of entries in the iovec
+ * @return the total length of iov in bytes
+ */
+size_t iov_length(const struct iovec *iov, size_t count);
+
 #ifdef __cplusplus
 }
 #endif

@@ -78,7 +78,7 @@ static void convert_attr(const struct fuse_setattr_in *attr, struct stat *stbuf)
 	ST_CTIM_NSEC_SET(stbuf, attr->ctimensec);
 }
 
-static	size_t iov_length(const struct iovec *iov, size_t count)
+size_t iov_length(const struct iovec *iov, size_t count)
 {
 	size_t seg;
 	size_t ret = 0;
