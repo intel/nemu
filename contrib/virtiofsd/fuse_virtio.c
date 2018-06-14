@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/eventfd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -98,13 +99,48 @@ static void fv_panic(VuDev *dev, const char *err)
         exit(EXIT_FAILURE);
 }
 
+/* Thread function for individual queues, created when a queue is 'started' */
 static void *fv_queue_thread(void *opaque)
 {
         struct fv_QueueInfo *qi = opaque;
         fprintf(stderr, "%s: Start for queue %d kick_fd %d\n",
                 __func__, qi->qidx, qi->kick_fd);
         while (1) {
-                /* TODO */
+               struct pollfd pf[1];
+               pf[0].fd = qi->kick_fd;
+               pf[0].events = POLLIN;
+               pf[0].revents = 0;
+
+               if (qi->virtio_dev->se->debug)
+                       fprintf(stderr, "%s: Waiting for Queue %d event\n", __func__, qi->qidx);
+               int poll_res = ppoll(pf, 1, NULL, NULL);
+
+               if (poll_res == -1) {
+                       if (errno == EINTR) {
+                               fprintf(stderr, "%s: ppoll interrupted, going around\n", __func__);
+                               continue;
+                       }
+                       perror("fv_queue_thread ppoll");
+                       break;
+               }
+               assert(poll_res == 1);
+               if (pf[0].revents & (POLLERR | POLLHUP | POLLNVAL)) {
+                       fprintf(stderr, "%s: Unexpected poll revents %x Queue %d\n",
+                                __func__, pf[0].revents, qi->qidx);
+                       break;
+               }
+               assert(pf[0].revents & POLLIN);
+               if (qi->virtio_dev->se->debug)
+                       fprintf(stderr, "%s: Got queue event on Queue %d\n", __func__, qi->qidx);
+
+               eventfd_t evalue;
+               if (eventfd_read(qi->kick_fd, &evalue)) {
+                       perror("Eventfd_read for queue");
+                       break;
+               }
+               if (qi->virtio_dev->se->debug)
+                       fprintf(stderr, "%s: Queue %d gave evalue: %zx\n",
+                               __func__, qi->qidx, (size_t)evalue);
         }
 
         return NULL;
