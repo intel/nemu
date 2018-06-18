@@ -38,6 +38,7 @@
 #include "hw/i386/apic_internal.h"
 #include "hw/i386/apic-msidef.h"
 #include "hw/i386/intel_iommu.h"
+#include "hw/i386/memory.h"
 #include "hw/i386/x86-iommu.h"
 
 #include "exec/ioport.h"
