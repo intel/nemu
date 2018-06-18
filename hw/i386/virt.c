@@ -20,11 +20,14 @@
 #include "sysemu/sysemu.h"
 #include "sysemu/cpus.h"
 #include "sysemu/numa.h"
+#include "hw/nmi.h"
 
 #include "hw/i386/virt.h"
 #include "hw/i386/topology.h"
 #include "hw/i386/amd_iommu.h"
 #include "hw/i386/intel_iommu.h"
+
+#include "cpu.h"
 
 #define DEFINE_VIRT_MACHINE_LATEST(major, minor, latest) \
     static void virt_##major##_##minor##_object_class_init(ObjectClass *oc, \
@@ -112,8 +115,27 @@ static void virt_machine_state_init(MachineState *machine)
 {
 }
 
+static void x86_nmi(NMIState *n, int cpu_index, Error **errp)
+{
+    CPUState *cs;
+
+    CPU_FOREACH(cs) {
+        X86CPU *cpu = X86_CPU(cs);
+
+        if (!cpu->apic_state) {
+            cpu_interrupt(cs, CPU_INTERRUPT_NMI);
+        } else {
+            apic_deliver_nmi(cpu->apic_state);
+        }
+    }
+}
+
 static void virt_class_init(ObjectClass *oc, void *data)
 {
+    NMIClass *nc = NMI_CLASS(oc);
+
+    /* NMI handler */
+    nc->nmi_monitor_handler = x86_nmi;
 }
 
 static const TypeInfo virt_machine_info = {
@@ -123,6 +145,10 @@ static const TypeInfo virt_machine_info = {
     .instance_size = sizeof(VirtMachineState),
     .class_size    = sizeof(VirtMachineClass),
     .class_init    = virt_class_init,
+    .interfaces = (InterfaceInfo[]) {
+         { TYPE_NMI },
+         { }
+    },
 };
 
 static void virt_machine_init(void)
