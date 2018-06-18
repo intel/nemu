@@ -108,6 +108,10 @@ static const CPUArchIdList *virt_possible_cpu_arch_ids(MachineState *ms)
     return ms->possible_cpus;
 }
 
+static void virt_machine_state_init(MachineState *machine)
+{
+}
+
 static void virt_class_init(ObjectClass *oc, void *data)
 {
 }
@@ -133,6 +137,8 @@ static void virt_2_12_instance_init(Object *obj)
 
 static void virt_machine_class_init(MachineClass *mc)
 {
+    mc->init = virt_machine_state_init;
+
     mc->family = "virt_i386";
     mc->desc = "Virtual i386 machine";
     mc->units_per_default_bus = 1;
