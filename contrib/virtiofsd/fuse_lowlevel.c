@@ -175,6 +175,10 @@ static int fuse_send_msg(struct fuse_session *se, struct fuse_chan *ch,
 		}
 	}
 
+        if (se->vu_socket_path) {
+                return virtio_send_msg(se, ch, iov, count);
+        }
+
         abort(); /* virtio should have taken it before here */
 	return 0;
 }
