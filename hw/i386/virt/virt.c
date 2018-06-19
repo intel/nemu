@@ -113,6 +113,11 @@ static const CPUArchIdList *virt_possible_cpu_arch_ids(MachineState *ms)
 
 static void virt_machine_state_init(MachineState *machine)
 {
+    //MemoryRegion *ram;
+    VirtMachineState *vms = VIRT_MACHINE(machine);
+
+    /* TODO Add the ram pointer to the QOM */
+    virt_memory_init(vms);
 }
 
 static void x86_nmi(NMIState *n, int cpu_index, Error **errp)
