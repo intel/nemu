@@ -39,4 +39,6 @@ typedef struct {
 #define VIRT_MACHINE_CLASS(class) \
     OBJECT_CLASS_CHECK(VirtMachineClass, class, TYPE_VIRT_MACHINE)
 
+MemoryRegion *virt_memory_init(VirtMachineState *vms);
+
 #endif
