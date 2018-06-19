@@ -23,6 +23,7 @@ obj-$(CONFIG_RASPI) += bcm2835_aux.o
 common-obj-$(CONFIG_CMSDK_APB_UART) += cmsdk-apb-uart.o
 common-obj-$(CONFIG_ETRAXFS) += etraxfs_ser.o
 common-obj-$(CONFIG_ISA_DEBUG) += debugcon.o
+common-obj-$(CONFIG_SYS_BUS_DEBUG) += sysbus_debugcon.o
 common-obj-$(CONFIG_GRLIB) += grlib_apbuart.o
 common-obj-$(CONFIG_IMX) += imx_serial.o
 common-obj-$(CONFIG_LM32) += lm32_juart.o
