@@ -22,6 +22,8 @@
 #include "sysemu/numa.h"
 #include "hw/nmi.h"
 
+#include "hw/kvm/clock.h"
+
 #include "hw/i386/virt.h"
 #include "hw/i386/topology.h"
 #include "hw/i386/amd_iommu.h"
@@ -118,6 +120,8 @@ static void virt_machine_state_init(MachineState *machine)
 
     /* TODO Add the ram pointer to the QOM */
     virt_memory_init(vms);
+
+    kvmclock_create();
 }
 
 static void x86_nmi(NMIState *n, int cpu_index, Error **errp)
