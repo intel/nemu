@@ -41,6 +41,7 @@
 #include "hw/kvm/clock.h"
 #include "hw/pci-host/q35.h"
 #include "exec/address-spaces.h"
+#include "hw/i386/cpu-internal.h"
 #include "hw/i386/pc.h"
 #include "hw/i386/ich9.h"
 #include "hw/i386/amd_iommu.h"
@@ -125,7 +126,7 @@ static void pc_q35_init(MachineState *machine)
         xen_hvm_init(pcms, &ram_memory);
     }
 
-    pc_cpus_init(pcms);
+    pcms->apic_id_limit = cpus_init(machine, compat_apic_id_mode);
 
     kvmclock_create();
 

@@ -25,6 +25,7 @@
 #include "qemu/osdep.h"
 #include "hw/hw.h"
 #include "hw/i386/pc.h"
+#include "hw/i386/cpu-internal.h"
 #include "hw/i386/memory.h"
 #include "hw/char/serial.h"
 #include "hw/char/parallel.h"
@@ -615,36 +616,11 @@ static void handle_a20_line_change(void *opaque, int irq, int level)
 }
 
 /* Enables contiguous-apic-ID mode, for compatibility */
-static bool compat_apic_id_mode;
+bool compat_apic_id_mode;
 
 void enable_compat_apic_id_mode(void)
 {
     compat_apic_id_mode = true;
-}
-
-/* Calculates initial APIC ID for a specific CPU index
- *
- * Currently we need to be able to calculate the APIC ID from the CPU index
- * alone (without requiring a CPU object), as the QEMU<->Seabios interfaces have
- * no concept of "CPU index", and the NUMA tables on fw_cfg need the APIC ID of
- * all CPUs up to max_cpus.
- */
-static uint32_t x86_cpu_apic_id_from_index(unsigned int cpu_index)
-{
-    uint32_t correct_id;
-    static bool warned;
-
-    correct_id = x86_apicid_from_cpu_idx(smp_cores, smp_threads, cpu_index);
-    if (compat_apic_id_mode) {
-        if (cpu_index != correct_id && !warned && !qtest_enabled()) {
-            error_report("APIC IDs set in compatibility mode, "
-                         "CPU topology won't match the configuration");
-            warned = true;
-        }
-        return cpu_index;
-    } else {
-        return correct_id;
-    }
 }
 
 static void pc_build_smbios(PCMachineState *pcms)
@@ -1034,67 +1010,6 @@ void pc_acpi_smi_interrupt(void *opaque, int irq, int level)
 
     if (level) {
         cpu_interrupt(CPU(cpu), CPU_INTERRUPT_SMI);
-    }
-}
-
-static void pc_new_cpu(const char *typename, int64_t apic_id, Error **errp)
-{
-    Object *cpu = NULL;
-    Error *local_err = NULL;
-
-    cpu = object_new(typename);
-
-    object_property_set_uint(cpu, apic_id, "apic-id", &local_err);
-    object_property_set_bool(cpu, true, "realized", &local_err);
-
-    object_unref(cpu);
-    error_propagate(errp, local_err);
-}
-
-void pc_hot_add_cpu(const int64_t id, Error **errp)
-{
-    MachineState *ms = MACHINE(qdev_get_machine());
-    int64_t apic_id = x86_cpu_apic_id_from_index(id);
-    Error *local_err = NULL;
-
-    if (id < 0) {
-        error_setg(errp, "Invalid CPU id: %" PRIi64, id);
-        return;
-    }
-
-    if (apic_id >= ACPI_CPU_HOTPLUG_ID_LIMIT) {
-        error_setg(errp, "Unable to add CPU: %" PRIi64
-                   ", resulting APIC ID (%" PRIi64 ") is too large",
-                   id, apic_id);
-        return;
-    }
-
-    pc_new_cpu(ms->cpu_type, apic_id, &local_err);
-    if (local_err) {
-        error_propagate(errp, local_err);
-        return;
-    }
-}
-
-void pc_cpus_init(PCMachineState *pcms)
-{
-    int i;
-    const CPUArchIdList *possible_cpus;
-    MachineState *ms = MACHINE(pcms);
-    MachineClass *mc = MACHINE_GET_CLASS(pcms);
-
-    /* Calculates the limit to CPU APIC ID values
-     *
-     * Limit for the APIC ID value, so that all
-     * CPU APIC IDs are < pcms->apic_id_limit.
-     *
-     * This is used for FW_CFG_MAX_CPUS. See comments on bochs_bios_init().
-     */
-    pcms->apic_id_limit = x86_cpu_apic_id_from_index(max_cpus - 1) + 1;
-    possible_cpus = mc->possible_cpu_arch_ids(ms);
-    for (i = 0; i < smp_cpus; i++) {
-        pc_new_cpu(possible_cpus->cpus[i].type, possible_cpus->cpus[i].arch_id,
-                   &error_fatal);
     }
 }
 
@@ -2208,60 +2123,6 @@ static void pc_machine_reset(void)
     }
 }
 
-static CpuInstanceProperties
-pc_cpu_index_to_props(MachineState *ms, unsigned cpu_index)
-{
-    MachineClass *mc = MACHINE_GET_CLASS(ms);
-    const CPUArchIdList *possible_cpus = mc->possible_cpu_arch_ids(ms);
-
-    assert(cpu_index < possible_cpus->len);
-    return possible_cpus->cpus[cpu_index].props;
-}
-
-static int64_t pc_get_default_cpu_node_id(const MachineState *ms, int idx)
-{
-   X86CPUTopoInfo topo;
-
-   assert(idx < ms->possible_cpus->len);
-   x86_topo_ids_from_apicid(ms->possible_cpus->cpus[idx].arch_id,
-                            smp_cores, smp_threads, &topo);
-   return topo.pkg_id % nb_numa_nodes;
-}
-
-static const CPUArchIdList *pc_possible_cpu_arch_ids(MachineState *ms)
-{
-    int i;
-
-    if (ms->possible_cpus) {
-        /*
-         * make sure that max_cpus hasn't changed since the first use, i.e.
-         * -smp hasn't been parsed after it
-        */
-        assert(ms->possible_cpus->len == max_cpus);
-        return ms->possible_cpus;
-    }
-
-    ms->possible_cpus = g_malloc0(sizeof(CPUArchIdList) +
-                                  sizeof(CPUArchId) * max_cpus);
-    ms->possible_cpus->len = max_cpus;
-    for (i = 0; i < ms->possible_cpus->len; i++) {
-        X86CPUTopoInfo topo;
-
-        ms->possible_cpus->cpus[i].type = ms->cpu_type;
-        ms->possible_cpus->cpus[i].vcpus_count = 1;
-        ms->possible_cpus->cpus[i].arch_id = x86_cpu_apic_id_from_index(i);
-        x86_topo_ids_from_apicid(ms->possible_cpus->cpus[i].arch_id,
-                                 smp_cores, smp_threads, &topo);
-        ms->possible_cpus->cpus[i].props.has_socket_id = true;
-        ms->possible_cpus->cpus[i].props.socket_id = topo.pkg_id;
-        ms->possible_cpus->cpus[i].props.has_core_id = true;
-        ms->possible_cpus->cpus[i].props.core_id = topo.core_id;
-        ms->possible_cpus->cpus[i].props.has_thread_id = true;
-        ms->possible_cpus->cpus[i].props.thread_id = topo.smt_id;
-    }
-    return ms->possible_cpus;
-}
-
 static void x86_nmi(NMIState *n, int cpu_index, Error **errp)
 {
     /* cpu index isn't used */
@@ -2301,13 +2162,13 @@ static void pc_machine_class_init(ObjectClass *oc, void *data)
     pcmc->save_tsc_khz = true;
     pcmc->linuxboot_dma_enabled = true;
     mc->get_hotplug_handler = pc_get_hotpug_handler;
-    mc->cpu_index_to_instance_props = pc_cpu_index_to_props;
-    mc->get_default_cpu_node_id = pc_get_default_cpu_node_id;
-    mc->possible_cpu_arch_ids = pc_possible_cpu_arch_ids;
+    mc->cpu_index_to_instance_props = cpu_index_to_props;
+    mc->get_default_cpu_node_id = cpu_get_default_cpu_node_id;
+    mc->possible_cpu_arch_ids = cpu_possible_cpu_arch_ids;
     mc->auto_enable_numa_with_memhp = true;
     mc->has_hotpluggable_cpus = true;
     mc->default_boot_order = "cad";
-    mc->hot_add_cpu = pc_hot_add_cpu;
+    mc->hot_add_cpu = cpu_hot_add;
     mc->block_default_type = IF_IDE;
     mc->max_cpus = 255;
     mc->reset = pc_machine_reset;
