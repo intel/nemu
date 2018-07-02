@@ -24,6 +24,7 @@
 
 #include "qemu/osdep.h"
 #include "hw/hw.h"
+#include "hw/i386/acpi.h"
 #include "hw/i386/pc.h"
 #include "hw/i386/cpu-internal.h"
 #include "hw/i386/memory.h"
@@ -1055,6 +1056,36 @@ static void rtc_set_cpus_count(ISADevice *rtc, uint16_t cpus_count)
     }
 }
 
+static void acpi_conf_pc_init(MachineState *machine, AcpiConfiguration *conf)
+{
+    PCMachineState *pcms = PC_MACHINE(machine);
+    PCMachineClass *pcmc = PC_MACHINE_GET_CLASS(machine);
+
+    if (!conf) {
+        error_report("The ACPI configuration structure must be allocated");
+        exit(EXIT_FAILURE);
+    }
+
+    /* Machine class settings */
+    conf->legacy_acpi_table_size = pcmc->legacy_acpi_table_size;
+    conf->legacy_cpu_hotplug = pcmc->legacy_cpu_hotplug;
+    conf->rsdp_in_ram = pcmc->rsdp_in_ram;
+
+    /* Machine state settings */
+    conf->fw_cfg = pcms->fw_cfg;
+    conf->acpi_dev = pcms->acpi_dev;
+    conf->below_4g_mem_size = pcms->below_4g_mem_size;
+    conf->numa_nodes = pcms->numa_nodes;
+    conf->node_mem = pcms->node_mem;
+    conf->apic_xrupt_override = pcms->apic_xrupt_override;
+    conf->apic_id_limit = pcms->apic_id_limit;
+    conf->acpi_nvdimm_state = pcms->acpi_nvdimm_state;
+    conf->hotplug_memory = pcms->hotplug_memory;
+
+    /* ACPI build state */
+    conf->build_state = NULL;
+}
+
 static
 void pc_machine_done(Notifier *notifier, void *data)
 {
@@ -1082,7 +1113,16 @@ void pc_machine_done(Notifier *notifier, void *data)
         }
     }
 
-    acpi_setup();
+    if (pcms->acpi_build_enabled) {
+        AcpiConfiguration *conf;
+
+        conf = g_malloc0(sizeof(*conf));
+        pcms->acpi_configuration = conf;
+
+        acpi_conf_pc_init(MACHINE(pcms), conf);
+        acpi_setup(MACHINE(pcms), conf);
+    }
+
     if (pcms->fw_cfg) {
         pc_build_smbios(pcms);
         pc_build_feature_control_file(pcms);
