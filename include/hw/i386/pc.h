@@ -8,6 +8,7 @@
 #include "hw/block/fdc.h"
 #include "net/net.h"
 #include "hw/i386/ioapic.h"
+#include "hw/i386/acpi.h"
 
 #include "qemu/range.h"
 #include "qemu/bitmap.h"
@@ -69,6 +70,9 @@ struct PCMachineState {
     /* Address space used by IOAPIC device. All IOAPIC interrupts
      * will be translated to MSI messages in the address space. */
     AddressSpace *ioapic_as;
+
+    /* ACPI configuration */
+    AcpiConfiguration *acpi_configuration;
 };
 
 #define PC_MACHINE_ACPI_DEVICE_PROP "acpi-device"
