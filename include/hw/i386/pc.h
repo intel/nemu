@@ -12,6 +12,7 @@
 #include "qemu/range.h"
 #include "qemu/bitmap.h"
 #include "sysemu/sysemu.h"
+#include "hw/acpi/acpi.h"
 #include "hw/pci/pci.h"
 #include "hw/compat.h"
 #include "hw/mem/pc-dimm.h"
@@ -35,10 +36,8 @@ struct PCMachineState {
     Notifier machine_done;
 
     /* Pointers to devices and objects: */
-    HotplugHandler *acpi_dev;
     ISADevice *rtc;
     PCIBus *bus;
-    FWCfgState *fw_cfg;
     qemu_irq *gsi;
 
     /* Configuration options: */
@@ -46,28 +45,20 @@ struct PCMachineState {
     OnOffAuto vmport;
     OnOffAuto smm;
 
-    AcpiNVDIMMState acpi_nvdimm_state;
-
     bool acpi_build_enabled;
     bool smbus;
     bool sata;
     bool pit;
 
-    /* RAM information (sizes, addresses, configuration): */
-    ram_addr_t below_4g_mem_size, above_4g_mem_size;
-
-    /* CPU and apic information: */
-    bool apic_xrupt_override;
-    unsigned apic_id_limit;
+    /* CPU information */
     uint16_t boot_cpus;
-
-    /* NUMA information: */
-    uint64_t numa_nodes;
-    uint64_t *node_mem;
 
     /* Address space used by IOAPIC device. All IOAPIC interrupts
      * will be translated to MSI messages in the address space. */
     AddressSpace *ioapic_as;
+
+    /* ACPI configuration */
+    AcpiConfiguration acpi_configuration;
 };
 
 #define PC_MACHINE_ACPI_DEVICE_PROP "acpi-device"

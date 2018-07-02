@@ -338,13 +338,14 @@ void pc_madt_cpu_entry(AcpiDeviceIf *adev, int uid,
 }
 
 static void
-build_madt(GArray *table_data, BIOSLinker *linker, PCMachineState *pcms)
+build_madt(GArray *table_data, BIOSLinker *linker,
+           MachineState *ms, AcpiConfiguration *conf)
 {
-    MachineClass *mc = MACHINE_GET_CLASS(pcms);
-    const CPUArchIdList *apic_ids = mc->possible_cpu_arch_ids(MACHINE(pcms));
+    MachineClass *mc = MACHINE_GET_CLASS(ms);
+    const CPUArchIdList *apic_ids = mc->possible_cpu_arch_ids(ms);
     int madt_start = table_data->len;
-    AcpiDeviceIfClass *adevc = ACPI_DEVICE_IF_GET_CLASS(pcms->acpi_dev);
-    AcpiDeviceIf *adev = ACPI_DEVICE_IF(pcms->acpi_dev);
+    AcpiDeviceIfClass *adevc = ACPI_DEVICE_IF_GET_CLASS(conf->acpi_dev);
+    AcpiDeviceIf *adev = ACPI_DEVICE_IF(conf->acpi_dev);
     bool x2apic_mode = false;
 
     AcpiMultipleApicTable *madt;
@@ -370,7 +371,7 @@ build_madt(GArray *table_data, BIOSLinker *linker, PCMachineState *pcms)
     io_apic->address = cpu_to_le32(IO_APIC_DEFAULT_ADDRESS);
     io_apic->interrupt = cpu_to_le32(0);
 
-    if (pcms->apic_xrupt_override) {
+    if (conf->apic_xrupt_override) {
         intsrcovr = acpi_data_push(table_data, sizeof *intsrcovr);
         intsrcovr->type   = ACPI_APIC_XRUPT_OVERRIDE;
         intsrcovr->length = sizeof(*intsrcovr);
@@ -1786,13 +1787,12 @@ static Aml *build_q35_osc_method(void)
 static void
 build_dsdt(GArray *table_data, BIOSLinker *linker,
            AcpiPmInfo *pm, AcpiMiscInfo *misc,
-           Range *pci_hole, Range *pci_hole64, MachineState *machine)
+           Range *pci_hole, Range *pci_hole64,
+           MachineState *machine, AcpiConfiguration *conf)
 {
     CrsRangeEntry *entry;
     Aml *dsdt, *sb_scope, *scope, *dev, *method, *field, *pkg, *crs;
     CrsRangeSet crs_range_set;
-    PCMachineState *pcms = PC_MACHINE(machine);
-    PCMachineClass *pcmc = PC_MACHINE_GET_CLASS(machine);
     uint32_t nr_mem = machine->ram_slots;
     int root_bus_limit = 0xFF;
     PCIBus *bus = NULL;
@@ -1836,7 +1836,7 @@ build_dsdt(GArray *table_data, BIOSLinker *linker,
         build_q35_pci0_int(dsdt);
     }
 
-    if (pcmc->legacy_cpu_hotplug) {
+    if (conf->legacy_cpu_hotplug) {
         build_legacy_cpu_hotplug_aml(dsdt, machine, pm->cpu_hp_io_base);
     } else {
         CPUHotplugFeatures opts = {
@@ -1860,7 +1860,7 @@ build_dsdt(GArray *table_data, BIOSLinker *linker,
             aml_append(scope, method);
         }
 
-        if (pcms->acpi_nvdimm_state.is_enabled) {
+        if (conf->acpi_nvdimm_state.is_enabled) {
             method = aml_method("_E04", 0, AML_NOTSERIALIZED);
             aml_append(method, aml_notify(aml_name("\\_SB.NVDR"),
                                           aml_int(0x80)));
@@ -2041,7 +2041,7 @@ build_dsdt(GArray *table_data, BIOSLinker *linker,
          * with half of the 16-bit control register. Hence, the total size
          * of the i/o region used is FW_CFG_CTL_SIZE; when using DMA, the
          * DMA control register is located at FW_CFG_DMA_IO_BASE + 4 */
-        uint8_t io_size = object_property_get_bool(OBJECT(pcms->fw_cfg),
+        uint8_t io_size = object_property_get_bool(OBJECT(conf->fw_cfg),
                                                    "dma_enabled", NULL) ?
                           ROUND_UP(FW_CFG_CTL_SIZE, 4) + sizeof(dma_addr_t) :
                           FW_CFG_CTL_SIZE;
@@ -2252,7 +2252,8 @@ build_tpm2(GArray *table_data, BIOSLinker *linker, GArray *tcpalog)
 #define HOLE_640K_END   (1 * MiB)
 
 static void
-build_srat(GArray *table_data, BIOSLinker *linker, MachineState *machine)
+build_srat(GArray *table_data, BIOSLinker *linker,
+           MachineState *machine, AcpiConfiguration *conf)
 {
     AcpiSystemResourceAffinityTable *srat;
     AcpiSratMemoryAffinity *numamem;
@@ -2262,9 +2263,8 @@ build_srat(GArray *table_data, BIOSLinker *linker, MachineState *machine)
     uint64_t mem_len, mem_base, next_base;
     MachineClass *mc = MACHINE_GET_CLASS(machine);
     const CPUArchIdList *apic_ids = mc->possible_cpu_arch_ids(machine);
-    PCMachineState *pcms = PC_MACHINE(machine);
     ram_addr_t hotplugabble_address_space_size =
-        object_property_get_int(OBJECT(pcms), PC_MACHINE_DEVMEM_REGION_SIZE,
+        object_property_get_int(OBJECT(machine), PC_MACHINE_DEVMEM_REGION_SIZE,
                                 NULL);
 
     srat_start = table_data->len;
@@ -2306,9 +2306,9 @@ build_srat(GArray *table_data, BIOSLinker *linker, MachineState *machine)
     next_base = 0;
     numa_start = table_data->len;
 
-    for (i = 1; i < pcms->numa_nodes + 1; ++i) {
+    for (i = 1; i < conf->numa_nodes + 1; ++i) {
         mem_base = next_base;
-        mem_len = pcms->node_mem[i - 1];
+        mem_len = conf->node_mem[i - 1];
         next_base = mem_base + mem_len;
 
         /* Cut out the 640K hole */
@@ -2331,16 +2331,16 @@ build_srat(GArray *table_data, BIOSLinker *linker, MachineState *machine)
         }
 
         /* Cut out the ACPI_PCI hole */
-        if (mem_base <= pcms->below_4g_mem_size &&
-            next_base > pcms->below_4g_mem_size) {
-            mem_len -= next_base - pcms->below_4g_mem_size;
+        if (mem_base <= conf->below_4g_mem_size &&
+            next_base > conf->below_4g_mem_size) {
+            mem_len -= next_base - conf->below_4g_mem_size;
             if (mem_len > 0) {
                 numamem = acpi_data_push(table_data, sizeof *numamem);
                 build_srat_memory(numamem, mem_base, mem_len, i - 1,
                                   MEM_AFFINITY_ENABLED);
             }
             mem_base = 1ULL << 32;
-            mem_len = next_base - pcms->below_4g_mem_size;
+            mem_len = next_base - conf->below_4g_mem_size;
             next_base = mem_base + mem_len;
         }
 
@@ -2351,7 +2351,7 @@ build_srat(GArray *table_data, BIOSLinker *linker, MachineState *machine)
         }
     }
     slots = (table_data->len - numa_start) / sizeof *numamem;
-    for (; slots < pcms->numa_nodes + 2; slots++) {
+    for (; slots < conf->numa_nodes + 2; slots++) {
         numamem = acpi_data_push(table_data, sizeof *numamem);
         build_srat_memory(numamem, 0, 0, 0, MEM_AFFINITY_NOFLAGS);
     }
@@ -2367,7 +2367,7 @@ build_srat(GArray *table_data, BIOSLinker *linker, MachineState *machine)
     if (hotplugabble_address_space_size) {
         numamem = acpi_data_push(table_data, sizeof *numamem);
         build_srat_memory(numamem, machine->device_memory->base,
-                          hotplugabble_address_space_size, pcms->numa_nodes - 1,
+                          hotplugabble_address_space_size, conf->numa_nodes - 1,
                           MEM_AFFINITY_HOTPLUGGABLE | MEM_AFFINITY_ENABLED);
     }
 
@@ -2546,17 +2546,6 @@ build_rsdp(GArray *rsdp_table, BIOSLinker *linker, unsigned rsdt_tbl_offset)
     return rsdp_table;
 }
 
-typedef
-struct AcpiBuildState {
-    /* Copy of table in RAM (for patching). */
-    MemoryRegion *table_mr;
-    /* Is table patched? */
-    uint8_t patched;
-    void *rsdp;
-    MemoryRegion *rsdp_mr;
-    MemoryRegion *linker_mr;
-} AcpiBuildState;
-
 static bool acpi_get_mcfg(AcpiMcfgInfo *mcfg)
 {
     Object *pci_host;
@@ -2580,10 +2569,9 @@ static bool acpi_get_mcfg(AcpiMcfgInfo *mcfg)
 }
 
 static
-void acpi_build(AcpiBuildTables *tables, MachineState *machine)
+void acpi_build(AcpiBuildTables *tables,
+                MachineState *machine, AcpiConfiguration *conf)
 {
-    PCMachineState *pcms = PC_MACHINE(machine);
-    PCMachineClass *pcmc = PC_MACHINE_GET_CLASS(pcms);
     GArray *table_offsets;
     unsigned facs, dsdt, rsdt, fadt;
     AcpiPmInfo pm;
@@ -2621,7 +2609,7 @@ void acpi_build(AcpiBuildTables *tables, MachineState *machine)
     /* DSDT is pointed to by FADT */
     dsdt = tables_blob->len;
     build_dsdt(tables_blob, tables->linker, &pm, &misc,
-               &pci_hole, &pci_hole64, machine);
+               &pci_hole, &pci_hole64, machine, conf);
 
     /* Count the size of the DSDT and SSDT, we will need it for legacy
      * sizing of ACPI tables.
@@ -2639,7 +2627,7 @@ void acpi_build(AcpiBuildTables *tables, MachineState *machine)
     aml_len += tables_blob->len - fadt;
 
     acpi_add_table(table_offsets, tables_blob);
-    build_madt(tables_blob, tables->linker, pcms);
+    build_madt(tables_blob, tables->linker, machine, conf);
 
     vmgenid_dev = find_vmgenid_dev();
     if (vmgenid_dev) {
@@ -2661,9 +2649,9 @@ void acpi_build(AcpiBuildTables *tables, MachineState *machine)
             build_tpm2(tables_blob, tables->linker, tables->tcpalog);
         }
     }
-    if (pcms->numa_nodes) {
+    if (conf->numa_nodes) {
         acpi_add_table(table_offsets, tables_blob);
-        build_srat(tables_blob, tables->linker, machine);
+        build_srat(tables_blob, tables->linker, machine, conf);
         if (have_numa_distance) {
             acpi_add_table(table_offsets, tables_blob);
             build_slit(tables_blob, tables->linker);
@@ -2683,9 +2671,9 @@ void acpi_build(AcpiBuildTables *tables, MachineState *machine)
             build_dmar_q35(tables_blob, tables->linker);
         }
     }
-    if (pcms->acpi_nvdimm_state.is_enabled) {
+    if (conf->acpi_nvdimm_state.is_enabled) {
         nvdimm_build_acpi(table_offsets, tables_blob, tables->linker,
-                          &pcms->acpi_nvdimm_state, machine->ram_slots);
+                          &conf->acpi_nvdimm_state, machine->ram_slots);
     }
 
     /* Add tables supplied by user (if any) */
@@ -2721,13 +2709,13 @@ void acpi_build(AcpiBuildTables *tables, MachineState *machine)
      *
      * All this is for PIIX4, since QEMU 2.0 didn't support Q35 migration.
      */
-    if (pcmc->legacy_acpi_table_size) {
+    if (conf->legacy_acpi_table_size) {
         /* Subtracting aml_len gives the size of fixed tables.  Then add the
          * size of the PIIX4 DSDT/SSDT in QEMU 2.0.
          */
         int legacy_aml_len =
-            pcmc->legacy_acpi_table_size +
-            ACPI_BUILD_LEGACY_CPU_AML_SIZE * pcms->apic_id_limit;
+            conf->legacy_acpi_table_size +
+            ACPI_BUILD_LEGACY_CPU_AML_SIZE * conf->apic_id_limit;
         int legacy_table_size =
             ROUND_UP(tables_blob->len - aml_len + legacy_aml_len,
                      ACPI_BUILD_ALIGN_SIZE);
@@ -2772,8 +2760,16 @@ static void acpi_ram_update(MemoryRegion *mr, GArray *data)
 
 static void acpi_build_update(void *build_opaque)
 {
-    AcpiBuildState *build_state = build_opaque;
+    AcpiConfiguration *conf = build_opaque;
+    AcpiBuildState *build_state;
     AcpiBuildTables tables;
+
+    /* No ACPI configuration? Nothing to do. */
+    if (!conf) {
+        return;
+    }
+
+    build_state = conf->build_state;
 
     /* No state to update or already patched? Nothing to do. */
     if (!build_state || build_state->patched) {
@@ -2783,7 +2779,7 @@ static void acpi_build_update(void *build_opaque)
 
     acpi_build_tables_init(&tables);
 
-    acpi_build(&tables, MACHINE(qdev_get_machine()));
+    acpi_build(&tables, MACHINE(qdev_get_machine()), conf);
 
     acpi_ram_update(build_state->table_mr, tables.table_data);
 
@@ -2803,12 +2799,12 @@ static void acpi_build_reset(void *build_opaque)
     build_state->patched = 0;
 }
 
-static MemoryRegion *acpi_add_rom_blob(AcpiBuildState *build_state,
+static MemoryRegion *acpi_add_rom_blob(AcpiConfiguration *conf,
                                        GArray *blob, const char *name,
                                        uint64_t max_size)
 {
     return rom_add_blob(name, blob->data, acpi_data_len(blob), max_size, -1,
-                        name, acpi_build_update, build_state, NULL, true);
+                        name, acpi_build_update, conf, NULL, true);
 }
 
 static const VMStateDescription vmstate_acpi_build = {
@@ -2816,59 +2812,48 @@ static const VMStateDescription vmstate_acpi_build = {
     .version_id = 1,
     .minimum_version_id = 1,
     .fields = (VMStateField[]) {
-        VMSTATE_UINT8(patched, AcpiBuildState),
+        VMSTATE_BOOL(patched, AcpiBuildState),
         VMSTATE_END_OF_LIST()
     },
 };
 
-void acpi_setup(void)
+void acpi_setup(MachineState *machine, AcpiConfiguration *conf)
 {
-    PCMachineState *pcms = PC_MACHINE(qdev_get_machine());
-    PCMachineClass *pcmc = PC_MACHINE_GET_CLASS(pcms);
     AcpiBuildTables tables;
     AcpiBuildState *build_state;
     Object *vmgenid_dev;
 
-    if (!pcms->fw_cfg) {
-        ACPI_BUILD_DPRINTF("No fw cfg. Bailing out.\n");
-        return;
-    }
-
-    if (!pcms->acpi_build_enabled) {
-        ACPI_BUILD_DPRINTF("ACPI build disabled. Bailing out.\n");
-        return;
-    }
-
-    if (!acpi_enabled) {
-        ACPI_BUILD_DPRINTF("ACPI disabled. Bailing out.\n");
+    if (!conf) {
+        ACPI_BUILD_DPRINTF("No ACPI config. Bailing out.\n");
         return;
     }
 
     build_state = g_malloc0(sizeof *build_state);
+    conf->build_state = build_state;
 
     acpi_build_tables_init(&tables);
-    acpi_build(&tables, MACHINE(pcms));
+    acpi_build(&tables, machine, conf);
 
     /* Now expose it all to Guest */
-    build_state->table_mr = acpi_add_rom_blob(build_state, tables.table_data,
+    build_state->table_mr = acpi_add_rom_blob(conf, tables.table_data,
                                                ACPI_BUILD_TABLE_FILE,
                                                ACPI_BUILD_TABLE_MAX_SIZE);
     assert(build_state->table_mr != NULL);
 
     build_state->linker_mr =
-        acpi_add_rom_blob(build_state, tables.linker->cmd_blob,
+        acpi_add_rom_blob(conf, tables.linker->cmd_blob,
                           "etc/table-loader", 0);
 
-    fw_cfg_add_file(pcms->fw_cfg, ACPI_BUILD_TPMLOG_FILE,
+    fw_cfg_add_file(conf->fw_cfg, ACPI_BUILD_TPMLOG_FILE,
                     tables.tcpalog->data, acpi_data_len(tables.tcpalog));
 
     vmgenid_dev = find_vmgenid_dev();
     if (vmgenid_dev) {
-        vmgenid_add_fw_cfg(VMGENID(vmgenid_dev), pcms->fw_cfg,
+        vmgenid_add_fw_cfg(VMGENID(vmgenid_dev), conf->fw_cfg,
                            tables.vmgenid);
     }
 
-    if (!pcmc->rsdp_in_ram) {
+    if (!conf->rsdp_in_ram) {
         /*
          * Keep for compatibility with old machine types.
          * Though RSDP is small, its contents isn't immutable, so
@@ -2877,13 +2862,13 @@ void acpi_setup(void)
         uint32_t rsdp_size = acpi_data_len(tables.rsdp);
 
         build_state->rsdp = g_memdup(tables.rsdp->data, rsdp_size);
-        fw_cfg_add_file_callback(pcms->fw_cfg, ACPI_BUILD_RSDP_FILE,
-                                 acpi_build_update, NULL, build_state,
+        fw_cfg_add_file_callback(conf->fw_cfg, ACPI_BUILD_RSDP_FILE,
+                                 acpi_build_update, NULL, conf,
                                  build_state->rsdp, rsdp_size, true);
         build_state->rsdp_mr = NULL;
     } else {
         build_state->rsdp = NULL;
-        build_state->rsdp_mr = acpi_add_rom_blob(build_state, tables.rsdp,
+        build_state->rsdp_mr = acpi_add_rom_blob(conf, tables.rsdp,
                                                   ACPI_BUILD_RSDP_FILE, 0);
     }
 

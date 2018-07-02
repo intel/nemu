@@ -790,16 +790,6 @@ build_dsdt(GArray *table_data, BIOSLinker *linker, VirtMachineState *vms)
     free_aml_allocator();
 }
 
-typedef
-struct AcpiBuildState {
-    /* Copy of table in RAM (for patching). */
-    MemoryRegion *table_mr;
-    MemoryRegion *rsdp_mr;
-    MemoryRegion *linker_mr;
-    /* Is table patched? */
-    bool patched;
-} AcpiBuildState;
-
 static
 void virt_acpi_build(VirtMachineState *vms, AcpiBuildTables *tables)
 {

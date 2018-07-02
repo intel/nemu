@@ -71,6 +71,7 @@ static void pc_init1(MachineState *machine,
 {
     PCMachineState *pcms = PC_MACHINE(machine);
     PCMachineClass *pcmc = PC_MACHINE_GET_CLASS(pcms);
+    AcpiConfiguration *conf = &pcms->acpi_configuration;
     MemoryRegion *system_memory = get_system_memory();
     MemoryRegion *system_io = get_system_io();
     int i;
@@ -142,11 +143,11 @@ static void pc_init1(MachineState *machine,
         }
 
         if (machine->ram_size >= lowmem) {
-            pcms->above_4g_mem_size = machine->ram_size - lowmem;
-            pcms->below_4g_mem_size = lowmem;
+            conf->above_4g_mem_size = machine->ram_size - lowmem;
+            conf->below_4g_mem_size = lowmem;
         } else {
-            pcms->above_4g_mem_size = 0;
-            pcms->below_4g_mem_size = machine->ram_size;
+            conf->above_4g_mem_size = 0;
+            conf->below_4g_mem_size = machine->ram_size;
         }
     }
 
@@ -199,8 +200,8 @@ static void pc_init1(MachineState *machine,
                               pci_type,
                               &i440fx_state, &piix3_devfn, &isa_bus, pcms->gsi,
                               system_memory, system_io, machine->ram_size,
-                              pcms->below_4g_mem_size,
-                              pcms->above_4g_mem_size,
+                              conf->below_4g_mem_size,
+                              conf->above_4g_mem_size,
                               pci_memory, ram_memory);
         pcms->bus = pci_bus;
     } else {
@@ -289,16 +290,16 @@ static void pc_init1(MachineState *machine,
 
         object_property_add_link(OBJECT(machine), PC_MACHINE_ACPI_DEVICE_PROP,
                                  TYPE_HOTPLUG_HANDLER,
-                                 (Object **)&pcms->acpi_dev,
+                                 (Object **)&conf->acpi_dev,
                                  object_property_allow_set_link,
                                  OBJ_PROP_LINK_STRONG, &error_abort);
         object_property_set_link(OBJECT(machine), OBJECT(piix4_pm),
                                  PC_MACHINE_ACPI_DEVICE_PROP, &error_abort);
     }
 
-    if (pcms->acpi_nvdimm_state.is_enabled) {
-        nvdimm_init_acpi_state(&pcms->acpi_nvdimm_state, system_io,
-                               pcms->fw_cfg, OBJECT(pcms));
+    if (conf->acpi_nvdimm_state.is_enabled) {
+        nvdimm_init_acpi_state(&conf->acpi_nvdimm_state, system_io,
+                               conf->fw_cfg, OBJECT(pcms));
     }
 }
 
