@@ -63,6 +63,7 @@ static void pc_q35_init(MachineState *machine)
 {
     PCMachineState *pcms = PC_MACHINE(machine);
     PCMachineClass *pcmc = PC_MACHINE_GET_CLASS(pcms);
+    AcpiConfiguration *conf = &pcms->acpi_configuration;
     Q35PCIHost *q35_host;
     PCIHostState *phb;
     PCIBus *host_bus;
@@ -116,11 +117,11 @@ static void pc_q35_init(MachineState *machine)
     }
 
     if (machine->ram_size >= lowmem) {
-        pcms->above_4g_mem_size = machine->ram_size - lowmem;
-        pcms->below_4g_mem_size = lowmem;
+        conf->above_4g_mem_size = machine->ram_size - lowmem;
+        conf->below_4g_mem_size = lowmem;
     } else {
-        pcms->above_4g_mem_size = 0;
-        pcms->below_4g_mem_size = machine->ram_size;
+        conf->above_4g_mem_size = 0;
+        conf->below_4g_mem_size = machine->ram_size;
     }
 
     if (xen_enabled()) {
@@ -179,9 +180,9 @@ static void pc_q35_init(MachineState *machine)
                              MCH_HOST_PROP_SYSTEM_MEM, NULL);
     object_property_set_link(OBJECT(q35_host), OBJECT(system_io),
                              MCH_HOST_PROP_IO_MEM, NULL);
-    object_property_set_int(OBJECT(q35_host), pcms->below_4g_mem_size,
+    object_property_set_int(OBJECT(q35_host), conf->below_4g_mem_size,
                             PCI_HOST_BELOW_4G_MEM_SIZE, NULL);
-    object_property_set_int(OBJECT(q35_host), pcms->above_4g_mem_size,
+    object_property_set_int(OBJECT(q35_host), conf->above_4g_mem_size,
                             PCI_HOST_ABOVE_4G_MEM_SIZE, NULL);
     /* pci */
     qdev_init_nofail(DEVICE(q35_host));
@@ -194,7 +195,7 @@ static void pc_q35_init(MachineState *machine)
 
     object_property_add_link(OBJECT(machine), PC_MACHINE_ACPI_DEVICE_PROP,
                              TYPE_HOTPLUG_HANDLER,
-                             (Object **)&pcms->acpi_dev,
+                             (Object **)&conf->acpi_dev,
                              object_property_allow_set_link,
                              OBJ_PROP_LINK_STRONG, &error_abort);
     object_property_set_link(OBJECT(machine), OBJECT(lpc),
@@ -276,9 +277,9 @@ static void pc_q35_init(MachineState *machine)
     pc_vga_init(isa_bus, host_bus);
     pc_nic_init(pcmc, isa_bus, host_bus);
 
-    if (pcms->acpi_nvdimm_state.is_enabled) {
-        nvdimm_init_acpi_state(&pcms->acpi_nvdimm_state, system_io,
-                               pcms->fw_cfg, OBJECT(pcms));
+    if (conf->acpi_nvdimm_state.is_enabled) {
+        nvdimm_init_acpi_state(&conf->acpi_nvdimm_state, system_io,
+                               conf->fw_cfg, OBJECT(pcms));
     }
 }
 

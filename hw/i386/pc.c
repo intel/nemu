@@ -444,17 +444,18 @@ void pc_cmos_init(PCMachineState *pcms,
 {
     int val;
     static pc_cmos_init_late_arg arg;
+    AcpiConfiguration *conf = &pcms->acpi_configuration;
 
     /* various important CMOS locations needed by PC/Bochs bios */
 
     /* memory size */
     /* base memory (first MiB) */
-    val = MIN(pcms->below_4g_mem_size / KiB, 640);
+    val = MIN(conf->below_4g_mem_size / KiB, 640);
     rtc_set_memory(s, 0x15, val);
     rtc_set_memory(s, 0x16, val >> 8);
     /* extended memory (next 64MiB) */
-    if (pcms->below_4g_mem_size > 1 * MiB) {
-        val = (pcms->below_4g_mem_size - 1 * MiB) / KiB;
+    if (conf->below_4g_mem_size > 1 * MiB) {
+        val = (conf->below_4g_mem_size - 1 * MiB) / KiB;
     } else {
         val = 0;
     }
@@ -465,8 +466,8 @@ void pc_cmos_init(PCMachineState *pcms,
     rtc_set_memory(s, 0x30, val);
     rtc_set_memory(s, 0x31, val >> 8);
     /* memory between 16MiB and 4GiB */
-    if (pcms->below_4g_mem_size > 16 * MiB) {
-        val = (pcms->below_4g_mem_size - 16 * MiB) / (64 * KiB);
+    if (conf->below_4g_mem_size > 16 * MiB) {
+        val = (conf->below_4g_mem_size - 16 * MiB) / (64 * KiB);
     } else {
         val = 0;
     }
@@ -475,7 +476,7 @@ void pc_cmos_init(PCMachineState *pcms,
     rtc_set_memory(s, 0x34, val);
     rtc_set_memory(s, 0x35, val >> 8);
     /* memory above 4GiB */
-    val = pcms->above_4g_mem_size / 65536;
+    val = conf->above_4g_mem_size / 65536;
     rtc_set_memory(s, 0x5b, val);
     rtc_set_memory(s, 0x5c, val >> 8);
     rtc_set_memory(s, 0x5d, val >> 16);
@@ -714,13 +715,14 @@ static void pc_build_smbios(PCMachineState *pcms)
     unsigned i, array_count;
     MachineState *ms = MACHINE(pcms);
     X86CPU *cpu = X86_CPU(ms->possible_cpus->cpus[0].cpu);
+    AcpiConfiguration *conf = &pcms->acpi_configuration;
 
     /* tell smbios about cpuid version and features */
     smbios_set_cpuid(cpu->env.cpuid_version, cpu->env.features[FEAT_1_EDX]);
 
     smbios_tables = smbios_get_table_legacy(&smbios_tables_len);
     if (smbios_tables) {
-        fw_cfg_add_bytes(pcms->fw_cfg, FW_CFG_SMBIOS_ENTRIES,
+        fw_cfg_add_bytes(conf->fw_cfg, FW_CFG_SMBIOS_ENTRIES,
                          smbios_tables, smbios_tables_len);
     }
 
@@ -741,9 +743,9 @@ static void pc_build_smbios(PCMachineState *pcms)
     g_free(mem_array);
 
     if (smbios_anchor) {
-        fw_cfg_add_file(pcms->fw_cfg, "etc/smbios/smbios-tables",
+        fw_cfg_add_file(conf->fw_cfg, "etc/smbios/smbios-tables",
                         smbios_tables, smbios_tables_len);
-        fw_cfg_add_file(pcms->fw_cfg, "etc/smbios/smbios-anchor",
+        fw_cfg_add_file(conf->fw_cfg, "etc/smbios/smbios-anchor",
                         smbios_anchor, smbios_anchor_len);
     }
 }
@@ -755,6 +757,7 @@ static FWCfgState *bochs_bios_init(AddressSpace *as, PCMachineState *pcms)
     int i;
     const CPUArchIdList *cpus;
     MachineClass *mc = MACHINE_GET_CLASS(pcms);
+    AcpiConfiguration *conf = &pcms->acpi_configuration;
 
     fw_cfg = fw_cfg_init_io_dma(FW_CFG_IO_BASE, FW_CFG_IO_BASE + 4, as);
     fw_cfg_add_i16(fw_cfg, FW_CFG_NB_CPUS, pcms->boot_cpus);
@@ -771,7 +774,7 @@ static FWCfgState *bochs_bios_init(AddressSpace *as, PCMachineState *pcms)
      * So for compatibility reasons with old BIOSes we are stuck with
      * "etc/max-cpus" actually being apic_id_limit
      */
-    fw_cfg_add_i16(fw_cfg, FW_CFG_MAX_CPUS, (uint16_t)pcms->apic_id_limit);
+    fw_cfg_add_i16(fw_cfg, FW_CFG_MAX_CPUS, (uint16_t)conf->apic_id_limit);
     fw_cfg_add_i64(fw_cfg, FW_CFG_RAM_SIZE, (uint64_t)ram_size);
     fw_cfg_add_bytes(fw_cfg, FW_CFG_ACPI_TABLES,
                      acpi_tables, acpi_tables_len);
@@ -787,20 +790,20 @@ static FWCfgState *bochs_bios_init(AddressSpace *as, PCMachineState *pcms)
      * of nodes, one word for each VCPU->node and one word for each node to
      * hold the amount of memory.
      */
-    numa_fw_cfg = g_new0(uint64_t, 1 + pcms->apic_id_limit + nb_numa_nodes);
+    numa_fw_cfg = g_new0(uint64_t, 1 + conf->apic_id_limit + nb_numa_nodes);
     numa_fw_cfg[0] = cpu_to_le64(nb_numa_nodes);
     cpus = mc->possible_cpu_arch_ids(MACHINE(pcms));
     for (i = 0; i < cpus->len; i++) {
         unsigned int apic_id = cpus->cpus[i].arch_id;
-        assert(apic_id < pcms->apic_id_limit);
+        assert(apic_id < conf->apic_id_limit);
         numa_fw_cfg[apic_id + 1] = cpu_to_le64(cpus->cpus[i].props.node_id);
     }
     for (i = 0; i < nb_numa_nodes; i++) {
-        numa_fw_cfg[pcms->apic_id_limit + 1 + i] =
+        numa_fw_cfg[conf->apic_id_limit + 1 + i] =
             cpu_to_le64(numa_info[i].node_mem);
     }
     fw_cfg_add_bytes(fw_cfg, FW_CFG_NUMA, numa_fw_cfg,
-                     (1 + pcms->apic_id_limit + nb_numa_nodes) *
+                     (1 + conf->apic_id_limit + nb_numa_nodes) *
                      sizeof(*numa_fw_cfg));
 
     return fw_cfg;
@@ -848,6 +851,7 @@ static void load_linux(PCMachineState *pcms,
     char *vmode;
     MachineState *machine = MACHINE(pcms);
     PCMachineClass *pcmc = PC_MACHINE_GET_CLASS(pcms);
+    AcpiConfiguration *conf = &pcms->acpi_configuration;
     struct setup_data *setup_data;
     const char *kernel_filename = machine->kernel_filename;
     const char *initrd_filename = machine->initrd_filename;
@@ -917,8 +921,8 @@ static void load_linux(PCMachineState *pcms,
         initrd_max = 0x37ffffff;
     }
 
-    if (initrd_max >= pcms->below_4g_mem_size - pcmc->acpi_data_size) {
-        initrd_max = pcms->below_4g_mem_size - pcmc->acpi_data_size - 1;
+    if (initrd_max >= conf->below_4g_mem_size - pcmc->acpi_data_size) {
+        initrd_max = conf->below_4g_mem_size - pcmc->acpi_data_size - 1;
     }
 
     fw_cfg_add_i32(fw_cfg, FW_CFG_CMDLINE_ADDR, cmdline_addr);
@@ -1154,7 +1158,8 @@ void pc_cpus_init(PCMachineState *pcms)
      *
      * This is used for FW_CFG_MAX_CPUS. See comments on bochs_bios_init().
      */
-    pcms->apic_id_limit = x86_cpu_apic_id_from_index(max_cpus - 1) + 1;
+    pcms->acpi_configuration.apic_id_limit =
+        x86_cpu_apic_id_from_index(max_cpus - 1) + 1;
     possible_cpus = mc->possible_cpu_arch_ids(ms);
     for (i = 0; i < smp_cpus; i++) {
         pc_new_cpu(possible_cpus->cpus[i].type, possible_cpus->cpus[i].arch_id,
@@ -1188,7 +1193,8 @@ static void pc_build_feature_control_file(PCMachineState *pcms)
 
     val = g_malloc(sizeof(*val));
     *val = cpu_to_le64(feature_control_bits | FEATURE_CONTROL_LOCKED);
-    fw_cfg_add_file(pcms->fw_cfg, "etc/msr_feature_control", val, sizeof(*val));
+    fw_cfg_add_file(pcms->acpi_configuration.fw_cfg,
+                    "etc/msr_feature_control", val, sizeof(*val));
 }
 
 static void rtc_set_cpus_count(ISADevice *rtc, uint16_t cpus_count)
@@ -1204,11 +1210,27 @@ static void rtc_set_cpus_count(ISADevice *rtc, uint16_t cpus_count)
     }
 }
 
+static void acpi_conf_pc_init(MachineState *machine)
+{
+    PCMachineState *pcms = PC_MACHINE(machine);
+    PCMachineClass *pcmc = PC_MACHINE_GET_CLASS(machine);
+    AcpiConfiguration *conf = &pcms->acpi_configuration;
+
+    /* Machine class settings */
+    conf->legacy_acpi_table_size = pcmc->legacy_acpi_table_size;
+    conf->legacy_cpu_hotplug = pcmc->legacy_cpu_hotplug;
+    conf->rsdp_in_ram = pcmc->rsdp_in_ram;
+
+    /* ACPI build state */
+    conf->build_state = NULL;
+}
+
 static
 void pc_machine_done(Notifier *notifier, void *data)
 {
     PCMachineState *pcms = container_of(notifier,
                                         PCMachineState, machine_done);
+    AcpiConfiguration *conf = &pcms->acpi_configuration;
     PCIBus *bus = pcms->bus;
 
     /* set the number of CPUs */
@@ -1223,23 +1245,27 @@ void pc_machine_done(Notifier *notifier, void *data)
                 extra_hosts++;
             }
         }
-        if (extra_hosts && pcms->fw_cfg) {
+        if (extra_hosts && conf->fw_cfg) {
             uint64_t *val = g_malloc(sizeof(*val));
             *val = cpu_to_le64(extra_hosts);
-            fw_cfg_add_file(pcms->fw_cfg,
+            fw_cfg_add_file(conf->fw_cfg,
                     "etc/extra-pci-roots", val, sizeof(*val));
         }
     }
 
-    acpi_setup();
-    if (pcms->fw_cfg) {
+    if (pcms->acpi_build_enabled) {
+        acpi_conf_pc_init(MACHINE(pcms));
+        acpi_setup(MACHINE(pcms), conf);
+    }
+
+    if (conf->fw_cfg) {
         pc_build_smbios(pcms);
         pc_build_feature_control_file(pcms);
         /* update FW_CFG_NB_CPUS to account for -device added CPUs */
-        fw_cfg_modify_i16(pcms->fw_cfg, FW_CFG_NB_CPUS, pcms->boot_cpus);
+        fw_cfg_modify_i16(conf->fw_cfg, FW_CFG_NB_CPUS, pcms->boot_cpus);
     }
 
-    if (pcms->apic_id_limit > 255 && !xen_enabled()) {
+    if (conf->apic_id_limit > 255 && !xen_enabled()) {
         IntelIOMMUState *iommu = INTEL_IOMMU_DEVICE(x86_iommu_get_default());
 
         if (!iommu || !iommu->x86_iommu.intr_supported ||
@@ -1256,13 +1282,14 @@ void pc_machine_done(Notifier *notifier, void *data)
 void pc_guest_info_init(PCMachineState *pcms)
 {
     int i;
+    AcpiConfiguration *conf = &pcms->acpi_configuration;
 
-    pcms->apic_xrupt_override = kvm_allows_irq0_override();
-    pcms->numa_nodes = nb_numa_nodes;
-    pcms->node_mem = g_malloc0(pcms->numa_nodes *
-                                    sizeof *pcms->node_mem);
+    conf->apic_xrupt_override = kvm_allows_irq0_override();
+    conf->numa_nodes = nb_numa_nodes;
+    conf->node_mem = g_malloc0(conf->numa_nodes *
+                                    sizeof *conf->node_mem);
     for (i = 0; i < nb_numa_nodes; i++) {
-        pcms->node_mem[i] = numa_info[i].node_mem;
+        conf->node_mem[i] = numa_info[i].node_mem;
     }
 
     pcms->machine_done.notify = pc_machine_done;
@@ -1323,7 +1350,7 @@ void xen_load_linux(PCMachineState *pcms)
                !strcmp(option_rom[i].name, "multiboot.bin"));
         rom_add_option(option_rom[i].name, option_rom[i].bootindex);
     }
-    pcms->fw_cfg = fw_cfg;
+    pcms->acpi_configuration.fw_cfg = fw_cfg;
 }
 
 void pc_memory_init(PCMachineState *pcms,
@@ -1337,9 +1364,10 @@ void pc_memory_init(PCMachineState *pcms,
     FWCfgState *fw_cfg;
     MachineState *machine = MACHINE(pcms);
     PCMachineClass *pcmc = PC_MACHINE_GET_CLASS(pcms);
+    AcpiConfiguration *conf = &pcms->acpi_configuration;
 
-    assert(machine->ram_size == pcms->below_4g_mem_size +
-                                pcms->above_4g_mem_size);
+    assert(machine->ram_size == conf->below_4g_mem_size +
+                                conf->above_4g_mem_size);
 
     linux_boot = (machine->kernel_filename != NULL);
 
@@ -1353,17 +1381,17 @@ void pc_memory_init(PCMachineState *pcms,
     *ram_memory = ram;
     ram_below_4g = g_malloc(sizeof(*ram_below_4g));
     memory_region_init_alias(ram_below_4g, NULL, "ram-below-4g", ram,
-                             0, pcms->below_4g_mem_size);
+                             0, conf->below_4g_mem_size);
     memory_region_add_subregion(system_memory, 0, ram_below_4g);
-    e820_add_entry(0, pcms->below_4g_mem_size, E820_RAM);
-    if (pcms->above_4g_mem_size > 0) {
+    e820_add_entry(0, conf->below_4g_mem_size, E820_RAM);
+    if (conf->above_4g_mem_size > 0) {
         ram_above_4g = g_malloc(sizeof(*ram_above_4g));
         memory_region_init_alias(ram_above_4g, NULL, "ram-above-4g", ram,
-                                 pcms->below_4g_mem_size,
-                                 pcms->above_4g_mem_size);
+                                 conf->below_4g_mem_size,
+                                 conf->above_4g_mem_size);
         memory_region_add_subregion(system_memory, 0x100000000ULL,
                                     ram_above_4g);
-        e820_add_entry(0x100000000ULL, pcms->above_4g_mem_size, E820_RAM);
+        e820_add_entry(0x100000000ULL, conf->above_4g_mem_size, E820_RAM);
     }
 
     if (!pcmc->has_reserved_memory &&
@@ -1398,7 +1426,7 @@ void pc_memory_init(PCMachineState *pcms,
         }
 
         machine->device_memory->base =
-            ROUND_UP(0x100000000ULL + pcms->above_4g_mem_size, 1 * GiB);
+            ROUND_UP(0x100000000ULL + conf->above_4g_mem_size, 1 * GiB);
 
         if (pcmc->enforce_aligned_dimm) {
             /* size device region assuming 1G page max alignment per slot */
@@ -1455,7 +1483,7 @@ void pc_memory_init(PCMachineState *pcms,
     for (i = 0; i < nb_option_roms; i++) {
         rom_add_option(option_rom[i].name, option_rom[i].bootindex);
     }
-    pcms->fw_cfg = fw_cfg;
+    conf->fw_cfg = fw_cfg;
 
     /* Init default IOAPIC address space */
     pcms->ioapic_as = &address_space_memory;
@@ -1478,7 +1506,8 @@ uint64_t pc_pci_hole64_start(void)
             hole64_start += memory_region_size(&ms->device_memory->mr);
         }
     } else {
-        hole64_start = 0x100000000ULL + pcms->above_4g_mem_size;
+        hole64_start =
+            0x100000000ULL + pcms->acpi_configuration.above_4g_mem_size;
     }
 
     return ROUND_UP(hole64_start, 1 * GiB);
@@ -1685,21 +1714,22 @@ static void pc_memory_pre_plug(HotplugHandler *hotplug_dev, DeviceState *dev,
 {
     const PCMachineState *pcms = PC_MACHINE(hotplug_dev);
     const PCMachineClass *pcmc = PC_MACHINE_GET_CLASS(pcms);
+    const AcpiConfiguration *conf = &pcms->acpi_configuration;
     const bool is_nvdimm = object_dynamic_cast(OBJECT(dev), TYPE_NVDIMM);
     const uint64_t legacy_align = TARGET_PAGE_SIZE;
 
     /*
      * When -no-acpi is used with Q35 machine type, no ACPI is built,
-     * but pcms->acpi_dev is still created. Check !acpi_enabled in
+     * but acpi_dev is still created. Check !acpi_enabled in
      * addition to cover this case.
      */
-    if (!pcms->acpi_dev || !acpi_enabled) {
+    if (!conf->acpi_dev || !acpi_enabled) {
         error_setg(errp,
                    "memory hotplug is not enabled: missing acpi device or acpi disabled");
         return;
     }
 
-    if (is_nvdimm && !pcms->acpi_nvdimm_state.is_enabled) {
+    if (is_nvdimm && !conf->acpi_nvdimm_state.is_enabled) {
         error_setg(errp, "nvdimm is not enabled: missing 'nvdimm' in '-M'");
         return;
     }
@@ -1715,6 +1745,7 @@ static void pc_memory_plug(HotplugHandler *hotplug_dev,
     Error *local_err = NULL;
     PCMachineState *pcms = PC_MACHINE(hotplug_dev);
     bool is_nvdimm = object_dynamic_cast(OBJECT(dev), TYPE_NVDIMM);
+    AcpiConfiguration *conf = &pcms->acpi_configuration;
 
     pc_dimm_plug(PC_DIMM(dev), MACHINE(pcms), &local_err);
     if (local_err) {
@@ -1722,11 +1753,11 @@ static void pc_memory_plug(HotplugHandler *hotplug_dev,
     }
 
     if (is_nvdimm) {
-        nvdimm_plug(&pcms->acpi_nvdimm_state);
+        nvdimm_plug(&conf->acpi_nvdimm_state);
     }
 
-    hhc = HOTPLUG_HANDLER_GET_CLASS(pcms->acpi_dev);
-    hhc->plug(HOTPLUG_HANDLER(pcms->acpi_dev), dev, &error_abort);
+    hhc = HOTPLUG_HANDLER_GET_CLASS(conf->acpi_dev);
+    hhc->plug(HOTPLUG_HANDLER(conf->acpi_dev), dev, &error_abort);
 out:
     error_propagate(errp, local_err);
 }
@@ -1737,13 +1768,14 @@ static void pc_memory_unplug_request(HotplugHandler *hotplug_dev,
     HotplugHandlerClass *hhc;
     Error *local_err = NULL;
     PCMachineState *pcms = PC_MACHINE(hotplug_dev);
+    AcpiConfiguration *conf = &pcms->acpi_configuration;
 
     /*
      * When -no-acpi is used with Q35 machine type, no ACPI is built,
-     * but pcms->acpi_dev is still created. Check !acpi_enabled in
+     * but acpi_dev is still created. Check !acpi_enabled in
      * addition to cover this case.
      */
-    if (!pcms->acpi_dev || !acpi_enabled) {
+    if (!conf->acpi_dev || !acpi_enabled) {
         error_setg(&local_err,
                    "memory hotplug is not enabled: missing acpi device or acpi disabled");
         goto out;
@@ -1755,8 +1787,8 @@ static void pc_memory_unplug_request(HotplugHandler *hotplug_dev,
         goto out;
     }
 
-    hhc = HOTPLUG_HANDLER_GET_CLASS(pcms->acpi_dev);
-    hhc->unplug_request(HOTPLUG_HANDLER(pcms->acpi_dev), dev, &local_err);
+    hhc = HOTPLUG_HANDLER_GET_CLASS(conf->acpi_dev);
+    hhc->unplug_request(HOTPLUG_HANDLER(conf->acpi_dev), dev, &local_err);
 
 out:
     error_propagate(errp, local_err);
@@ -1766,11 +1798,12 @@ static void pc_memory_unplug(HotplugHandler *hotplug_dev,
                              DeviceState *dev, Error **errp)
 {
     PCMachineState *pcms = PC_MACHINE(hotplug_dev);
+    AcpiConfiguration *conf = &pcms->acpi_configuration;
     HotplugHandlerClass *hhc;
     Error *local_err = NULL;
 
-    hhc = HOTPLUG_HANDLER_GET_CLASS(pcms->acpi_dev);
-    hhc->unplug(HOTPLUG_HANDLER(pcms->acpi_dev), dev, &local_err);
+    hhc = HOTPLUG_HANDLER_GET_CLASS(conf->acpi_dev);
+    hhc->unplug(HOTPLUG_HANDLER(conf->acpi_dev), dev, &local_err);
 
     if (local_err) {
         goto out;
@@ -1817,10 +1850,11 @@ static void pc_cpu_plug(HotplugHandler *hotplug_dev,
     Error *local_err = NULL;
     X86CPU *cpu = X86_CPU(dev);
     PCMachineState *pcms = PC_MACHINE(hotplug_dev);
+    AcpiConfiguration *conf = &pcms->acpi_configuration;
 
-    if (pcms->acpi_dev) {
-        hhc = HOTPLUG_HANDLER_GET_CLASS(pcms->acpi_dev);
-        hhc->plug(HOTPLUG_HANDLER(pcms->acpi_dev), dev, &local_err);
+    if (conf->acpi_dev) {
+        hhc = HOTPLUG_HANDLER_GET_CLASS(conf->acpi_dev);
+        hhc->plug(HOTPLUG_HANDLER(conf->acpi_dev), dev, &local_err);
         if (local_err) {
             goto out;
         }
@@ -1831,8 +1865,8 @@ static void pc_cpu_plug(HotplugHandler *hotplug_dev,
     if (pcms->rtc) {
         rtc_set_cpus_count(pcms->rtc, pcms->boot_cpus);
     }
-    if (pcms->fw_cfg) {
-        fw_cfg_modify_i16(pcms->fw_cfg, FW_CFG_NB_CPUS, pcms->boot_cpus);
+    if (conf->fw_cfg) {
+        fw_cfg_modify_i16(conf->fw_cfg, FW_CFG_NB_CPUS, pcms->boot_cpus);
     }
 
     found_cpu = pc_find_cpu_slot(MACHINE(pcms), cpu->apic_id, NULL);
@@ -1848,8 +1882,9 @@ static void pc_cpu_unplug_request_cb(HotplugHandler *hotplug_dev,
     Error *local_err = NULL;
     X86CPU *cpu = X86_CPU(dev);
     PCMachineState *pcms = PC_MACHINE(hotplug_dev);
+    AcpiConfiguration *conf = &pcms->acpi_configuration;
 
-    if (!pcms->acpi_dev) {
+    if (!conf->acpi_dev) {
         error_setg(&local_err, "CPU hot unplug not supported without ACPI");
         goto out;
     }
@@ -1861,8 +1896,8 @@ static void pc_cpu_unplug_request_cb(HotplugHandler *hotplug_dev,
         goto out;
     }
 
-    hhc = HOTPLUG_HANDLER_GET_CLASS(pcms->acpi_dev);
-    hhc->unplug_request(HOTPLUG_HANDLER(pcms->acpi_dev), dev, &local_err);
+    hhc = HOTPLUG_HANDLER_GET_CLASS(conf->acpi_dev);
+    hhc->unplug_request(HOTPLUG_HANDLER(conf->acpi_dev), dev, &local_err);
 
     if (local_err) {
         goto out;
@@ -1881,9 +1916,10 @@ static void pc_cpu_unplug_cb(HotplugHandler *hotplug_dev,
     Error *local_err = NULL;
     X86CPU *cpu = X86_CPU(dev);
     PCMachineState *pcms = PC_MACHINE(hotplug_dev);
+    AcpiConfiguration *conf = &pcms->acpi_configuration;
 
-    hhc = HOTPLUG_HANDLER_GET_CLASS(pcms->acpi_dev);
-    hhc->unplug(HOTPLUG_HANDLER(pcms->acpi_dev), dev, &local_err);
+    hhc = HOTPLUG_HANDLER_GET_CLASS(conf->acpi_dev);
+    hhc->unplug(HOTPLUG_HANDLER(conf->acpi_dev), dev, &local_err);
 
     if (local_err) {
         goto out;
@@ -1897,7 +1933,7 @@ static void pc_cpu_unplug_cb(HotplugHandler *hotplug_dev,
     pcms->boot_cpus--;
     /* Update the number of CPUs in CMOS */
     rtc_set_cpus_count(pcms->rtc, pcms->boot_cpus);
-    fw_cfg_modify_i16(pcms->fw_cfg, FW_CFG_NB_CPUS, pcms->boot_cpus);
+    fw_cfg_modify_i16(conf->fw_cfg, FW_CFG_NB_CPUS, pcms->boot_cpus);
  out:
     error_propagate(errp, local_err);
 }
@@ -2181,28 +2217,30 @@ static bool pc_machine_get_nvdimm(Object *obj, Error **errp)
 {
     PCMachineState *pcms = PC_MACHINE(obj);
 
-    return pcms->acpi_nvdimm_state.is_enabled;
+    return pcms->acpi_configuration.acpi_nvdimm_state.is_enabled;
 }
 
 static void pc_machine_set_nvdimm(Object *obj, bool value, Error **errp)
 {
     PCMachineState *pcms = PC_MACHINE(obj);
+    AcpiConfiguration *conf = &pcms->acpi_configuration;
 
-    pcms->acpi_nvdimm_state.is_enabled = value;
+    conf->acpi_nvdimm_state.is_enabled = value;
 }
 
 static char *pc_machine_get_nvdimm_persistence(Object *obj, Error **errp)
 {
     PCMachineState *pcms = PC_MACHINE(obj);
+    AcpiConfiguration *conf = &pcms->acpi_configuration;
 
-    return g_strdup(pcms->acpi_nvdimm_state.persistence_string);
+    return g_strdup(conf->acpi_nvdimm_state.persistence_string);
 }
 
 static void pc_machine_set_nvdimm_persistence(Object *obj, const char *value,
                                                Error **errp)
 {
     PCMachineState *pcms = PC_MACHINE(obj);
-    AcpiNVDIMMState *nvdimm_state = &pcms->acpi_nvdimm_state;
+    AcpiNVDIMMState *nvdimm_state = &pcms->acpi_configuration.acpi_nvdimm_state;
 
     if (strcmp(value, "cpu") == 0)
         nvdimm_state->persistence = 3;
@@ -2268,7 +2306,7 @@ static void pc_machine_initfn(Object *obj)
     pcms->smm = ON_OFF_AUTO_AUTO;
     pcms->vmport = ON_OFF_AUTO_AUTO;
     /* nvdimm is disabled on default. */
-    pcms->acpi_nvdimm_state.is_enabled = false;
+    pcms->acpi_configuration.acpi_nvdimm_state.is_enabled = false;
     /* acpi build is enabled by default if machine supports it */
     pcms->acpi_build_enabled = PC_MACHINE_GET_CLASS(pcms)->has_acpi_build;
     pcms->smbus = true;

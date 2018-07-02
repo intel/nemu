@@ -24,6 +24,8 @@
 #include "exec/memory.h"
 #include "hw/irq.h"
 #include "hw/acpi/acpi_dev_interface.h"
+#include "hw/hotplug.h"
+#include "hw/mem/nvdimm.h"
 
 /*
  * current device naming scheme supports up to 256 memory devices
@@ -185,6 +187,47 @@ void acpi_update_sci(ACPIREGS *acpi_regs, qemu_irq irq);
 extern int acpi_enabled;
 extern char unsigned *acpi_tables;
 extern size_t acpi_tables_len;
+
+typedef
+struct AcpiBuildState {
+    /* Copy of table in RAM (for patching). */
+    MemoryRegion *table_mr;
+    /* Is table patched? */
+    bool patched;
+    void *rsdp;
+    MemoryRegion *rsdp_mr;
+    MemoryRegion *linker_mr;
+} AcpiBuildState;
+
+typedef
+struct AcpiConfiguration {
+    /* Machine class ACPI settings */
+    int legacy_acpi_table_size;
+    bool rsdp_in_ram;
+    unsigned acpi_data_size;
+
+    /* Machine state ACPI settings */
+    HotplugHandler *acpi_dev;
+    AcpiNVDIMMState acpi_nvdimm_state;
+
+    /*
+     * The fields below are machine settings that
+     * are not ACPI specific. However they are needed
+     * for building ACPI tables and as such should be
+     * carried through the ACPI configuration structure.
+     */
+    bool legacy_cpu_hotplug;
+    bool linuxboot_dma_enabled;
+    FWCfgState *fw_cfg;
+    ram_addr_t below_4g_mem_size, above_4g_mem_size;;
+    uint64_t numa_nodes;
+    uint64_t *node_mem;
+    bool apic_xrupt_override;
+    unsigned apic_id_limit;
+
+    /* Build state */
+    AcpiBuildState *build_state;
+} AcpiConfiguration;
 
 uint8_t *acpi_table_first(void);
 uint8_t *acpi_table_next(uint8_t *current);
