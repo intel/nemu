@@ -41,6 +41,9 @@ typedef struct {
 
     /* ACPI configuration */
     AcpiConfiguration *acpi_configuration;
+
+    /* Devices and objects */
+    FWCfgState *fw_cfg;
 } VirtMachineState;
 
 #define TYPE_VIRT_MACHINE   MACHINE_TYPE_NAME("virt")
