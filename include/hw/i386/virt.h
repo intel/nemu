@@ -21,7 +21,9 @@
 #include "qemu-common.h"
 #include "exec/hwaddr.h"
 #include "qemu/notify.h"
+
 #include "hw/boards.h"
+#include "hw/i386/acpi.h"
 
 typedef struct {
     MachineClass parent;
@@ -30,6 +32,15 @@ typedef struct {
 typedef struct {
     MachineState parent;
     unsigned apic_id_limit;
+
+    Notifier machine_done;
+
+    /* NUMA information: */
+    uint64_t numa_nodes;
+    uint64_t *node_mem;
+
+    /* ACPI configuration */
+    AcpiConfiguration *acpi_configuration;
 } VirtMachineState;
 
 #define TYPE_VIRT_MACHINE   MACHINE_TYPE_NAME("virt")
