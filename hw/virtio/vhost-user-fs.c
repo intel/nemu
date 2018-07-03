@@ -196,6 +196,22 @@ static void vuf_device_realize(DeviceState *dev, Error **errp)
                    VIRTQUEUE_MAX_SIZE);
         return;
     }
+    if (!is_power_of_2(fs->conf.cache_size) ||
+        fs->conf.cache_size < sysconf(_SC_PAGESIZE)) {
+        error_setg(errp, "cache-size property must be a power of 2 "
+                         "no smaller than the page size");
+        return;
+    }
+    /* We need a region with some host memory, 'ram' is the easiest */
+    memory_region_init_ram_nomigrate(&fs->cache, OBJECT(vdev),
+                       "virtio-fs-cache",
+                       fs->conf.cache_size, NULL);
+    /*
+     * But we don't actually want anyone reading/writing the raw
+     * area with no cache data.
+     */
+    mprotect(memory_region_get_ram_ptr(&fs->cache), fs->conf.cache_size,
+             PROT_NONE);
 
     if (!vhost_user_init(&fs->vhost_user, &fs->conf.chardev, errp)) {
         return;
@@ -257,6 +273,7 @@ static Property vuf_properties[] = {
     DEFINE_PROP_UINT16("num-queues", VHostUserFS, conf.num_queues, 1),
     DEFINE_PROP_UINT16("queue-size", VHostUserFS, conf.queue_size, 128),
     DEFINE_PROP_STRING("vhostfd", VHostUserFS, conf.vhostfd),
+    DEFINE_PROP_SIZE("cache-size", VHostUserFS, conf.cache_size, 1ull << 30),
     DEFINE_PROP_END_OF_LIST(),
 };
 
