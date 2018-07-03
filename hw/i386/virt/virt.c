@@ -126,7 +126,7 @@ static void virt_machine_state_init(MachineState *machine)
 
     vms->apic_id_limit = cpus_init(machine, false);
 
-    fw_cfg = fw_cfg_init(smp_cpus, mc->possible_cpu_arch_ids(machine), vms->apic_id_limit);
+    fw_cfg = fw_cfg_init(machine, smp_cpus, mc->possible_cpu_arch_ids(machine), vms->apic_id_limit);
     rom_set_fw(fw_cfg);
     vms->fw_cfg = fw_cfg;
 
