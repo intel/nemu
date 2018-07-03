@@ -16,6 +16,7 @@
  */
 
 #include "qemu/osdep.h"
+#include "qemu/error-report.h"
 #include "qapi/error.h"
 #include "sysemu/sysemu.h"
 #include "sysemu/cpus.h"
@@ -25,12 +26,16 @@
 #include "hw/kvm/clock.h"
 
 #include "hw/i386/virt.h"
+#include "hw/i386/acpi.h"
 #include "hw/i386/cpu-internal.h"
 #include "hw/i386/topology.h"
 #include "hw/i386/amd_iommu.h"
 #include "hw/i386/intel_iommu.h"
 
 #include "cpu.h"
+#include "kvm_i386.h"
+
+#include "../acpi-build.h"
 
 #define DEFINE_VIRT_MACHINE_LATEST(major, minor, latest) \
     static void virt_##major##_##minor##_object_class_init(ObjectClass *oc, \
@@ -60,10 +65,56 @@
 #define DEFINE_VIRT_MACHINE(major, minor) \
     DEFINE_VIRT_MACHINE_LATEST(major, minor, false)
 
+static void acpi_conf_virt_init(MachineState *machine, AcpiConfiguration *conf)
+{
+    VirtMachineState *vms = VIRT_MACHINE(machine);
+
+    if (!conf) {
+        error_report("The ACPI configuration structure must be allocated");
+        exit(EXIT_FAILURE);
+    }
+
+    conf->legacy_acpi_table_size = 0;
+    conf->legacy_cpu_hotplug = false;
+    conf->rsdp_in_ram = true;
+    conf->apic_xrupt_override = kvm_allows_irq0_override();
+
+    /* TODO: fw_cfg, lowmem, acpi_dev, acpi_nvdimm, hotplug_memory */
+    conf->numa_nodes = vms->numa_nodes;
+    conf->node_mem = vms->node_mem;
+    conf->apic_id_limit = vms->apic_id_limit;
+}
+
+static void virt_machine_done(Notifier *notifier, void *data)
+{
+    VirtMachineState *vms = container_of(notifier,
+                                          VirtMachineState, machine_done);
+    AcpiConfiguration *conf;
+
+    conf = g_malloc0(sizeof(*conf));
+    vms->acpi_configuration = conf;
+
+    acpi_conf_virt_init(MACHINE(vms), conf);
+    acpi_setup(MACHINE(vms), conf);
+}
+
 static void virt_machine_state_init(MachineState *machine)
 {
+    int i;
+
     //MemoryRegion *ram;
     VirtMachineState *vms = VIRT_MACHINE(machine);
+
+    /* NUMA stuff */
+    vms->numa_nodes = nb_numa_nodes;
+    vms->node_mem = g_malloc0(nb_numa_nodes *
+                              sizeof *vms->node_mem);
+    for (i = 0; i < nb_numa_nodes; i++) {
+        vms->node_mem[i] = numa_info[i].node_mem;
+    }
+
+    vms->machine_done.notify = virt_machine_done;
+    qemu_add_machine_init_done_notifier(&vms->machine_done);
 
     /* TODO Add the ram pointer to the QOM */
     virt_memory_init(vms);
