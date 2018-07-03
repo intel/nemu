@@ -21,6 +21,8 @@
 #include "sysemu/sysemu.h"
 #include "sysemu/cpus.h"
 #include "sysemu/numa.h"
+
+#include "hw/loader.h"
 #include "hw/nmi.h"
 
 #include "hw/kvm/clock.h"
@@ -28,6 +30,7 @@
 #include "hw/i386/virt.h"
 #include "hw/i386/acpi.h"
 #include "hw/i386/cpu-internal.h"
+#include "hw/i386/fw.h"
 #include "hw/i386/topology.h"
 #include "hw/i386/amd_iommu.h"
 #include "hw/i386/intel_iommu.h"
@@ -79,7 +82,8 @@ static void acpi_conf_virt_init(MachineState *machine, AcpiConfiguration *conf)
     conf->rsdp_in_ram = true;
     conf->apic_xrupt_override = kvm_allows_irq0_override();
 
-    /* TODO: fw_cfg, lowmem, acpi_dev, acpi_nvdimm, hotplug_memory */
+    /* TODO: lowmem, acpi_dev, acpi_nvdimm, hotplug_memory */
+    conf->fw_cfg = vms->fw_cfg;
     conf->numa_nodes = vms->numa_nodes;
     conf->node_mem = vms->node_mem;
     conf->apic_id_limit = vms->apic_id_limit;
@@ -101,8 +105,9 @@ static void virt_machine_done(Notifier *notifier, void *data)
 static void virt_machine_state_init(MachineState *machine)
 {
     int i;
-
+    FWCfgState *fw_cfg;
     //MemoryRegion *ram;
+    MachineClass *mc = MACHINE_GET_CLASS(machine);
     VirtMachineState *vms = VIRT_MACHINE(machine);
 
     /* NUMA stuff */
@@ -120,6 +125,10 @@ static void virt_machine_state_init(MachineState *machine)
     virt_memory_init(vms);
 
     vms->apic_id_limit = cpus_init(machine, false);
+
+    fw_cfg = fw_cfg_init(smp_cpus, mc->possible_cpu_arch_ids(machine), vms->apic_id_limit);
+    rom_set_fw(fw_cfg);
+    vms->fw_cfg = fw_cfg;
 
     kvmclock_create();
 }
