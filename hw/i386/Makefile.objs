@@ -10,4 +10,4 @@ obj-$(CONFIG_VMPORT) += vmport.o
 obj-$(CONFIG_VMMOUSE) += vmmouse.o
 
 obj-y += kvmvapic.o
-obj-y += acpi-build.o
+obj-y += acpi-build.o acpi-link.o

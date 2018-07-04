@@ -897,8 +897,10 @@ void nvdimm_init_acpi_state(AcpiNVDIMMState *state, MemoryRegion *io,
 
     state->dsm_mem = g_array_new(false, true /* clear */, 1);
     acpi_data_push(state->dsm_mem, sizeof(NvdimmDsmIn));
-    fw_cfg_add_file(fw_cfg, NVDIMM_DSM_MEM_FILE, state->dsm_mem->data,
-                    state->dsm_mem->len);
+    if (fw_cfg) {
+        fw_cfg_add_file(fw_cfg, NVDIMM_DSM_MEM_FILE, state->dsm_mem->data,
+                        state->dsm_mem->len);
+    }
 
     nvdimm_init_fit_buffer(&state->fit_buf);
 }
