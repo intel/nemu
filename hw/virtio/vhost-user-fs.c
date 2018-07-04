@@ -24,20 +24,147 @@
 int vhost_user_fs_slave_map(struct vhost_dev *dev, VhostUserFSSlaveMsg *sm,
                             int fd)
 {
-    /* TODO */
-    return -1;
+    VHostUserFS *fs = VHOST_USER_FS(dev->vdev);
+    if (!fs) {
+        /* Shouldn't happen - but has a habit of doing when things are failing */
+        fprintf(stderr, "%s: Bad fs ptr\n", __func__);
+        return -1;
+    }
+    size_t cache_size = fs->conf.cache_size;
+    void *cache_host = memory_region_get_ram_ptr(&fs->cache);
+
+    unsigned int i;
+    int res = 0;
+
+    if (fd < 0) {
+        fprintf(stderr, "%s: Bad fd for map\n", __func__);
+        return -1;
+    }
+
+    for (i = 0; i < VHOST_USER_FS_SLAVE_ENTRIES; i++) {
+        if (sm->len[i] == 0) {
+            continue;
+        }
+
+        if ((sm->c_offset[i] + sm->len[i]) < sm->len[i] ||
+            (sm->c_offset[i] + sm->len[i]) > cache_size) {
+            fprintf(stderr, "%s: Bad offset/len for map [%d] %"
+                            PRIx64 "+%" PRIx64 "\n", __func__,
+                            i, sm->c_offset[i], sm->len[i]);
+            res = -1;
+            break;
+        }
+
+        if (mmap(cache_host + sm->c_offset[i], sm->len[i],
+                 ((sm->flags[i] & VHOST_USER_FS_FLAG_MAP_R) ? PROT_READ : 0) |
+                 ((sm->flags[i] & VHOST_USER_FS_FLAG_MAP_W) ? PROT_WRITE : 0),
+                 MAP_SHARED | MAP_FIXED,
+                 fd, sm->fd_offset[i]) != (cache_host + sm->c_offset[i])) {
+            fprintf(stderr, "%s: map failed err %d [%d] %"
+                            PRIx64 "+%" PRIx64 " from %" PRIx64 "\n", __func__,
+                            errno, i, sm->c_offset[i], sm->len[i],
+                            sm->fd_offset[i]);
+            res = -1;
+            break;
+        }
+    }
+
+    if (res) {
+        /* Something went wrong, unmap them all */
+        vhost_user_fs_slave_unmap(dev, sm);
+    }
+    return res;
 }
 
 int vhost_user_fs_slave_unmap(struct vhost_dev *dev, VhostUserFSSlaveMsg *sm)
 {
-    /* TODO */
-    return -1;
+    VHostUserFS *fs = VHOST_USER_FS(dev->vdev);
+    if (!fs) {
+        /* Shouldn't happen - but has a habit of doing when things are failing */
+        fprintf(stderr, "%s: Bad fs ptr\n", __func__);
+        return -1;
+    }
+    size_t cache_size = fs->conf.cache_size;
+    void *cache_host = memory_region_get_ram_ptr(&fs->cache);
+
+    unsigned int i;
+    int res = 0;
+
+    /* Note even if one unmap fails we try the rest, since the effect
+     * is to clean up as much as possible.
+     */
+    for (i = 0; i < VHOST_USER_FS_SLAVE_ENTRIES; i++) {
+        void *ptr;
+        if (sm->len[i] == 0) {
+            continue;
+        }
+
+        if (sm->len[i] == ~(uint64_t)0) {
+            /* Special case meaning the whole arena */
+            sm->len[i] = cache_size;
+        }
+
+        if ((sm->c_offset[i] + sm->len[i]) < sm->len[i] ||
+            (sm->c_offset[i] + sm->len[i]) > cache_size) {
+            fprintf(stderr, "%s: Bad offset/len for unmap [%d] %"
+                            PRIx64 "+%" PRIx64 "\n", __func__,
+                            i, sm->c_offset[i], sm->len[i]);
+            res = -1;
+            continue;
+        }
+
+        ptr = mmap(cache_host + sm->c_offset[i], sm->len[i],
+                PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
+        if (ptr != (cache_host + sm->c_offset[i])) {
+            fprintf(stderr, "%s: mmap failed (%s) [%d] %"
+                            PRIx64 "+%" PRIx64 " from %" PRIx64 " res: %p\n",
+                            __func__,
+                            strerror(errno),
+                            i, sm->c_offset[i], sm->len[i],
+                            sm->fd_offset[i], ptr);
+            res = -1;
+        }
+    }
+
+    return res;
 }
 
 int vhost_user_fs_slave_sync(struct vhost_dev *dev, VhostUserFSSlaveMsg *sm)
 {
-    /* TODO */
-    return -1;
+    VHostUserFS *fs = VHOST_USER_FS(dev->vdev);
+    size_t cache_size = fs->conf.cache_size;
+    void *cache_host = memory_region_get_ram_ptr(&fs->cache);
+
+    unsigned int i;
+    int res = 0;
+
+    /* Note even if one sync fails we try the rest */
+    for (i = 0; i < VHOST_USER_FS_SLAVE_ENTRIES; i++) {
+        if (sm->len[i] == 0) {
+            continue;
+        }
+
+        if ((sm->c_offset[i] + sm->len[i]) < sm->len[i] ||
+            (sm->c_offset[i] + sm->len[i]) > cache_size) {
+            fprintf(stderr, "%s: Bad offset/len for sync [%d] %"
+                            PRIx64 "+%" PRIx64 "\n", __func__,
+                            i, sm->c_offset[i], sm->len[i]);
+            res = -1;
+            continue;
+        }
+
+        if (msync(cache_host + sm->c_offset[i], sm->len[i],
+                  MS_SYNC /* ?? */)) {
+            fprintf(stderr, "%s: msync failed (%s) [%d] %"
+                            PRIx64 "+%" PRIx64 " from %" PRIx64 "\n", __func__,
+                            strerror(errno),
+                            i, sm->c_offset[i], sm->len[i],
+                            sm->fd_offset[i]);
+            res = -1;
+        }
+    }
+
+    return res;
 }
 
 
