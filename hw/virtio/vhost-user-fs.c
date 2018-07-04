@@ -21,6 +21,26 @@
 #include "hw/virtio/vhost-user-fs.h"
 #include "monitor/monitor.h"
 
+int vhost_user_fs_slave_map(struct vhost_dev *dev, VhostUserFSSlaveMsg *sm,
+                            int fd)
+{
+    /* TODO */
+    return -1;
+}
+
+int vhost_user_fs_slave_unmap(struct vhost_dev *dev, VhostUserFSSlaveMsg *sm)
+{
+    /* TODO */
+    return -1;
+}
+
+int vhost_user_fs_slave_sync(struct vhost_dev *dev, VhostUserFSSlaveMsg *sm)
+{
+    /* TODO */
+    return -1;
+}
+
+
 static void vuf_get_config(VirtIODevice *vdev, uint8_t *config)
 {
     VHostUserFS *fs = VHOST_USER_FS(vdev);

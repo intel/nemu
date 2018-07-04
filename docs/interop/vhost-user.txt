@@ -1105,6 +1105,41 @@ Slave message types
       This request should be sent only when VHOST_USER_PROTOCOL_F_HOST_NOTIFIER
       protocol feature has been successfully negotiated.
 
+ * VHOST_USER_SLAVE_FS_MAP
+
+      Id: 4
+      Equivalent ioctl: N/A
+      Slave payload: fd + n * (offset + address + len)
+      Master payload: N/A
+
+      Requests that the QEMU mmap the given fd into the virtio-fs cache;
+      multiple chunks can be mapped in one command.
+      A reply is generated indicating whether mapping succeeded.
+
+ * VHOST_USER_SLAVE_FS_UNMAP
+
+      Id: 5
+      Equivalent ioctl: N/A
+      Slave payload: n * (address + len)
+      Master payload: N/A
+
+      Requests that the QEMU un-mmap the given range in the virtio-fs cache;
+      multiple chunks can be unmapped in one command.
+      A reply is generated indicating whether unmapping succeeded.
+
+ * VHOST_USER_SLAVE_FS_SYNC
+
+      Id: 6
+      Equivalent ioctl: N/A
+      Slave payload: n * (address + len)
+      Master payload: N/A
+
+      Requests that the QEMU causes any changes to the virtio-fs cache to
+      be synchronised with the backing files.  Multiple chunks can be synced
+      in one command.
+      A reply is generated indicating whether syncing succeeded.
+      [Semantic details TBD]
+
 VHOST_USER_PROTOCOL_F_REPLY_ACK:
 -------------------------------
 The original vhost-user specification only demands replies for certain
