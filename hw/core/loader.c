@@ -841,6 +841,9 @@ struct Rom {
     char *fw_file;
 
     hwaddr addr;
+
+    void (*load_fn)(Rom *rom, Error **errp);
+
     QTAILQ_ENTRY(Rom) next;
 };
 
@@ -1080,23 +1083,43 @@ int rom_add_option(const char *file, int32_t bootindex)
     return rom_add_file(file, "genroms", 0, bootindex, true, NULL, NULL);
 }
 
+static void rom_default_loader(Rom *rom, Error **errp)
+{
+    Error *local_err = NULL;
+
+    if (rom->data == NULL) {
+        goto out;
+    }
+
+    if (rom->mr) {
+        void *host = memory_region_get_ram_ptr(rom->mr);
+        memcpy(host, rom->data, rom->datasize);
+    } else {
+        cpu_physical_memory_write_rom(&address_space_memory,
+                                      rom->addr, rom->data, rom->datasize);
+    }
+
+ out:
+    error_propagate(errp, local_err);
+    return;
+}
+
 static void rom_reset(void *unused)
 {
     Rom *rom;
+    Error *local_err = NULL;
 
     QTAILQ_FOREACH(rom, &roms, next) {
         if (rom->fw_file) {
             continue;
         }
-        if (rom->data == NULL) {
-            continue;
-        }
-        if (rom->mr) {
-            void *host = memory_region_get_ram_ptr(rom->mr);
-            memcpy(host, rom->data, rom->datasize);
+        if (rom->load_fn) {
+            rom->load_fn(rom, &local_err);
         } else {
-            cpu_physical_memory_write_rom(rom->as, rom->addr, rom->data,
-                                          rom->datasize);
+            rom_default_loader(rom, &local_err);
+        }
+        if (local_err) {
+            break;
         }
         if (rom->isrom) {
             /* rom needs to be written only once */
@@ -1111,6 +1134,8 @@ static void rom_reset(void *unused)
          */
         cpu_flush_icache_range(rom->addr, rom->datasize);
     }
+
+    error_propagate(&error_abort, local_err);
 }
 
 int rom_check_and_register_reset(void)
