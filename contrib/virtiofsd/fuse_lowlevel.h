@@ -31,6 +31,7 @@
 #include <sys/statvfs.h>
 #include <sys/uio.h>
 
+#include "contrib/libvhost-user/libvhost-user.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -1993,6 +1994,35 @@ int fuse_session_receive_buf(struct fuse_session *se, struct fuse_buf *buf);
  * @return the total length of iov in bytes
  */
 size_t iov_length(const struct iovec *iov, size_t count);
+
+/**
+ * For use with virtio-fs; request an fd be mapped into the cache
+ *
+ * @param req The request that triggered this action
+ * @param msg A set of mapping requests
+ * @param fd The fd to map
+ * @return Zero on success
+ */
+int fuse_virtio_map(fuse_req_t req, VhostUserFSSlaveMsg *msg, int fd);
+
+/**
+ * For use with virtio-fs; request unmapping of part of the cache
+ *
+ * @param se The session this request is on
+ * @param msg A set of unmapping requests
+ * @return Zero on success
+ */
+int fuse_virtio_unmap(struct fuse_session *se, VhostUserFSSlaveMsg *msg);
+
+/**
+ * For use with virtio-fs; request synchronisation of part of the cache
+ * [Semantics TBD]
+ *
+ * @param req The request that triggered this action
+ * @param msg A set of syncing requests
+ * @return Zero on success
+ */
+int fuse_virtio_sync(fuse_req_t req, VhostUserFSSlaveMsg *msg);
 
 #ifdef __cplusplus
 }

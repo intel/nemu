@@ -534,4 +534,23 @@ int virtio_session_mount(struct fuse_session *se)
         return 0;
 }
 
+int fuse_virtio_map(fuse_req_t req, VhostUserFSSlaveMsg *msg, int fd)
+{
+        if (!req->se->virtio_dev) return -ENODEV;
+        return !vu_fs_cache_request(&req->se->virtio_dev->dev,
+                                    VHOST_USER_SLAVE_FS_MAP, fd, msg);
+}
 
+int fuse_virtio_unmap(struct fuse_session *se, VhostUserFSSlaveMsg *msg)
+{
+        if (!se->virtio_dev) return -ENODEV;
+        return !vu_fs_cache_request(&se->virtio_dev->dev,
+                                    VHOST_USER_SLAVE_FS_UNMAP, -1, msg);
+}
+
+int fuse_virtio_sync(fuse_req_t req, VhostUserFSSlaveMsg *msg)
+{
+        if (!req->se->virtio_dev) return -ENODEV;
+        return !vu_fs_cache_request(&req->se->virtio_dev->dev,
+                                    VHOST_USER_SLAVE_FS_SYNC, -1, msg);
+}
