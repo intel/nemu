@@ -419,15 +419,14 @@ fail:
     close(fd);
 }
 
-/* return < 0 if error, otherwise the number of bytes loaded in memory */
-int load_elf(const char *filename, uint64_t (*translate_fn)(void *, uint64_t),
-             void *translate_opaque, uint64_t *pentry, uint64_t *lowaddr,
-             uint64_t *highaddr, int big_endian, int elf_machine,
-             int clear_lsb, int data_swab)
+int load_elf_shared(const char *filename, uint64_t (*translate_fn)(void *, uint64_t),
+                    void *translate_opaque, uint64_t *pentry, uint64_t *lowaddr,
+                    uint64_t *highaddr, int big_endian, int elf_machine,
+                    int clear_lsb, int data_swab, int shared)
 {
     return load_elf_as(filename, translate_fn, translate_opaque, pentry,
                        lowaddr, highaddr, big_endian, elf_machine, clear_lsb,
-                       data_swab, NULL);
+                       data_swab, NULL, shared);
 }
 
 /* return < 0 if error, otherwise the number of bytes loaded in memory */
@@ -435,11 +434,11 @@ int load_elf_as(const char *filename,
                 uint64_t (*translate_fn)(void *, uint64_t),
                 void *translate_opaque, uint64_t *pentry, uint64_t *lowaddr,
                 uint64_t *highaddr, int big_endian, int elf_machine,
-                int clear_lsb, int data_swab, AddressSpace *as)
+                int clear_lsb, int data_swab, AddressSpace *as, int shared)
 {
     return load_elf_ram(filename, translate_fn, translate_opaque,
                         pentry, lowaddr, highaddr, big_endian, elf_machine,
-                        clear_lsb, data_swab, as, true);
+                        clear_lsb, data_swab, as, true, shared);
 }
 
 /* return < 0 if error, otherwise the number of bytes loaded in memory */
@@ -448,12 +447,12 @@ int load_elf_ram(const char *filename,
                  void *translate_opaque, uint64_t *pentry, uint64_t *lowaddr,
                  uint64_t *highaddr, int big_endian, int elf_machine,
                  int clear_lsb, int data_swab, AddressSpace *as,
-                 bool load_rom)
+                 bool load_rom, bool shared)
 {
     return load_elf_ram_sym(filename, translate_fn, translate_opaque,
                             pentry, lowaddr, highaddr, big_endian,
                             elf_machine, clear_lsb, data_swab, as,
-                            load_rom, NULL);
+                            load_rom, NULL, shared);
 }
 
 /* return < 0 if error, otherwise the number of bytes loaded in memory */
@@ -462,7 +461,7 @@ int load_elf_ram_sym(const char *filename,
                      void *translate_opaque, uint64_t *pentry,
                      uint64_t *lowaddr, uint64_t *highaddr, int big_endian,
                      int elf_machine, int clear_lsb, int data_swab,
-                     AddressSpace *as, bool load_rom, symbol_fn_t sym_cb)
+                     AddressSpace *as, bool load_rom, symbol_fn_t sym_cb, bool shared)
 {
     int fd, data_order, target_data_order, must_swab, ret = ELF_LOAD_FAILED;
     uint8_t e_ident[EI_NIDENT];
@@ -502,16 +501,26 @@ int load_elf_ram_sym(const char *filename,
     if (e_ident[EI_CLASS] == ELFCLASS64) {
         ret = load_elf64(filename, fd, translate_fn, translate_opaque, must_swab,
                          pentry, lowaddr, highaddr, elf_machine, clear_lsb,
-                         data_swab, as, load_rom, sym_cb);
+                         data_swab, as, load_rom, sym_cb, shared);
     } else {
         ret = load_elf32(filename, fd, translate_fn, translate_opaque, must_swab,
                          pentry, lowaddr, highaddr, elf_machine, clear_lsb,
-                         data_swab, as, load_rom, sym_cb);
+                         data_swab, as, load_rom, sym_cb, shared);
     }
 
  fail:
     close(fd);
     return ret;
+}
+
+int load_elf(const char *filename, uint64_t (*translate_fn)(void *, uint64_t),
+			 void *translate_opaque, uint64_t *pentry, uint64_t *lowaddr,
+			 uint64_t *highaddr, int big_endian, int elf_machine,
+			 int clear_lsb, int data_swab)
+{
+	return load_elf_shared(filename, translate_fn, translate_opaque,
+						   pentry, lowaddr, highaddr, big_endian, elf_machine,
+						   clear_lsb, data_swab, 0);
 }
 
 static void bswap_uboot_header(uboot_image_header_t *hdr)
@@ -825,6 +834,7 @@ typedef struct Rom Rom;
 struct Rom {
     char *name;
     char *path;
+    size_t offset;
 
     /* datasize is the amount of memory allocated in "data". If datasize is less
      * than romsize, it means that the area from datasize to romsize is filled
@@ -1102,6 +1112,65 @@ static void rom_default_loader(Rom *rom, Error **errp)
  out:
     error_propagate(errp, local_err);
     return;
+}
+
+static void rom_load_file_entry(Rom *rom, Error **errp)
+{
+    FILE *f;
+    char *dst;
+    size_t bytes, length = rom->datasize;
+    Error *local_err = NULL;
+
+    f = fopen(rom->path, "rb");
+    if (!f) {
+        error_setg(&local_err, "unable to open file: %s", rom->path);
+        goto out;
+    }
+
+    dst = cpu_physical_memory_map(rom->addr, &length, 1);
+    if (!dst) {
+        error_setg(&local_err,
+                   "unable to map file entry %s (paddr %" PRIx64
+                   ", length %"PRIx64", offset %"PRIx64"): %s",
+                   rom->name, rom->addr, rom->datasize, rom->offset,
+                   strerror(errno));
+        goto out_fclose;
+    }
+
+    fseek(f, rom->offset, 0);
+    bytes = fread(dst, 1, length, f);
+    cpu_physical_memory_unmap(dst, length, 1, length);
+
+    if (bytes != length) {
+        error_setg(&local_err,
+                   "unable to load file entry %s (paddr %" PRIx64
+                   ", length %"PRIx64", offset %"PRIx64"): %s",
+                   rom->name, rom->addr, length, rom->offset,
+                   strerror(errno));
+        goto out_fclose;
+    }
+
+ out_fclose:
+    fclose(f);
+ out:
+    error_propagate(errp, local_err);
+}
+
+int rom_add_file_entry(const char *name, const char *path,
+                       uint64_t paddr, size_t offset, size_t size)
+{
+    Rom *rom;
+
+    rom             = g_malloc0(sizeof(*rom));
+    rom->name       = g_strdup(name);
+    rom->path       = g_strdup(path);
+    rom->addr       = paddr;
+    rom->offset     = offset;
+    rom->datasize   = size;
+    rom->load_fn    = rom_load_file_entry;
+    rom_insert(rom);
+
+    return 0;
 }
 
 static void rom_reset(void *unused)
