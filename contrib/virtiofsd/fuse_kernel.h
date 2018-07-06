@@ -385,6 +385,8 @@ enum fuse_opcode {
 	FUSE_RENAME2		= 45,
 	FUSE_LSEEK		= 46,
 	FUSE_COPY_FILE_RANGE	= 47,
+        FUSE_SETUPMAPPING       = 48,
+        FUSE_REMOVEMAPPING      = 49,
 
 	/* CUSE specific operations */
 	CUSE_INIT		= 4096,
@@ -804,6 +806,37 @@ struct fuse_copy_file_range_in {
 	uint64_t	off_out;
 	uint64_t	len;
 	uint64_t	flags;
+};
+
+#define FUSE_SETUPMAPPING_ENTRIES 8
+#define FUSE_SETUPMAPPING_FLAG_WRITE (1ull << 0)
+struct fuse_setupmapping_in {
+        /* An already open handle */
+	uint64_t	fh;
+        /* Offset into the file to start the mapping */
+        uint64_t        foffset;
+        /* Length of mapping required */
+        uint64_t        len;
+        /* Flags, FUSE_SETUPMAPPING_FLAG_* */
+        uint64_t        flags;
+        /* memory offset in to dax window */
+        uint64_t        moffset;
+};
+
+struct fuse_setupmapping_out {
+        /* Offsets into the cache of mappings */
+        uint64_t        coffset[FUSE_SETUPMAPPING_ENTRIES];
+        /* Lengths of each mapping */
+        uint64_t        len[FUSE_SETUPMAPPING_ENTRIES];
+};
+
+struct fuse_removemapping_in {
+        /* An already open handle */
+	uint64_t	fh;
+        /* Offset into the file to start the mapping */
+        uint64_t        foffset;
+        /* Length of mapping required */
+        uint64_t        len;
 };
 
 #endif /* _LINUX_FUSE_H */
