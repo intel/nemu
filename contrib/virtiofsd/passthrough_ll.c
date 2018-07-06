@@ -1261,6 +1261,22 @@ static void lo_copy_file_range(fuse_req_t req, fuse_ino_t ino_in, off_t off_in,
 }
 #endif
 
+static void lo_setupmapping(fuse_req_t req, fuse_ino_t ino, uint64_t offset,
+                            uint64_t len, uint64_t flags,
+                            struct fuse_file_info *fi)
+{
+        // TODO
+	fuse_reply_err(req, ENOSYS);
+}
+
+static void lo_removemapping(fuse_req_t req, struct fuse_session *se,
+                             fuse_ino_t ino, uint64_t moffset,
+                             uint64_t len, struct fuse_file_info *fi)
+{
+        // TODO
+	fuse_reply_err(req, ENOSYS);
+}
+
 static struct fuse_lowlevel_ops lo_oper = {
 	.init		= lo_init,
 	.lookup		= lo_lookup,
@@ -1298,6 +1314,8 @@ static struct fuse_lowlevel_ops lo_oper = {
 #ifdef HAVE_COPY_FILE_RANGE
 	.copy_file_range = lo_copy_file_range,
 #endif
+        .setupmapping   = lo_setupmapping,
+        .removemapping  = lo_removemapping,
 };
 
 int main(int argc, char *argv[])
