@@ -1,5 +1,5 @@
 obj-$(CONFIG_KVM) += kvm/
-obj-y += cpu.o fw.o memory.o multiboot.o
+obj-y += cpu.o fw.o memory.o multiboot.o kernel-loader.o
 obj-y += pc.o pc_piix.o pc_q35.o
 obj-y += pc_sysfw.o
 obj-y += virt/
