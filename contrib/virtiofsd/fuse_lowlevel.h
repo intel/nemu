@@ -1146,7 +1146,6 @@ struct fuse_lowlevel_ops {
 	 */
 	void (*readdirplus) (fuse_req_t req, fuse_ino_t ino, size_t size, off_t off,
 			 struct fuse_file_info *fi);
-
 	/**
 	 * Copy a range of data from one file to another
 	 *
@@ -1182,6 +1181,27 @@ struct fuse_lowlevel_ops {
 				 fuse_ino_t ino_out, off_t off_out,
 				 struct fuse_file_info *fi_out, size_t len,
 				 int flags);
+
+        /*
+         * Map file sections into kernel visible cache
+         *
+         * Map a section of the file into address space visible to the kernel
+         * mounting the filesystem.
+         * TODO
+         */
+        void (*setupmapping) (fuse_req_t req, fuse_ino_t ino, uint64_t foffset,
+                              uint64_t len, uint64_t moffset, uint64_t flags,
+                              struct fuse_file_info *fi);
+
+        /*
+         * Unmap file sections in kernel visible cache
+         *
+         * Unmap sections previously mapped by setupmapping
+         * TODO
+         */
+        void (*removemapping) (fuse_req_t req, struct fuse_session *se,
+                               fuse_ino_t ino, uint64_t moffset,
+                               uint64_t len, struct fuse_file_info *fi);
 };
 
 /**
@@ -1532,6 +1552,19 @@ int fuse_reply_ioctl_iov(fuse_req_t req, int result, const struct iovec *iov,
  * @param revents poll result event mask
  */
 int fuse_reply_poll(fuse_req_t req, unsigned revents);
+
+/**
+ * Reply with set of mappings
+ *
+ * @param req request handle
+ * @param entries Number of mapping entries in arrays
+ * @coffset array of offsets in the cache
+ * @len array of lengths correspondg to each offset
+ */
+int fuse_reply_setupmapping(fuse_req_t req,
+                            unsigned int entries,
+                            uint64_t *coffset,
+                            uint64_t *len);
 
 /* ----------------------------------------------------------- *
  * Notification						       *

@@ -450,6 +450,21 @@ int fuse_reply_write(fuse_req_t req, size_t count)
 	return send_reply_ok(req, &arg, sizeof(arg));
 }
 
+int fuse_reply_setupmapping(fuse_req_t req,
+                            unsigned int entries,
+                            uint64_t *coffset,
+                            uint64_t *len)
+{
+        struct fuse_setupmapping_out arg;
+	memset(&arg, 0, sizeof(arg));
+
+        assert(entries < FUSE_SETUPMAPPING_ENTRIES);
+        memcpy(arg.coffset, coffset, entries * sizeof(coffset[0]));
+        memcpy(arg.len, len, entries * sizeof(len[0]));
+
+	return send_reply_ok(req, &arg, sizeof(arg));
+}
+
 int fuse_reply_buf(fuse_req_t req, const char *buf, size_t size)
 {
 	return send_reply_ok(req, buf, size);
@@ -1501,6 +1516,45 @@ static void do_copy_file_range(fuse_req_t req, fuse_ino_t nodeid_in, const void 
 		fuse_reply_err(req, ENOSYS);
 }
 
+static void do_setupmapping(fuse_req_t req, fuse_ino_t nodeid, const void *inarg)
+{
+	struct fuse_setupmapping_in *arg = (struct fuse_setupmapping_in *) inarg;
+        struct fuse_file_info fi;
+
+        memset(&fi, 0, sizeof(fi));
+	fi.fh = arg->fh;
+
+        // TODO: Need to come up with a better definition of flags here; it can't
+        // be the kernel view of the flags, since that's abstracted from the client
+        // similarly, it's not the vhost-user set
+        // for now just use O_ flags
+        uint64_t genflags;
+
+        genflags = 0;
+        genflags |= (arg->flags & FUSE_SETUPMAPPING_FLAG_WRITE) ? O_WRONLY : 0;
+
+	if (req->se->op.setupmapping)
+		req->se->op.setupmapping(req, nodeid, arg->foffset, arg->len,
+                                         arg->moffset, genflags, &fi);
+	else
+		fuse_reply_err(req, ENOSYS);
+}
+
+static void do_removemapping(fuse_req_t req, fuse_ino_t nodeid, const void *inarg)
+{
+	struct fuse_removemapping_in *arg = (struct fuse_removemapping_in *) inarg;
+        struct fuse_file_info fi;
+
+        memset(&fi, 0, sizeof(fi));
+	fi.fh = arg->fh;
+
+	if (req->se->op.removemapping)
+		req->se->op.removemapping(req, req->se, nodeid, arg->foffset,
+                                          arg->len, &fi);
+	else
+		fuse_reply_err(req, ENOSYS);
+}
+
 static void do_init(fuse_req_t req, fuse_ino_t nodeid, const void *inarg)
 {
 	struct fuse_init_in *arg = (struct fuse_init_in *) inarg;
@@ -1942,6 +1996,8 @@ static struct {
 	[FUSE_READDIRPLUS] = { do_readdirplus,	"READDIRPLUS"},
 	[FUSE_RENAME2]     = { do_rename2,      "RENAME2"    },
 	[FUSE_COPY_FILE_RANGE] = { do_copy_file_range, "COPY_FILE_RANGE" },
+	[FUSE_SETUPMAPPING]  = { do_setupmapping, "SETUPMAPPING" },
+	[FUSE_REMOVEMAPPING] = { do_removemapping, "REMOVEMAPPING" },
 };
 
 #define FUSE_MAXOP (sizeof(fuse_ll_ops) / sizeof(fuse_ll_ops[0]))
