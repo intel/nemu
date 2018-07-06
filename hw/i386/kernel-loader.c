@@ -52,13 +52,7 @@
        (((base)  & 0x00ffffffULL) << 16) |          \
        (((limit) & 0x0000ffffULL)))
 
-struct kernel_boot_info {
-    uint64_t entry;
-    bool protected_mode;
-    bool long_mode;
-};
-
-static struct kernel_boot_info boot_info;
+struct kernel_boot_info boot_info;
 
 void kernel_loader_reset_cpu(CPUX86State *env)
 {

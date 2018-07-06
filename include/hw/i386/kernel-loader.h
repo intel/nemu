@@ -25,6 +25,14 @@
 
 #include "cpu.h"
 
+struct kernel_boot_info {
+    uint64_t entry;
+    bool protected_mode;
+    bool long_mode;
+};
+
+extern struct kernel_boot_info boot_info;
+
 void kernel_loader_reset_cpu(CPUX86State *env);
 void kernel_loader_setup(void);
 
