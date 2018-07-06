@@ -31,6 +31,7 @@
 #include "hw/i386/acpi.h"
 #include "hw/i386/cpu-internal.h"
 #include "hw/i386/fw.h"
+#include "hw/i386/kernel-loader.h"
 #include "hw/i386/topology.h"
 #include "hw/i386/amd_iommu.h"
 #include "hw/i386/intel_iommu.h"
@@ -109,6 +110,7 @@ static void virt_machine_state_init(MachineState *machine)
     //MemoryRegion *ram;
     MachineClass *mc = MACHINE_GET_CLASS(machine);
     VirtMachineState *vms = VIRT_MACHINE(machine);
+    bool linux_boot = (machine->kernel_filename != NULL);
 
     /* NUMA stuff */
     vms->numa_nodes = nb_numa_nodes;
@@ -126,11 +128,68 @@ static void virt_machine_state_init(MachineState *machine)
 
     vms->apic_id_limit = cpus_init(machine, false);
 
-    fw_cfg = fw_cfg_init(machine, smp_cpus, mc->possible_cpu_arch_ids(machine), vms->apic_id_limit);
-    rom_set_fw(fw_cfg);
-    vms->fw_cfg = fw_cfg;
-
     kvmclock_create();
+
+    if (vms->fw) {
+        fw_cfg = fw_cfg_init(machine, smp_cpus, mc->possible_cpu_arch_ids(machine), vms->apic_id_limit);
+        rom_set_fw(fw_cfg);
+        vms->fw_cfg = fw_cfg;
+        if (linux_boot) {
+            load_linux_bzimage(MACHINE(vms), vms->acpi_configuration, fw_cfg);
+        }
+    } else {
+        if (linux_boot) {
+            load_linux_efi(MACHINE(vms));
+        }
+    }
+}
+
+static bool virt_machine_get_fw(Object *obj, Error **errp)
+{
+    VirtMachineState *vms = VIRT_MACHINE(obj);
+
+    return vms->fw;
+}
+
+static void virt_machine_set_fw(Object *obj, bool value, Error **errp)
+{
+    VirtMachineState *vms = VIRT_MACHINE(obj);
+
+    vms->fw = value;
+}
+
+static void virt_machine_instance_init(Object *obj)
+{
+    VirtMachineState *vms = VIRT_MACHINE(obj);
+
+    vms->fw = true;
+}
+
+static void virt_machine_reset(void)
+{
+    CPUState *cs;
+    X86CPU *cpu;
+
+    qemu_devices_reset();
+
+    CPU_FOREACH(cs) {
+        cpu = X86_CPU(cs);
+
+        /* Reset APIC after devices have been reset to cancel
+         * any changes that qemu_devices_reset() might have done.
+         */
+        if (cpu->apic_state) {
+            device_reset(cpu->apic_state);
+        }
+
+        if (boot_info.protected_mode && cpu_is_bsp(cpu)) {
+            kernel_loader_reset_cpu(&cpu->env);
+        }
+    }
+
+    if (boot_info.protected_mode) {
+        kernel_loader_setup();
+    }
 }
 
 static void x86_nmi(NMIState *n, int cpu_index, Error **errp)
@@ -154,6 +213,11 @@ static void virt_class_init(ObjectClass *oc, void *data)
 
     /* NMI handler */
     nc->nmi_monitor_handler = x86_nmi;
+
+    /* Firmware setting */
+    object_class_property_add_bool(oc, VIRT_MACHINE_FW,
+                                   virt_machine_get_fw, virt_machine_set_fw, &error_abort);
+
 }
 
 static const TypeInfo virt_machine_info = {
@@ -161,6 +225,7 @@ static const TypeInfo virt_machine_info = {
     .parent        = TYPE_MACHINE,
     .abstract      = true,
     .instance_size = sizeof(VirtMachineState),
+    .instance_init = virt_machine_instance_init,
     .class_size    = sizeof(VirtMachineClass),
     .class_init    = virt_class_init,
     .interfaces = (InterfaceInfo[]) {
@@ -196,6 +261,7 @@ static void virt_machine_class_init(MachineClass *mc)
     mc->cpu_index_to_instance_props = cpu_index_to_props;
     mc->get_default_cpu_node_id = cpu_get_default_cpu_node_id;
     mc->possible_cpu_arch_ids = cpu_possible_cpu_arch_ids;;
+    mc->reset = virt_machine_reset;
 }
 
 static void virt_2_12_machine_class_init(MachineClass *mc)

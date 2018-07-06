@@ -44,7 +44,12 @@ typedef struct {
 
     /* Devices and objects */
     FWCfgState *fw_cfg;
+
+    /* Firmware */
+    bool fw;
 } VirtMachineState;
+
+#define VIRT_MACHINE_FW "fw"
 
 #define TYPE_VIRT_MACHINE   MACHINE_TYPE_NAME("virt")
 #define VIRT_MACHINE(obj) \
