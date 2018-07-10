@@ -100,7 +100,7 @@ static void virt_machine_done(Notifier *notifier, void *data)
     vms->acpi_configuration = conf;
 
     acpi_conf_virt_init(MACHINE(vms), conf);
-    acpi_setup(MACHINE(vms), conf);
+    //acpi_setup(MACHINE(vms), conf);
 }
 
 static void virt_machine_state_init(MachineState *machine)
