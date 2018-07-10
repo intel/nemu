@@ -27,6 +27,8 @@
 
 typedef struct {
     MachineClass parent;
+    HotplugHandler *(*orig_hotplug_handler)(MachineState *machine,
+                                           DeviceState *dev);
 } VirtMachineClass;
 
 typedef struct {
@@ -47,6 +49,9 @@ typedef struct {
 
     /* Firmware */
     bool fw;
+
+    /* number of CPUs */
+    uint16_t boot_cpus;
 } VirtMachineState;
 
 #define VIRT_MACHINE_FW "fw"
