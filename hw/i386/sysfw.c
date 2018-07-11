@@ -31,7 +31,7 @@
 #include "qemu/units.h"
 #include "hw/sysbus.h"
 #include "hw/hw.h"
-#include "hw/i386/pc.h"
+#include "hw/i386/fw.h"
 #include "hw/boards.h"
 #include "hw/loader.h"
 #include "sysemu/sysemu.h"
@@ -240,7 +240,7 @@ static void old_pc_system_rom_init(MemoryRegion *rom_memory, bool isapc_ram_fw)
                                 bios);
 }
 
-void pc_system_firmware_init(MemoryRegion *rom_memory, bool isapc_ram_fw)
+void sysfw_firmware_init(MemoryRegion *rom_memory, bool isapc_ram_fw)
 {
     DriveInfo *pflash_drv;
 
