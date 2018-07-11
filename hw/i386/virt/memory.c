@@ -21,6 +21,7 @@
 #include "hw/boards.h"
 #include "hw/i386/virt.h"
 #include "hw/i386/memory.h"
+#include "hw/i386/fw.h"
 
 /* 3GB split */
 #define VIRT_LOWMEM 0xc0000000UL
@@ -52,6 +53,10 @@ MemoryRegion *virt_memory_init(VirtMachineState *vms)
         memory_region_init_alias(highmem, NULL, "highmem", ram, lowmem_size, highmem_size);
         memory_region_add_subregion(system_memory, 0x100000000ULL, highmem);
         e820_add_entry(0x100000000ULL, highmem_size, E820_RAM);
+    }
+
+    if (vms->fw) {
+        sysfw_firmware_init(system_memory, false);
     }
     
     return ram;
