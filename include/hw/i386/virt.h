@@ -52,6 +52,8 @@ typedef struct {
 
     /* number of CPUs */
     uint16_t boot_cpus;
+
+    PCIBus *pci_bus;
 } VirtMachineState;
 
 #define VIRT_MACHINE_FW "fw"
