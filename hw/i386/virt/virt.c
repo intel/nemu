@@ -27,8 +27,9 @@
 
 #include "hw/kvm/clock.h"
 
+#include "hw/acpi/acpi.h"
+
 #include "hw/i386/virt.h"
-#include "hw/i386/acpi.h"
 #include "hw/i386/cpu-internal.h"
 #include "hw/i386/fw.h"
 #include "hw/i386/kernel-loader.h"

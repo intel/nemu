@@ -25,7 +25,6 @@
 #include "qemu/osdep.h"
 #include "qemu/units.h"
 #include "hw/hw.h"
-#include "hw/i386/acpi.h"
 #include "hw/i386/pc.h"
 #include "hw/i386/cpu-internal.h"
 #include "hw/i386/memory.h"
