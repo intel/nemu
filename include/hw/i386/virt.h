@@ -23,7 +23,7 @@
 #include "qemu/notify.h"
 
 #include "hw/boards.h"
-#include "hw/i386/acpi.h"
+#include "hw/acpi/acpi.h"
 
 typedef struct {
     MachineClass parent;

@@ -8,11 +8,11 @@
 #include "hw/block/fdc.h"
 #include "net/net.h"
 #include "hw/i386/ioapic.h"
-#include "hw/i386/acpi.h"
 
 #include "qemu/range.h"
 #include "qemu/bitmap.h"
 #include "sysemu/sysemu.h"
+#include "hw/acpi/acpi.h"
 #include "hw/pci/pci.h"
 #include "hw/compat.h"
 #include "hw/mem/pc-dimm.h"
