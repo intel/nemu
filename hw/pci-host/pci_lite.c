@@ -247,6 +247,12 @@ static void pci_lite_device_class_init(ObjectClass *klass, void *data)
 
     k->class_id = PCI_CLASS_BRIDGE_HOST;
     dc->desc = "Host bridge";
+
+    // TODO: Use different one to GPEX?
+    k->vendor_id = PCI_VENDOR_ID_REDHAT;
+    k->device_id = PCI_DEVICE_ID_REDHAT_PCIE_HOST;
+    k->revision = 0;
+
     /*
      * PCI-facing part of the host bridge, not usable without the
      * host-facing part, which can't be device_add'ed, yet.
