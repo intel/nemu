@@ -20,7 +20,7 @@
 
 #include "hw/boards.h"
 
-#include "hw/i386/acpi.h"
+#include "hw/acpi/acpi.h"
 #include "hw/nvram/fw_cfg.h"
 
 #include "cpu.h"
