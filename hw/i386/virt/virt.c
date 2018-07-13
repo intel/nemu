@@ -36,6 +36,8 @@
 #include "hw/i386/amd_iommu.h"
 #include "hw/i386/intel_iommu.h"
 
+#include "hw/pci-host/pci-lite.h"
+
 #include "cpu.h"
 #include "kvm_i386.h"
 
@@ -98,6 +100,49 @@ static void virt_machine_done(Notifier *notifier, void *data)
     acpi_setup(MACHINE(vms), vms->acpi_configuration);
 }
 
+static void virt_gsi_handler(void *opaque, int n, int level)
+{
+    qemu_irq *ioapic_irq = opaque;
+
+    qemu_set_irq(ioapic_irq[n], level);
+}
+
+static void virt_pci_init(VirtMachineState *vms)
+{
+    MemoryRegion *pci_memory;
+    qemu_irq *ioapic_irq;
+    DeviceState *ioapic_dev;
+    SysBusDevice *d;
+    unsigned int i;
+
+    pci_memory = g_new(MemoryRegion, 1);
+
+    /* irq lines */
+    ioapic_irq = g_new0(qemu_irq, IOAPIC_NUM_PINS);
+    assert(kvm_irqchip_in_kernel());
+    kvm_pc_setup_irq_routing(true);
+
+    qemu_allocate_irqs(virt_gsi_handler, ioapic_irq, IOAPIC_NUM_PINS);
+
+    memory_region_init(pci_memory, NULL, "pci", UINT64_MAX);
+
+    vms->pci_bus = pci_lite_init(get_system_memory(), get_system_io(),
+                                 pci_memory);
+
+    assert(kvm_ioapic_in_kernel());
+    ioapic_dev = qdev_create(NULL, "kvm-ioapic");
+
+    object_property_add_child(qdev_get_machine(), "ioapic", OBJECT(ioapic_dev), NULL);
+
+    qdev_init_nofail(ioapic_dev);
+    d = SYS_BUS_DEVICE(ioapic_dev);
+    sysbus_mmio_map(d, 0, IO_APIC_DEFAULT_ADDRESS);
+
+    for (i = 0; i < IOAPIC_NUM_PINS; i++) {
+        ioapic_irq[i] = qdev_get_gpio_in(ioapic_dev, i);
+    }
+}
+
 static void virt_machine_state_init(MachineState *machine)
 {
     int i;
@@ -120,6 +165,7 @@ static void virt_machine_state_init(MachineState *machine)
 
     /* TODO Add the ram pointer to the QOM */
     virt_memory_init(vms);
+    virt_pci_init(vms);
 
     vms->apic_id_limit = cpus_init(machine, false);
 
