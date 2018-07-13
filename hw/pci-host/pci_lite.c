@@ -259,6 +259,10 @@ static const TypeInfo pci_lite_device_info = {
     .name          = TYPE_PCI_LITE_DEVICE,
     .parent        = TYPE_PCI_DEVICE,
     .class_init    = pci_lite_device_class_init,
+    .interfaces = (InterfaceInfo[]) {
+        { INTERFACE_CONVENTIONAL_PCI_DEVICE },
+        { },
+    },
 };
 
 static void pci_lite_register_types(void)
