@@ -20,7 +20,6 @@
 #include "hw/boards.h"
 #include "hw/loader.h"
 
-#include "hw/i386/acpi.h"
 #include "hw/i386/kernel-loader.h"
 #include "hw/i386/memory.h"
 

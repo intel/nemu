@@ -27,8 +27,9 @@
 
 #include "hw/kvm/clock.h"
 
+#include "hw/acpi/acpi.h"
+
 #include "hw/i386/virt.h"
-#include "hw/i386/acpi.h"
 #include "hw/i386/cpu-internal.h"
 #include "hw/i386/fw.h"
 #include "hw/i386/kernel-loader.h"
@@ -102,7 +103,7 @@ static void virt_machine_done(Notifier *notifier, void *data)
     vms->acpi_configuration = conf;
 
     acpi_conf_virt_init(MACHINE(vms), conf);
-    //acpi_setup(MACHINE(vms), conf);
+    acpi_setup(MACHINE(vms), conf);
 }
 
 static void virt_gsi_handler(void *opaque, int n, int level)

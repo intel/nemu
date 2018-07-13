@@ -19,9 +19,7 @@
 #include <glib.h>
 #include "qemu-common.h"
 #include "qemu/mmap-alloc.h"
-#include "acpi-build.h"
 #include "hw/i386/pc.h"
-#include "hw/i386/acpi.h"
 #include "hw/i386/memory.h"
 #include "hw/acpi/acpi.h"
 #include "hw/acpi/aml-build.h"
