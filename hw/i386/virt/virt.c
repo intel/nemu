@@ -91,6 +91,7 @@ static void acpi_conf_virt_init(MachineState *machine, AcpiConfiguration *conf)
     conf->numa_nodes = vms->numa_nodes;
     conf->node_mem = vms->node_mem;
     conf->apic_id_limit = vms->apic_id_limit;
+    conf->below_4g_mem_size = vms->below_4g_mem_size;
 }
 
 static void virt_machine_done(Notifier *notifier, void *data)

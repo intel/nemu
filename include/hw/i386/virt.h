@@ -54,6 +54,9 @@ typedef struct {
     uint16_t boot_cpus;
 
     PCIBus *pci_bus;
+
+    /* RAM size */
+    ram_addr_t below_4g_mem_size;
 } VirtMachineState;
 
 #define VIRT_MACHINE_FW "fw"
