@@ -31,6 +31,7 @@
 #include "hw/i386/memory.h"
 #include "hw/pci/pci.h"
 #include "hw/pci/pcie_host.h"
+#include "hw/pci-host/pci-lite.h"
 #include "hw/isa/isa.h"
 #include "hw/sysbus.h"
 #include "qapi/error.h"
@@ -52,10 +53,6 @@
 #define PCI_LITE_PCIEXBAR_SIZE  (0x100000) /* 1M for bus 0 */
 
 #define DEFAULT_PCI_HOLE64_SIZE (~0x0ULL)
-
-PCIBus *pci_lite_init(MemoryRegion *address_space_mem,
-                      MemoryRegion *address_space_io,
-                      MemoryRegion *pci_address_space);
 
 typedef struct PCILiteHost {
     /*< private >*/
