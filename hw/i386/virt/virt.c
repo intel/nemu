@@ -100,12 +100,14 @@ static void virt_machine_done(Notifier *notifier, void *data)
     VirtMachineState *vms = container_of(notifier,
                                           VirtMachineState, machine_done);
     AcpiConfiguration *conf;
+    MachineState *ms = MACHINE(vms);
+    MachineClass *mc = MACHINE_GET_CLASS(ms);
 
     conf = g_malloc0(sizeof(*conf));
     vms->acpi_configuration = conf;
 
     acpi_conf_virt_init(MACHINE(vms), conf);
-    acpi_reduced_setup(MACHINE(vms), conf);
+    mc->firmware_build_methods.acpi.setup(ms, conf);
 }
 
 static void virt_gsi_handler(void *opaque, int n, int level)
@@ -481,6 +483,11 @@ static void virt_machine_class_init(MachineClass *mc)
     /* Hotplug handlers */
     hc->pre_plug = virt_machine_device_pre_plug_cb;
     hc->plug = virt_machine_device_plug_cb;
+
+    /* Firmware building handler */
+    mc->firmware_build_methods.acpi.madt = build_madt;
+    mc->firmware_build_methods.acpi.rsdp = build_rsdp;
+    mc->firmware_build_methods.acpi.setup = acpi_reduced_setup;
 }
 
 static void virt_2_12_machine_class_init(MachineClass *mc)

@@ -6,6 +6,11 @@
 #include "hw/acpi/bios-linker-loader.h"
 #include "qapi/error.h"
 
+/* Build methods */
+GArray *build_madt(GArray *table_data, BIOSLinker *linker, MachineState *ms, AcpiConfiguration *conf);
+GArray *build_rsdp(GArray *rsdp_table, BIOSLinker *linker, unsigned rsdt_tbl_offset);
+
+/* ACPI setup */
 void acpi_setup(MachineState *machine, AcpiConfiguration *conf);
 
 #endif

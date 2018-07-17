@@ -328,8 +328,7 @@ void pc_madt_cpu_entry(AcpiDeviceIf *adev, int uid,
     }
 }
 
-static void
-build_madt(GArray *table_data, BIOSLinker *linker, MachineState *ms, AcpiConfiguration *conf)
+GArray *build_madt(GArray *table_data, BIOSLinker *linker, MachineState *ms, AcpiConfiguration *conf)
 {
     MachineClass *mc = MACHINE_GET_CLASS(ms);
     const CPUArchIdList *apic_ids = mc->possible_cpu_arch_ids(ms);
@@ -406,6 +405,8 @@ build_madt(GArray *table_data, BIOSLinker *linker, MachineState *ms, AcpiConfigu
     build_header(linker, table_data,
                  (void *)(table_data->data + madt_start), "APIC",
                  table_data->len - madt_start, 1, NULL, NULL);
+
+    return table_data;
 }
 
 static void build_append_pcihp_notify_entry(Aml *method, int slot)
@@ -2579,8 +2580,7 @@ build_amd_iommu(GArray *table_data, BIOSLinker *linker)
                  "IVRS", table_data->len - iommu_start, 1, NULL, NULL);
 }
 
-static GArray *
-build_rsdp(GArray *rsdp_table, BIOSLinker *linker, unsigned rsdt_tbl_offset)
+GArray * build_rsdp(GArray *rsdp_table, BIOSLinker *linker, unsigned rsdt_tbl_offset)
 {
     AcpiRsdpDescriptor *rsdp = acpi_data_push(rsdp_table, sizeof *rsdp);
     unsigned rsdt_pa_size = sizeof(rsdp->rsdt_physical_address);
