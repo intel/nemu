@@ -1,0 +1,1 @@
+obj-y += virt.o memory.o

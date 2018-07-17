@@ -102,7 +102,7 @@ int load_elf_ram_sym(const char *filename,
                      void *translate_opaque, uint64_t *pentry,
                      uint64_t *lowaddr, uint64_t *highaddr, int big_endian,
                      int elf_machine, int clear_lsb, int data_swab,
-                     AddressSpace *as, bool load_rom, symbol_fn_t sym_cb);
+                     AddressSpace *as, bool load_rom, symbol_fn_t sym_cb, bool shared);
 
 /** load_elf_ram:
  * Same as load_elf_ram_sym(), but doesn't allow the caller to specify a
@@ -113,7 +113,7 @@ int load_elf_ram(const char *filename,
                  void *translate_opaque, uint64_t *pentry, uint64_t *lowaddr,
                  uint64_t *highaddr, int big_endian, int elf_machine,
                  int clear_lsb, int data_swab, AddressSpace *as,
-                 bool load_rom);
+                 bool load_rom, bool shared);
 
 /** load_elf_as:
  * Same as load_elf_ram(), but always loads the elf as ROM
@@ -122,7 +122,12 @@ int load_elf_as(const char *filename,
                 uint64_t (*translate_fn)(void *, uint64_t),
                 void *translate_opaque, uint64_t *pentry, uint64_t *lowaddr,
                 uint64_t *highaddr, int big_endian, int elf_machine,
-                int clear_lsb, int data_swab, AddressSpace *as);
+                int clear_lsb, int data_swab, AddressSpace *as, int shared);
+
+int load_elf_shared(const char *filename, uint64_t (*translate_fn)(void *, uint64_t),
+                    void *translate_opaque, uint64_t *pentry, uint64_t *lowaddr,
+                    uint64_t *highaddr, int big_endian, int elf_machine,
+                    int clear_lsb, int data_swab, int shared);
 
 /** load_elf:
  * Same as load_elf_as(), but doesn't allow the caller to specify an
@@ -250,6 +255,8 @@ void hmp_info_roms(Monitor *mon, const QDict *qdict);
 
 int rom_add_vga(const char *file);
 int rom_add_option(const char *file, int32_t bootindex);
+int rom_add_file_entry(const char *name, const char *path,
+                       uint64_t paddr, size_t offset, size_t size);
 
 /* This is the usual maximum in uboot, so if a uImage overflows this, it would
  * overflow on real hardware too. */

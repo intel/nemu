@@ -272,7 +272,7 @@ static int glue(load_elf, SZ)(const char *name, int fd,
                               uint64_t *lowaddr, uint64_t *highaddr,
                               int elf_machine, int clear_lsb, int data_swab,
                               AddressSpace *as, bool load_rom,
-                              symbol_fn_t sym_cb)
+                              symbol_fn_t sym_cb,int shared)
 {
     struct elfhdr ehdr;
     struct elf_phdr *phdr = NULL, *ph;
@@ -361,89 +361,96 @@ static int glue(load_elf, SZ)(const char *name, int fd,
         if (ph->p_type == PT_LOAD) {
             mem_size = ph->p_memsz; /* Size of the ROM */
             file_size = ph->p_filesz; /* Size of the allocated data */
-            data = g_malloc0(file_size);
-            if (ph->p_filesz > 0) {
-                if (lseek(fd, ph->p_offset, SEEK_SET) < 0) {
-                    goto fail;
+            snprintf(label, sizeof(label), "phdr #%d: %s", i, name);
+            if (!translate_fn && !data_swab && shared) {
+                rom_add_file_entry(label, name,
+                                   ph->p_paddr, ph->p_offset, ph->p_filesz);
+                addr = ph->p_paddr;
+            } else {
+                data = g_malloc0(file_size);
+                if (ph->p_filesz > 0) {
+                    if (lseek(fd, ph->p_offset, SEEK_SET) < 0) {
+                        goto fail;
+                    }
+                    if (read(fd, data, file_size) != file_size) {
+                        goto fail;
+                    }
                 }
-                if (read(fd, data, file_size) != file_size) {
-                    goto fail;
-                }
-            }
 
-            /* The ELF spec is somewhat vague about the purpose of the
-             * physical address field. One common use in the embedded world
-             * is that physical address field specifies the load address
-             * and the virtual address field specifies the execution address.
-             * Segments are packed into ROM or flash, and the relocation
-             * and zero-initialization of data is done at runtime. This
-             * means that the memsz header represents the runtime size of the
-             * segment, but the filesz represents the loadtime size. If
-             * we try to honour the memsz value for an ELF file like this
-             * we will end up with overlapping segments (which the
-             * loader.c code will later reject).
-             * We support ELF files using this scheme by by checking whether
-             * paddr + memsz for this segment would overlap with any other
-             * segment. If so, then we assume it's using this scheme and
-             * truncate the loaded segment to the filesz size.
-             * If the segment considered as being memsz size doesn't overlap
-             * then we use memsz for the segment length, to handle ELF files
-             * which assume that the loader will do the zero-initialization.
-             */
-            if (mem_size > file_size) {
-                /* If this segment's zero-init portion overlaps another
-                 * segment's data or zero-init portion, then truncate this one.
-                 * Invalid ELF files where the segments overlap even when
-                 * only file_size bytes are loaded will be rejected by
-                 * the ROM overlap check in loader.c, so we don't try to
-                 * explicitly detect those here.
+                /* The ELF spec is somewhat vague about the purpose of the
+                 * physical address field. One common use in the embedded world
+                 * is that physical address field specifies the load address
+                 * and the virtual address field specifies the execution address.
+                 * Segments are packed into ROM or flash, and the relocation
+                 * and zero-initialization of data is done at runtime. This
+                 * means that the memsz header represents the runtime size of the
+                 * segment, but the filesz represents the loadtime size. If
+                 * we try to honour the memsz value for an ELF file like this
+                 * we will end up with overlapping segments (which the
+                 * loader.c code will later reject).
+                 * We support ELF files using this scheme by by checking whether
+                 * paddr + memsz for this segment would overlap with any other
+                 * segment. If so, then we assume it's using this scheme and
+                 * truncate the loaded segment to the filesz size.
+                 * If the segment considered as being memsz size doesn't overlap
+                 * then we use memsz for the segment length, to handle ELF files
+                 * which assume that the loader will do the zero-initialization.
                  */
-                int j;
-                elf_word zero_start = ph->p_paddr + file_size;
-                elf_word zero_end = ph->p_paddr + mem_size;
+                if (mem_size > file_size) {
+                    /* If this segment's zero-init portion overlaps another
+                     * segment's data or zero-init portion, then truncate this one.
+                     * Invalid ELF files where the segments overlap even when
+                     * only file_size bytes are loaded will be rejected by
+                     * the ROM overlap check in loader.c, so we don't try to
+                     * explicitly detect those here.
+                     */
+                    int j;
+                    elf_word zero_start = ph->p_paddr + file_size;
+                    elf_word zero_end = ph->p_paddr + mem_size;
 
-                for (j = 0; j < ehdr.e_phnum; j++) {
-                    struct elf_phdr *jph = &phdr[j];
+                    for (j = 0; j < ehdr.e_phnum; j++) {
+                        struct elf_phdr *jph = &phdr[j];
 
-                    if (i != j && jph->p_type == PT_LOAD) {
-                        elf_word other_start = jph->p_paddr;
-                        elf_word other_end = jph->p_paddr + jph->p_memsz;
+                        if (i != j && jph->p_type == PT_LOAD) {
+                            elf_word other_start = jph->p_paddr;
+                            elf_word other_end = jph->p_paddr + jph->p_memsz;
 
-                        if (!(other_start >= zero_end ||
-                              zero_start >= other_end)) {
-                            mem_size = file_size;
-                            break;
+                            if (!(other_start >= zero_end ||
+                                  zero_start >= other_end)) {
+                                mem_size = file_size;
+                                break;
+                            }
                         }
                     }
                 }
-            }
 
-            /* address_offset is hack for kernel images that are
-               linked at the wrong physical address.  */
-            if (translate_fn) {
-                addr = translate_fn(translate_opaque, ph->p_paddr);
-                glue(elf_reloc, SZ)(&ehdr, fd, must_swab,  translate_fn,
-                                    translate_opaque, data, ph, elf_machine);
-            } else {
-                addr = ph->p_paddr;
-            }
+                /* address_offset is hack for kernel images that are
+                   linked at the wrong physical address.  */
+                if (translate_fn) {
+                    addr = translate_fn(translate_opaque, ph->p_paddr);
+                    glue(elf_reloc, SZ)(&ehdr, fd, must_swab,  translate_fn,
+                                        translate_opaque, data, ph, elf_machine);
+                } else {
+                    addr = ph->p_paddr;
+                }
 
-            if (data_swab) {
-                int j;
-                for (j = 0; j < file_size; j += (1 << data_swab)) {
-                    uint8_t *dp = data + j;
-                    switch (data_swab) {
-                    case (1):
-                        *(uint16_t *)dp = bswap16(*(uint16_t *)dp);
-                        break;
-                    case (2):
-                        *(uint32_t *)dp = bswap32(*(uint32_t *)dp);
-                        break;
-                    case (3):
-                        *(uint64_t *)dp = bswap64(*(uint64_t *)dp);
-                        break;
-                    default:
-                        g_assert_not_reached();
+                if (data_swab) {
+                    int j;
+                    for (j = 0; j < file_size; j += (1 << data_swab)) {
+                        uint8_t *dp = data + j;
+                        switch (data_swab) {
+                        case (1):
+                            *(uint16_t *)dp = bswap16(*(uint16_t *)dp);
+                            break;
+                        case (2):
+                            *(uint32_t *)dp = bswap32(*(uint32_t *)dp);
+                            break;
+                        case (3):
+                            *(uint64_t *)dp = bswap64(*(uint64_t *)dp);
+                            break;
+                        default:
+                            g_assert_not_reached();
+                        }
                     }
                 }
             }
@@ -468,11 +475,11 @@ static int glue(load_elf, SZ)(const char *name, int fd,
                 g_free(data);
             } else {
                 if (load_rom) {
-                    snprintf(label, sizeof(label), "phdr #%d: %s", i, name);
-
-                    /* rom_add_elf_program() seize the ownership of 'data' */
-                    rom_add_elf_program(label, data, file_size, mem_size,
-                                        addr, as);
+                    if (!shared) {
+                        /* rom_add_elf_program() seize the ownership of 'data' */
+                        rom_add_elf_program(label, data, file_size, mem_size,
+                                            addr, as);
+                    }
                 } else {
                     cpu_physical_memory_write(addr, data, file_size);
                     g_free(data);
