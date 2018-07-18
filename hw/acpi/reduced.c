@@ -105,7 +105,7 @@ static void build_fadt_reduced(GArray *table_data, BIOSLinker *linker,
     build_fadt(table_data, linker, &fadt, NULL, NULL);
 }
 
-static void acpi_reduced_build(MachineState *ms, AcpiBuildTables *tables)
+static void acpi_reduced_build(MachineState *ms, AcpiBuildTables *tables, AcpiConfiguration *conf)
 {
     MachineClass *mc = MACHINE_GET_CLASS(ms);
     GArray *table_offsets;
@@ -155,7 +155,13 @@ static void acpi_reduced_build_update(void *build_opaque)
 {
     MachineState *ms = build_opaque;
     AcpiBuildState *build_state = ms->firmware_build_state.acpi.state;
+    AcpiConfiguration *conf = ms->firmware_build_state.acpi.conf;
     AcpiBuildTables tables;
+
+    /* No ACPI configuration? Nothing to do. */
+    if (!conf) {
+        return;
+    }
 
     /* No state to update or already patched? Nothing to do. */
     if (!build_state || build_state->patched) {
@@ -165,7 +171,7 @@ static void acpi_reduced_build_update(void *build_opaque)
 
     acpi_build_tables_init(&tables);
 
-    acpi_reduced_build(ms, &tables);
+    acpi_reduced_build(ms, &tables, conf);
 
     acpi_ram_update(build_state->table_mr, tables.table_data);
     acpi_ram_update(build_state->rsdp_mr, tables.rsdp);
@@ -207,9 +213,10 @@ void acpi_reduced_setup(MachineState *machine, AcpiConfiguration *conf)
 
     build_state = g_malloc0(sizeof(*build_state));
     machine->firmware_build_state.acpi.state = build_state;
+    machine->firmware_build_state.acpi.conf = conf;
 
     acpi_build_tables_init(&tables);
-    acpi_reduced_build(machine, &tables);
+    acpi_reduced_build(machine, &tables, conf);
 
     if (conf->fw_cfg) {
         /* Now expose it all to Guest */
