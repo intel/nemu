@@ -174,6 +174,7 @@ static void virt_machine_state_init(MachineState *machine)
     qemu_add_machine_init_done_notifier(&vms->machine_done);
 
     /* TODO Add the ram pointer to the QOM */
+    vms->cmos = virt_cmos_init();
     virt_memory_init(vms);
     virt_pci_init(vms);
 
