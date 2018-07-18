@@ -26,6 +26,43 @@
 /* 3GB split */
 #define VIRT_LOWMEM 0xc0000000UL
 
+static void virt_memory_setup_cmos(VirtMachineState *vms) {
+    uint64_t val;
+
+    /* memory size */
+    /* base memory (first MiB) */
+    val = MIN(vms->below_4g_mem_size / 1024, 640);
+    virt_cmos_set(vms->cmos, 0x15, val);
+    virt_cmos_set(vms->cmos, 0x16, val >> 8);
+    /* extended memory (next 64MiB) */
+    if (vms->below_4g_mem_size > 1024 * 1024) {
+        val = (vms->below_4g_mem_size - 1024 * 1024) / 1024;
+    } else {
+        val = 0;
+    }
+    if (val > 65535)
+        val = 65535;
+    virt_cmos_set(vms->cmos, 0x17, val);
+    virt_cmos_set(vms->cmos, 0x18, val >> 8);
+    virt_cmos_set(vms->cmos, 0x30, val);
+    virt_cmos_set(vms->cmos, 0x31, val >> 8);
+    /* memory between 16MiB and 4GiB */
+    if (vms->below_4g_mem_size > 16 * 1024 * 1024) {
+        val = (vms->below_4g_mem_size - 16 * 1024 * 1024) / 65536;
+    } else {
+        val = 0;
+    }
+    if (val > 65535)
+        val = 65535;
+    virt_cmos_set(vms->cmos, 0x34, val);
+    virt_cmos_set(vms->cmos, 0x35, val >> 8);
+    /* memory above 4GiB */
+    val = vms->above_4g_mem_size / 65536;
+    virt_cmos_set(vms->cmos, 0x5b, val);
+    virt_cmos_set(vms->cmos, 0x5c, val >> 8);
+    virt_cmos_set(vms->cmos, 0x5d, val >> 16);
+}
+
 MemoryRegion *virt_memory_init(VirtMachineState *vms)
 {
     MachineState *machine = MACHINE(vms);  
@@ -41,7 +78,8 @@ MemoryRegion *virt_memory_init(VirtMachineState *vms)
     }
 
     vms->below_4g_mem_size = lowmem_size;
-    
+    vms->above_4g_mem_size = highmem_size;
+
     memory_region_allocate_system_memory(ram, NULL, "virt.ram",
                                          machine->ram_size);
 
@@ -56,6 +94,8 @@ MemoryRegion *virt_memory_init(VirtMachineState *vms)
         memory_region_add_subregion(system_memory, 0x100000000ULL, highmem);
         e820_add_entry(0x100000000ULL, highmem_size, E820_RAM);
     }
+
+    virt_memory_setup_cmos(vms);
 
     if (vms->fw) {
         sysfw_firmware_init(system_memory, false);
