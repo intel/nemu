@@ -57,6 +57,7 @@ typedef struct {
 
     /* RAM size */
     ram_addr_t below_4g_mem_size;
+    ram_addr_t above_4g_mem_size;
 
     DeviceState *cmos;
 } VirtMachineState;
