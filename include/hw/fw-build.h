@@ -36,8 +36,9 @@ typedef struct FirmwareBuildMethods {
 
 typedef struct FirmwareBuildState {
     union {
-        /* ACPI state */
+        /* ACPI state and configuration */
         struct {
+            AcpiConfiguration *conf;
             AcpiBuildState *state;
         } acpi;
     };
