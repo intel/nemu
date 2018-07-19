@@ -77,4 +77,6 @@ MemoryRegion *virt_memory_init(VirtMachineState *vms);
 void virt_cmos_set(DeviceState *dev, uint8_t field, uint8_t value);
 DeviceState *virt_cmos_init(void);
 
+DeviceState *virt_acpi_init(void);
+
 #endif
