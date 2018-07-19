@@ -51,6 +51,11 @@ typedef struct {
     uint16_t boot_cpus;
 
     PCIBus *pci_bus;
+
+    /* ACPI device for hotplug and PM */
+    HotplugHandler *acpi_dev;
+
+    DeviceState *acpi;
 } VirtMachineState;
 
 #define TYPE_VIRT_MACHINE   MACHINE_TYPE_NAME("virt")
