@@ -93,6 +93,7 @@ static void acpi_conf_virt_init(MachineState *machine, AcpiConfiguration *conf)
     conf->node_mem = vms->node_mem;
     conf->apic_id_limit = vms->apic_id_limit;
     conf->below_4g_mem_size = vms->below_4g_mem_size;
+    conf->acpi_dev = vms->acpi_dev;
 }
 
 static void virt_machine_done(Notifier *notifier, void *data)
@@ -175,12 +176,21 @@ static void virt_machine_state_init(MachineState *machine)
 
     /* TODO Add the ram pointer to the QOM */
     vms->cmos = virt_cmos_init();
+    vms->acpi = virt_acpi_init();
     virt_memory_init(vms);
     virt_pci_init(vms);
 
     vms->apic_id_limit = cpus_init(machine, false);
 
     kvmclock_create();
+
+    object_property_add_link(OBJECT(machine), "acpi-device",
+                             TYPE_HOTPLUG_HANDLER,
+                             (Object **)&vms->acpi_dev,
+                             object_property_allow_set_link,
+                             OBJ_PROP_LINK_UNREF_ON_RELEASE, &error_abort);
+    object_property_set_link(OBJECT(machine), OBJECT(vms->acpi),
+                             "acpi-device", &error_abort);
 
     if (vms->fw) {
         fw_cfg = fw_cfg_init(machine, smp_cpus, mc->possible_cpu_arch_ids(machine), vms->apic_id_limit);
