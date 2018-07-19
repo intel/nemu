@@ -93,6 +93,7 @@ static void acpi_conf_virt_init(MachineState *machine)
     conf->numa_nodes = vms->numa_nodes;
     conf->node_mem = vms->node_mem;
     conf->apic_id_limit = vms->apic_id_limit;
+    conf->acpi_dev = vms->acpi_dev;
 }
 
 static void virt_machine_done(Notifier *notifier, void *data)
@@ -169,6 +170,7 @@ static void virt_machine_state_init(MachineState *machine)
     qemu_add_machine_init_done_notifier(&vms->machine_done);
 
     /* TODO Add the ram pointer to the QOM */
+    vms->acpi = virt_acpi_init();
     virt_memory_init(vms);
     virt_pci_init(vms);
 
@@ -176,6 +178,14 @@ static void virt_machine_state_init(MachineState *machine)
 
     kvmclock_create();
 
+    object_property_add_link(OBJECT(machine), "acpi-device",
+                             TYPE_HOTPLUG_HANDLER,
+                             (Object **)&vms->acpi_dev,
+                             object_property_allow_set_link,
+                             OBJ_PROP_LINK_STRONG, &error_abort);
+    object_property_set_link(OBJECT(machine), OBJECT(vms->acpi),
+                             "acpi-device", &error_abort);
+            
     fw_cfg = fw_cfg_init(machine, smp_cpus, mc->possible_cpu_arch_ids(machine), vms->apic_id_limit);
     rom_set_fw(fw_cfg);
     vms->fw_cfg = fw_cfg;
