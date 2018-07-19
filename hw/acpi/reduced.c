@@ -123,9 +123,13 @@ static void acpi_reduced_build(MachineState *ms, AcpiBuildTables *tables, AcpiCo
     dsdt = tables_blob->len;
     build_dsdt(tables_blob, tables->linker);
 
-    /* FADT MADT GTDT MCFG SPCR pointed to by RSDT */
+    /* FADT pointed to by RSDT */
     acpi_add_table(table_offsets, tables_blob);
     build_fadt_reduced(tables_blob, tables->linker, dsdt);
+
+    /* MADT pointed to by RSDT */
+    acpi_add_table(table_offsets, tables_blob);
+    mc->firmware_build_methods.acpi.madt(tables_blob, tables->linker, ms, conf);
 
     /* RSDT is pointed to by RSDP */
     rsdt = tables_blob->len;
