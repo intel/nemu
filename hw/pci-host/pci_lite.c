@@ -70,8 +70,12 @@ static void pci_lite_get_pci_hole_start(Object *obj, Visitor *v,
                                         Error **errp)
 {
     PCILiteHost *s = PCI_LITE_HOST(obj);
-    uint32_t value = range_lob(&s->pci_hole);
+    uint64_t val64;
+    uint32_t value;
 
+    val64 = range_is_empty(&s->pci_hole) ? 0 : range_lob(&s->pci_hole);
+    value = val64;
+    assert(value == val64);
     visit_type_uint32(v, name, &value, errp);
 }
 
@@ -80,8 +84,12 @@ static void pci_lite_get_pci_hole_end(Object *obj, Visitor *v,
                                       Error **errp)
 {
     PCILiteHost *s = PCI_LITE_HOST(obj);
-    uint32_t value = range_upb(&s->pci_hole);
+    uint64_t val64;
+    uint32_t value;
 
+    val64 = range_is_empty(&s->pci_hole) ? 0 : range_upb(&s->pci_hole) + 1;
+    value = val64;
+    assert(value == val64);
     visit_type_uint32(v, name, &value, errp);
 }
 
@@ -91,11 +99,14 @@ static void pci_lite_get_pci_hole64_start(Object *obj, Visitor *v,
 {
     PCIHostState *h = PCI_HOST_BRIDGE(obj);
     Range w64;
+    uint64_t value;
 
     pci_bus_get_w64_range(h->bus, &w64);
-
-    uint64_t start = range_lob(&w64);
-    visit_type_uint64(v, name, &start, errp);
+    value = range_is_empty(&w64) ? 0 : range_lob(&w64);
+    if (!value) {
+        value = ROUND_UP(0x100000000ULL, 1ULL << 30);
+    }
+    visit_type_uint64(v, name, &value, errp);
 }
 
 static void pci_lite_get_pci_hole64_end(Object *obj, Visitor *v,
@@ -103,12 +114,18 @@ static void pci_lite_get_pci_hole64_end(Object *obj, Visitor *v,
                                         Error **errp)
 {
     PCIHostState *h = PCI_HOST_BRIDGE(obj);
+    PCILiteHost *s = PCI_LITE_HOST(obj);
+    uint64_t hole64_start = ROUND_UP(0x100000000ULL, 1ULL << 30);
     Range w64;
+    uint64_t value, hole64_end;
 
     pci_bus_get_w64_range(h->bus, &w64);
-
-    uint64_t end = range_upb(&w64);
-    visit_type_uint64(v, name, &end, errp);
+    value = range_is_empty(&w64) ? 0 : range_upb(&w64) + 1;
+    hole64_end = ROUND_UP(hole64_start + s->pci_hole64_size, 1ULL << 30);
+    if (value < hole64_end) {
+        value = hole64_end;
+    }
+    visit_type_uint64(v, name, &value, errp);
 }
 
 static void pci_lite_initfn(Object *obj)
