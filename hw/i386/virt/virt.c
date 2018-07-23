@@ -28,6 +28,7 @@
 #include "hw/kvm/clock.h"
 
 #include "hw/acpi/acpi.h"
+#include "hw/acpi/aml-build.h"
 #include "hw/acpi/reduced.h"
 
 #include "hw/i386/virt.h"
