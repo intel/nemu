@@ -391,6 +391,8 @@ void acpi_align_size(GArray *blob, unsigned align);
 void acpi_add_table(GArray *table_offsets, GArray *table_data);
 void acpi_build_tables_init(AcpiBuildTables *tables);
 void acpi_build_tables_cleanup(AcpiBuildTables *tables, bool mfre);
+GArray *build_rsdp_rsdt(GArray *rsdp_table, BIOSLinker *linker, unsigned tbl_offset);
+GArray *build_rsdp(GArray *rsdp_table, BIOSLinker *linker, unsigned tbl_offset);
 void
 build_rsdt(GArray *table_data, BIOSLinker *linker, GArray *table_offsets,
            const char *oem_id, const char *oem_table_id);
