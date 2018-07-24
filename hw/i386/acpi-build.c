@@ -114,6 +114,12 @@ typedef struct AcpiBuildPciBusHotplugState {
     bool pcihp_bridge_en;
 } AcpiBuildPciBusHotplugState;
 
+static const char *pci_hosts[] = {
+   "/machine/i440fx",
+   "/machine/q35",
+   NULL,
+};
+
 static void init_common_fadt_data(Object *o, AcpiFadtData *data)
 {
     uint32_t io = object_property_get_uint(o, ACPI_PM_PROP_PM_IO_BASE, NULL);
@@ -238,27 +244,30 @@ static void acpi_get_misc_info(AcpiMiscInfo *info)
  * Because of the PXB hosts we cannot simply query TYPE_PCI_HOST_BRIDGE.
  * On i386 arch we only have two pci hosts, so we can look only for them.
  */
-static Object *acpi_get_i386_pci_host(void)
+static Object *acpi_get_pci_host(void)
 {
     PCIHostState *host;
+    int i = 0;
 
-    host = OBJECT_CHECK(PCIHostState,
-                        object_resolve_path("/machine/i440fx", NULL),
-                        TYPE_PCI_HOST_BRIDGE);
-    if (!host) {
+    while (pci_hosts[i]) {
         host = OBJECT_CHECK(PCIHostState,
-                            object_resolve_path("/machine/q35", NULL),
+                            object_resolve_path(pci_hosts[i], NULL),
                             TYPE_PCI_HOST_BRIDGE);
+        if (host) {
+            return OBJECT(host);
+        }
+
+        i++;
     }
 
-    return OBJECT(host);
+    return NULL;
 }
 
 static void acpi_get_pci_holes(Range *hole, Range *hole64)
 {
     Object *pci_host;
 
-    pci_host = acpi_get_i386_pci_host();
+    pci_host = acpi_get_pci_host();
     g_assert(pci_host);
 
     range_set_bounds1(hole,
@@ -1636,7 +1645,7 @@ build_dsdt(GArray *table_data, BIOSLinker *linker,
         Object *pci_host;
         PCIBus *bus = NULL;
 
-        pci_host = acpi_get_i386_pci_host();
+        pci_host = acpi_get_pci_host();
         if (pci_host) {
             bus = PCI_HOST_BRIDGE(pci_host)->bus;
         }
@@ -2009,7 +2018,7 @@ static bool acpi_get_mcfg(AcpiMcfgInfo *mcfg)
     Object *pci_host;
     QObject *o;
 
-    pci_host = acpi_get_i386_pci_host();
+    pci_host = acpi_get_pci_host();
     g_assert(pci_host);
 
     o = object_property_get_qobject(pci_host, PCIE_HOST_MCFG_BASE, NULL);
