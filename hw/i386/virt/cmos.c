@@ -42,14 +42,14 @@ typedef struct VirtCmosState {
 static void virt_cmos_ioport_write(void *opaque, hwaddr addr, uint64_t val,
                                   unsigned width)
 {
-    VirtCmosState *s = opaque;
+    VirtCmosState *s = VIRT_CMOS_DEVICE(opaque);
 
     s->cmos_index = val & 0x7f;
 }
 
 static uint64_t virt_cmos_ioport_read(void *opaque, hwaddr addr, unsigned width)
 {
-    VirtCmosState *s = opaque;
+    VirtCmosState *s = VIRT_CMOS_DEVICE(opaque);
 
     return s->cmos_data[s->cmos_index];
 }
