@@ -3,6 +3,7 @@
 
 #include "hw/acpi/acpi-defs.h"
 #include "hw/acpi/bios-linker-loader.h"
+#include "hw/pci/pcie_host.h"
 
 /* Reserve RAM space for tables: add another order of magnitude. */
 #define ACPI_BUILD_TABLE_MAX_SIZE         0x200000
@@ -224,6 +225,21 @@ struct AcpiBuildTables {
     BIOSLinker *linker;
 } AcpiBuildTables;
 
+typedef struct AcpiMcfgInfo {
+    uint64_t mcfg_base;
+    uint32_t mcfg_size;
+} AcpiMcfgInfo;
+
+typedef struct CrsRangeEntry {
+    uint64_t base;
+    uint64_t limit;
+} CrsRangeEntry;
+
+typedef struct CrsRangeSet {
+    GPtrArray *io_ranges;
+    GPtrArray *mem_ranges;
+    GPtrArray *mem_64bit_ranges;
+} CrsRangeSet;
 /**
  * init_aml_allocator:
  *
@@ -389,6 +405,15 @@ void acpi_align_size(GArray *blob, unsigned align);
 void acpi_add_table(GArray *table_offsets, GArray *table_data);
 void acpi_build_tables_init(AcpiBuildTables *tables);
 void acpi_build_tables_cleanup(AcpiBuildTables *tables, bool mfre);
+Aml *build_osc_method(void);
+void build_mcfg(GArray *table_data, BIOSLinker *linker, AcpiMcfgInfo *info);
+Aml *build_gsi_link_dev(const char *name, uint8_t uid, uint8_t gsi);
+Aml *build_prt(bool is_pci0_prt);
+void crs_range_set_init(CrsRangeSet *range_set);
+Aml *build_crs(PCIHostState *host, CrsRangeSet *range_set);
+void crs_replace_with_free_ranges(GPtrArray *ranges,
+                                  uint64_t start, uint64_t end);
+void crs_range_set_free(CrsRangeSet *range_set);
 void
 build_rsdp_rsdt(GArray *table_data,
                 BIOSLinker *linker, unsigned rsdt_tbl_offset);
