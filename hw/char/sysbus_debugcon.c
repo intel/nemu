@@ -52,7 +52,8 @@ typedef struct SysBusDebugConState {
 static void debugcon_ioport_write(void *opaque, hwaddr addr, uint64_t val,
                                   unsigned width)
 {
-    DebugconState *s = opaque;
+    SysBusDebugConState *d = SYS_DEBUGCON_DEVICE(opaque);
+    DebugconState *s = &d->state;
     unsigned char ch = val;
 
 #ifdef DEBUG_DEBUGCON
@@ -67,7 +68,8 @@ static void debugcon_ioport_write(void *opaque, hwaddr addr, uint64_t val,
 
 static uint64_t debugcon_ioport_read(void *opaque, hwaddr addr, unsigned width)
 {
-    DebugconState *s = opaque;
+    SysBusDebugConState *d = SYS_DEBUGCON_DEVICE(opaque);
+    DebugconState *s = &d->state;
 
 #ifdef DEBUG_DEBUGCON
     printf("debugcon: read addr=0x%04" HWADDR_PRIx "\n", addr);
@@ -106,7 +108,7 @@ static void debugcon_sysbus_realizefn(DeviceState *dev, Error **errp)
         error_propagate(errp, err);
         return;
     }
-    memory_region_init_io(&s->io, OBJECT(dev), &debugcon_ops, s,
+    memory_region_init_io(&s->io, OBJECT(dev), &debugcon_ops, sys,
                           TYPE_SYSBUS_DEBUGCON, 1);
     sysbus_add_io(d, sys->iobase, &s->io);
 }

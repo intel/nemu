@@ -157,7 +157,7 @@ static void acpi_ram_update(MemoryRegion *mr, GArray *data)
 
 static void acpi_reduced_build_update(void *build_opaque)
 {
-    MachineState *ms = build_opaque;
+    MachineState *ms = MACHINE(build_opaque);
     AcpiBuildState *build_state = ms->firmware_build_state.acpi.state;
     AcpiConfiguration *conf = ms->firmware_build_state.acpi.conf;
     AcpiBuildTables tables;
@@ -186,7 +186,7 @@ static void acpi_reduced_build_update(void *build_opaque)
 
 static void acpi_reduced_build_reset(void *build_opaque)
 {
-    MachineState *ms = build_opaque;
+    MachineState *ms = MACHINE(build_opaque);
     AcpiBuildState *build_state = ms->firmware_build_state.acpi.state;
 
     build_state->patched = false;
