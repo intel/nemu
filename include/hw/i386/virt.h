@@ -61,7 +61,6 @@ typedef struct {
     /* RAM size */
     ram_addr_t below_4g_mem_size;
 
-    DeviceState *cmos;
     DeviceState *acpi;
 } VirtMachineState;
 
@@ -76,9 +75,6 @@ typedef struct {
     OBJECT_CLASS_CHECK(VirtMachineClass, class, TYPE_VIRT_MACHINE)
 
 MemoryRegion *virt_memory_init(VirtMachineState *vms);
-
-void virt_cmos_set(DeviceState *dev, uint8_t field, uint8_t value);
-DeviceState *virt_cmos_init(void);
 
 DeviceState *virt_acpi_init(void);
 
