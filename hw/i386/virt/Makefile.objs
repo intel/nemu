@@ -1,1 +1,1 @@
-obj-y += virt.o memory.o cmos.o acpi.o
+obj-y += virt.o memory.o acpi.o
