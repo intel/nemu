@@ -52,7 +52,7 @@
 #define PCI_LITE_PCIEXBAR_BASE  0xb0000000
 #define PCI_LITE_PCIEXBAR_SIZE  (0x100000) /* 1M for bus 0 */
 
-#define DEFAULT_PCI_HOLE64_SIZE (~0x0ULL)
+#define DEFAULT_PCI_HOLE64_SIZE (1ULL << 35)
 
 typedef struct PCILiteHost {
     /*< private >*/
