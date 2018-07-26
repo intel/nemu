@@ -269,20 +269,27 @@ static void virt_2_12_instance_init(Object *obj)
 }
 
 static void virt_cpu_plug(HotplugHandler *hotplug_dev,
-                        DeviceState *dev, Error **errp)
+                          DeviceState *dev, Error **errp)
 {
     CPUArchId *found_cpu;
     Error *local_err = NULL;
     X86CPU *cpu = X86_CPU(dev);
     MachineState *ms = MACHINE(hotplug_dev);
     VirtMachineState *vms = VIRT_MACHINE(hotplug_dev);
+    HotplugHandlerClass *hhc;
 
-    // TODO: Toggle ACPI CPU hotplug here
+    /* We only support ACPI CPU hotplug/unplug */
+    assert(vms->acpi);
 
-    /* increment the number of CPUs */
+    /* Call ACPI hotplug */
+    hhc = HOTPLUG_HANDLER_GET_CLASS(vms->acpi);
+    hhc->plug(HOTPLUG_HANDLER(vms->acpi), dev, &local_err);
+    if (local_err) {
+        goto out;
+    }
+
+    /* Increment the number of CPUs */
     vms->boot_cpus++;
-
-    // TODO: If using RTC update here
 
     if (vms->fw_cfg) {
         fw_cfg_modify_i16(vms->fw_cfg, FW_CFG_NB_CPUS, vms->boot_cpus);
@@ -291,13 +298,15 @@ static void virt_cpu_plug(HotplugHandler *hotplug_dev,
     found_cpu = cpu_find_slot(ms, cpu->apic_id, NULL);
     found_cpu->cpu = OBJECT(dev);
 
+out:
     error_propagate(errp, local_err);
 }
 
 static void virt_cpu_pre_plug(HotplugHandler *hotplug_dev,
-                            DeviceState *dev, Error **errp)
+                              DeviceState *dev, Error **errp)
 {
     int idx;
+    Error *local_err = NULL;
     CPUState *cs;
     CPUArchId *cpu_slot;
     X86CPUTopoInfo topo;
@@ -305,9 +314,9 @@ static void virt_cpu_pre_plug(HotplugHandler *hotplug_dev,
     MachineState *ms = MACHINE(hotplug_dev);
 
     if(!object_dynamic_cast(OBJECT(cpu), ms->cpu_type)) {
-        error_setg(errp, "Invalid CPU type, expected cpu type: '%s'",
+        error_setg(&local_err, "Invalid CPU type, expected cpu type: '%s'",
                    ms->cpu_type);
-        return;
+        goto out;
     }
 
     /* if APIC ID is not set, set it based on socket/core/thread properties */
@@ -315,28 +324,28 @@ static void virt_cpu_pre_plug(HotplugHandler *hotplug_dev,
         int max_socket = (max_cpus - 1) / smp_threads / smp_cores;
 
         if (cpu->socket_id < 0) {
-            error_setg(errp, "CPU socket-id is not set");
-            return;
+            error_setg(&local_err, "CPU socket-id is not set");
+            goto out;
         } else if (cpu->socket_id > max_socket) {
-            error_setg(errp, "Invalid CPU socket-id: %u must be in range 0:%u",
+            error_setg(&local_err, "Invalid CPU socket-id: %u must be in range 0:%u",
                        cpu->socket_id, max_socket);
-            return;
+            goto out;
         }
         if (cpu->core_id < 0) {
-            error_setg(errp, "CPU core-id is not set");
-            return;
+            error_setg(&local_err, "CPU core-id is not set");
+            goto out;
         } else if (cpu->core_id > (smp_cores - 1)) {
-            error_setg(errp, "Invalid CPU core-id: %u must be in range 0:%u",
+            error_setg(&local_err, "Invalid CPU core-id: %u must be in range 0:%u",
                        cpu->core_id, smp_cores - 1);
-            return;
+            goto out;
         }
         if (cpu->thread_id < 0) {
-            error_setg(errp, "CPU thread-id is not set");
-            return;
+            error_setg(&local_err, "CPU thread-id is not set");
+            goto out;
         } else if (cpu->thread_id > (smp_threads - 1)) {
-            error_setg(errp, "Invalid CPU thread-id: %u must be in range 0:%u",
+            error_setg(&local_err, "Invalid CPU thread-id: %u must be in range 0:%u",
                        cpu->thread_id, smp_threads - 1);
-            return;
+            goto out;
         }
 
         topo.pkg_id = cpu->socket_id;
@@ -348,17 +357,17 @@ static void virt_cpu_pre_plug(HotplugHandler *hotplug_dev,
     cpu_slot = cpu_find_slot(ms, cpu->apic_id, &idx);
     if (!cpu_slot) {
         x86_topo_ids_from_apicid(cpu->apic_id, smp_cores, smp_threads, &topo);
-        error_setg(errp, "Invalid CPU [socket: %u, core: %u, thread: %u] with"
+        error_setg(&local_err, "Invalid CPU [socket: %u, core: %u, thread: %u] with"
                   " APIC ID %" PRIu32 ", valid index range 0:%d",
                    topo.pkg_id, topo.core_id, topo.smt_id, cpu->apic_id,
                    ms->possible_cpus->len - 1);
-        return;
+        goto out;
     }
 
     if (cpu_slot->cpu) {
-        error_setg(errp, "CPU[%d] with APIC ID %" PRIu32 " exists",
+        error_setg(&local_err, "CPU[%d] with APIC ID %" PRIu32 " exists",
                    idx, cpu->apic_id);
-        return;
+        goto out;
     }
 
     /* if 'address' properties socket-id/core-id/thread-id are not set, set them
@@ -369,23 +378,23 @@ static void virt_cpu_pre_plug(HotplugHandler *hotplug_dev,
      * CPUState::nr_cores and CPUState::nr_threads fields instead of globals */
     x86_topo_ids_from_apicid(cpu->apic_id, smp_cores, smp_threads, &topo);
     if (cpu->socket_id != -1 && cpu->socket_id != topo.pkg_id) {
-        error_setg(errp, "property socket-id: %u doesn't match set apic-id:"
+        error_setg(&local_err, "property socket-id: %u doesn't match set apic-id:"
             " 0x%x (socket-id: %u)", cpu->socket_id, cpu->apic_id, topo.pkg_id);
-        return;
+        goto out;
     }
     cpu->socket_id = topo.pkg_id;
 
     if (cpu->core_id != -1 && cpu->core_id != topo.core_id) {
-        error_setg(errp, "property core-id: %u doesn't match set apic-id:"
+        error_setg(&local_err, "property core-id: %u doesn't match set apic-id:"
             " 0x%x (core-id: %u)", cpu->core_id, cpu->apic_id, topo.core_id);
-        return;
+        goto out;
     }
     cpu->core_id = topo.core_id;
 
     if (cpu->thread_id != -1 && cpu->thread_id != topo.smt_id) {
-        error_setg(errp, "property thread-id: %u doesn't match set apic-id:"
+        error_setg(&local_err, "property thread-id: %u doesn't match set apic-id:"
             " 0x%x (thread-id: %u)", cpu->thread_id, cpu->apic_id, topo.smt_id);
-        return;
+        goto out;
     }
     cpu->thread_id = topo.smt_id;
 
@@ -393,10 +402,72 @@ static void virt_cpu_pre_plug(HotplugHandler *hotplug_dev,
     cs->cpu_index = idx;
 
     numa_cpu_pre_plug(cpu_slot, dev, errp);
+
+out:
+    error_propagate(errp, local_err);
+}
+
+static void virt_cpu_unplug_request_cb(HotplugHandler *hotplug_dev,
+                                       DeviceState *dev, Error **errp)
+{
+    int idx = -1;
+    HotplugHandlerClass *hhc;
+    Error *local_err = NULL;
+    X86CPU *cpu = X86_CPU(dev);
+    VirtMachineState *vms = VIRT_MACHINE(hotplug_dev);
+
+    /* We only support ACPI CPU hotplug/unplug */
+    assert(vms->acpi);
+
+    cpu_find_slot(MACHINE(vms), cpu->apic_id, &idx);
+    assert(idx != -1);
+    if (idx == 0) {
+        error_setg(&local_err, "Boot CPU is unpluggable");
+        goto out;
+    }
+
+    hhc = HOTPLUG_HANDLER_GET_CLASS(vms->acpi);
+    hhc->unplug_request(HOTPLUG_HANDLER(vms->acpi), dev, &local_err);
+
+ out:
+    error_propagate(errp, local_err);
+}
+
+static void virt_cpu_unplug_cb(HotplugHandler *hotplug_dev,
+                               DeviceState *dev, Error **errp)
+{
+    CPUArchId *found_cpu;
+    HotplugHandlerClass *hhc;
+    Error *local_err = NULL;
+    X86CPU *cpu = X86_CPU(dev);
+    VirtMachineState *vms = VIRT_MACHINE(hotplug_dev);
+
+    /* We only support ACPI CPU hotplug/unplug */
+    assert(vms->acpi);
+
+    hhc = HOTPLUG_HANDLER_GET_CLASS(vms->acpi);
+    hhc->unplug(HOTPLUG_HANDLER(vms->acpi), dev, &local_err);
+    if (local_err) {
+        goto out;
+    }
+
+    found_cpu = cpu_find_slot(MACHINE(vms), cpu->apic_id, NULL);
+    found_cpu->cpu = NULL;
+    object_unparent(OBJECT(dev));
+
+    /* decrement the number of CPUs */
+    vms->boot_cpus--;
+
+    if (vms->fw_cfg) {
+        fw_cfg_modify_i16(vms->fw_cfg, FW_CFG_NB_CPUS, vms->boot_cpus);
+    }
+
+out:
+    error_propagate(errp, local_err);
 }
 
 static void virt_machine_device_pre_plug_cb(HotplugHandler *hotplug_dev,
-                                          DeviceState *dev, Error **errp)
+                                            DeviceState *dev, Error **errp)
 {
     if (object_dynamic_cast(OBJECT(dev), TYPE_CPU)) {
         virt_cpu_pre_plug(hotplug_dev, dev, errp);
@@ -404,10 +475,35 @@ static void virt_machine_device_pre_plug_cb(HotplugHandler *hotplug_dev,
 }
 
 static void virt_machine_device_plug_cb(HotplugHandler *hotplug_dev,
-                                      DeviceState *dev, Error **errp)
+                                        DeviceState *dev, Error **errp)
 {
     if (object_dynamic_cast(OBJECT(dev), TYPE_CPU)) {
         virt_cpu_plug(hotplug_dev, dev, errp);
+    } else {
+        error_setg(errp, "virt: device plug for unsupported device"
+                   " type: %s", object_get_typename(OBJECT(dev)));
+    }
+}
+
+static void virt_machine_device_unplug_request_cb(HotplugHandler *hotplug_dev,
+                                                  DeviceState *dev, Error **errp)
+{
+    if (object_dynamic_cast(OBJECT(dev), TYPE_CPU)) {
+        virt_cpu_unplug_request_cb(hotplug_dev, dev, errp);
+    } else {
+        error_setg(errp, "virt: device unplug request for unsupported device"
+                   " type: %s", object_get_typename(OBJECT(dev)));
+    }
+}
+
+static void virt_machine_device_unplug_cb(HotplugHandler *hotplug_dev,
+                                          DeviceState *dev, Error **errp)
+{
+    if (object_dynamic_cast(OBJECT(dev), TYPE_CPU)) {
+        virt_cpu_unplug_cb(hotplug_dev, dev, errp);
+    } else {
+        error_setg(errp, "virt: device unplug for unsupported device"
+                   " type: %s", object_get_typename(OBJECT(dev)));
     }
 }
 
@@ -450,11 +546,14 @@ static void virt_machine_class_init(MachineClass *mc)
     mc->get_default_cpu_node_id = cpu_get_default_cpu_node_id;
     mc->possible_cpu_arch_ids = cpu_possible_cpu_arch_ids;;
     mc->reset = virt_machine_reset;
+    mc->hot_add_cpu = cpu_hot_add;
     mc->get_hotplug_handler = virt_get_hotplug_handler;
 
     /* Hotplug handlers */
     hc->pre_plug = virt_machine_device_pre_plug_cb;
     hc->plug = virt_machine_device_plug_cb;
+    hc->unplug_request = virt_machine_device_unplug_request_cb;
+    hc->unplug = virt_machine_device_unplug_cb;
 
     /* Firmware building handler */
     mc->firmware_build_methods.acpi.madt = build_madt;
