@@ -1251,32 +1251,6 @@ static void build_piix4_pci_hotplug(Aml *table)
     aml_append(table, scope);
 }
 
-static void build_static_pci0_prt(Aml *table)
-{
-    int i, j;
-    Aml *method, *res, *pkg;
-    Aml *sb_scope = aml_scope("_SB");
-    Aml *pci0_scope = aml_scope("PCI0");
-
-    method = aml_method("_PRT", 0, AML_NOTSERIALIZED);
-    res = aml_package(128);
-    for (i = 0; i < 32; i++) {
-        for (j = 0; j < 4; j++) {
-            pkg = aml_package(4);
-            aml_append(pkg, aml_int((i << 16) | 0xffff));
-            aml_append(pkg, aml_int(j));
-            aml_append(pkg, aml_int(0));
-            aml_append(pkg, aml_int(0x14 + ((i + j) % 4)));
-            aml_append(res, pkg);
-        }
-    }
-
-    aml_append(method, aml_return(res));
-    aml_append(pci0_scope, method);
-    aml_append(sb_scope, pci0_scope);
-    aml_append(table, sb_scope);
-}
-
 static void
 build_dsdt(GArray *table_data, BIOSLinker *linker,
            AcpiPmInfo *pm, AcpiMiscInfo *misc,
@@ -1566,7 +1540,6 @@ build_dsdt(GArray *table_data, BIOSLinker *linker,
     }
 
     aml_append(dsdt, sb_scope);
-    build_static_pci0_prt(dsdt);
 
     /* copy AML table into ACPI tables blob and patch header there */
     g_array_append_vals(table_data, dsdt->buf->data, dsdt->buf->len);
