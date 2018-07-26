@@ -1337,7 +1337,9 @@ build_dsdt(GArray *table_data, BIOSLinker *linker,
         aml_append(dev, aml_name_decl("_CID", aml_eisaid("PNP0A03")));
         aml_append(dev, aml_name_decl("_ADR", aml_int(0)));
         aml_append(dev, aml_name_decl("_UID", aml_int(1)));
-        aml_append(dev, build_osc_method());
+        aml_append(dev, aml_name_decl("SUPP", aml_int(0)));
+        aml_append(dev, aml_name_decl("CTRL", aml_int(0)));
+        aml_append(dev, build_osc_method(ACPI_OSC_CTRL_PCI_ALL));
         aml_append(sb_scope, dev);
         aml_append(dsdt, sb_scope);
 
@@ -1402,7 +1404,7 @@ build_dsdt(GArray *table_data, BIOSLinker *linker,
             aml_append(dev, aml_name_decl("_HID", aml_eisaid("PNP0A03")));
             aml_append(dev, aml_name_decl("_BBN", aml_int(bus_num)));
             if (pci_bus_is_express(bus)) {
-                aml_append(dev, build_osc_method());
+                aml_append(dev, build_osc_method(ACPI_OSC_CTRL_PCI_ALL));
             }
 
             if (numa_node != NUMA_NODE_UNASSIGNED) {
