@@ -114,12 +114,6 @@ typedef struct AcpiBuildPciBusHotplugState {
     bool pcihp_bridge_en;
 } AcpiBuildPciBusHotplugState;
 
-static const char *pci_hosts[] = {
-   "/machine/i440fx",
-   "/machine/q35",
-   NULL,
-};
-
 static void init_common_fadt_data(Object *o, AcpiFadtData *data)
 {
     uint32_t io = object_property_get_uint(o, ACPI_PM_PROP_PM_IO_BASE, NULL);
@@ -238,52 +232,6 @@ static void acpi_get_misc_info(AcpiMiscInfo *info)
     info->tpm_version = tpm_get_version(tpm_find());
     info->pvpanic_port = pvpanic_port();
     info->applesmc_io_base = applesmc_port();
-}
-
-/*
- * Because of the PXB hosts we cannot simply query TYPE_PCI_HOST_BRIDGE.
- * On i386 arch we only have two pci hosts, so we can look only for them.
- */
-static Object *acpi_get_pci_host(void)
-{
-    PCIHostState *host;
-    int i = 0;
-
-    while (pci_hosts[i]) {
-        host = OBJECT_CHECK(PCIHostState,
-                            object_resolve_path(pci_hosts[i], NULL),
-                            TYPE_PCI_HOST_BRIDGE);
-        if (host) {
-            return OBJECT(host);
-        }
-
-        i++;
-    }
-
-    return NULL;
-}
-
-static void acpi_get_pci_holes(Range *hole, Range *hole64)
-{
-    Object *pci_host;
-
-    pci_host = acpi_get_pci_host();
-    g_assert(pci_host);
-
-    range_set_bounds1(hole,
-                      object_property_get_uint(pci_host,
-                                               PCI_HOST_PROP_PCI_HOLE_START,
-                                               NULL),
-                      object_property_get_uint(pci_host,
-                                               PCI_HOST_PROP_PCI_HOLE_END,
-                                               NULL));
-    range_set_bounds1(hole64,
-                      object_property_get_uint(pci_host,
-                                               PCI_HOST_PROP_PCI_HOLE64_START,
-                                               NULL),
-                      object_property_get_uint(pci_host,
-                                               PCI_HOST_PROP_PCI_HOLE64_END,
-                                               NULL));
 }
 
 /* FACS */
@@ -1307,16 +1255,11 @@ static void build_piix4_pci_hotplug(Aml *table)
 static void
 build_dsdt(GArray *table_data, BIOSLinker *linker,
            AcpiPmInfo *pm, AcpiMiscInfo *misc,
-           Range *pci_hole, Range *pci_hole64,
+           AcpiPciBus *pci_host,
            MachineState *machine, AcpiConfiguration *conf)
 {
-    CrsRangeEntry *entry;
     Aml *dsdt, *sb_scope, *scope, *dev, *method, *field, *pkg, *crs;
-    CrsRangeSet crs_range_set;
     uint32_t nr_mem = machine->ram_slots;
-    int root_bus_limit = 0xFF;
-    PCIBus *bus = NULL;
-    int i;
 
     dsdt = init_aml_allocator();
 
@@ -1391,104 +1334,7 @@ build_dsdt(GArray *table_data, BIOSLinker *linker,
     }
     aml_append(dsdt, scope);
 
-    crs_range_set_init(&crs_range_set);
-    bus = PC_MACHINE(machine)->bus;
-    if (bus) {
-        QLIST_FOREACH(bus, &bus->child, sibling) {
-            uint8_t bus_num = pci_bus_num(bus);
-            uint8_t numa_node = pci_bus_numa_node(bus);
-
-            /* look only for expander root buses */
-            if (!pci_bus_is_root(bus)) {
-                continue;
-            }
-
-            if (bus_num < root_bus_limit) {
-                root_bus_limit = bus_num - 1;
-            }
-
-            scope = aml_scope("\\_SB");
-            dev = aml_device("PC%.02X", bus_num);
-            aml_append(dev, aml_name_decl("_UID", aml_int(bus_num)));
-            aml_append(dev, aml_name_decl("_HID", aml_eisaid("PNP0A03")));
-            aml_append(dev, aml_name_decl("_BBN", aml_int(bus_num)));
-            if (pci_bus_is_express(bus)) {
-                aml_append(dev, build_osc_method(ACPI_OSC_CTRL_PCI_ALL));
-            }
-
-            if (numa_node != NUMA_NODE_UNASSIGNED) {
-                aml_append(dev, aml_name_decl("_PXM", aml_int(numa_node)));
-            }
-
-            aml_append(dev, build_prt(false));
-            crs = build_crs(PCI_HOST_BRIDGE(BUS(bus)->parent), &crs_range_set);
-            aml_append(dev, aml_name_decl("_CRS", crs));
-            aml_append(scope, dev);
-            aml_append(dsdt, scope);
-        }
-    }
-
-    scope = aml_scope("\\_SB.PCI0");
-    /* build PCI0._CRS */
-    crs = aml_resource_template();
-    aml_append(crs,
-        aml_word_bus_number(AML_MIN_FIXED, AML_MAX_FIXED, AML_POS_DECODE,
-                            0x0000, 0x0, root_bus_limit,
-                            0x0000, root_bus_limit + 1));
-    aml_append(crs, aml_io(AML_DECODE16, 0x0CF8, 0x0CF8, 0x01, 0x08));
-
-    aml_append(crs,
-        aml_word_io(AML_MIN_FIXED, AML_MAX_FIXED,
-                    AML_POS_DECODE, AML_ENTIRE_RANGE,
-                    0x0000, 0x0000, 0x0CF7, 0x0000, 0x0CF8));
-
-    crs_replace_with_free_ranges(crs_range_set.io_ranges, 0x0D00, 0xFFFF);
-    for (i = 0; i < crs_range_set.io_ranges->len; i++) {
-        entry = g_ptr_array_index(crs_range_set.io_ranges, i);
-        aml_append(crs,
-            aml_word_io(AML_MIN_FIXED, AML_MAX_FIXED,
-                        AML_POS_DECODE, AML_ENTIRE_RANGE,
-                        0x0000, entry->base, entry->limit,
-                        0x0000, entry->limit - entry->base + 1));
-    }
-
-    aml_append(crs,
-        aml_dword_memory(AML_POS_DECODE, AML_MIN_FIXED, AML_MAX_FIXED,
-                         AML_CACHEABLE, AML_READ_WRITE,
-                         0, 0x000A0000, 0x000BFFFF, 0, 0x00020000));
-
-    crs_replace_with_free_ranges(crs_range_set.mem_ranges,
-                                 range_lob(pci_hole),
-                                 range_upb(pci_hole));
-    for (i = 0; i < crs_range_set.mem_ranges->len; i++) {
-        entry = g_ptr_array_index(crs_range_set.mem_ranges, i);
-        aml_append(crs,
-            aml_dword_memory(AML_POS_DECODE, AML_MIN_FIXED, AML_MAX_FIXED,
-                             AML_NON_CACHEABLE, AML_READ_WRITE,
-                             0, entry->base, entry->limit,
-                             0, entry->limit - entry->base + 1));
-    }
-
-    if (!range_is_empty(pci_hole64)) {
-        crs_replace_with_free_ranges(crs_range_set.mem_64bit_ranges,
-                                     range_lob(pci_hole64),
-                                     range_upb(pci_hole64));
-        for (i = 0; i < crs_range_set.mem_64bit_ranges->len; i++) {
-            entry = g_ptr_array_index(crs_range_set.mem_64bit_ranges, i);
-            aml_append(crs,
-                       aml_qword_memory(AML_POS_DECODE, AML_MIN_FIXED,
-                                        AML_MAX_FIXED,
-                                        AML_CACHEABLE, AML_READ_WRITE,
-                                        0, entry->base, entry->limit,
-                                        0, entry->limit - entry->base + 1));
-        }
-    }
-
-    if (TPM_IS_TIS(tpm_find())) {
-        aml_append(crs, aml_memory32_fixed(TPM_TIS_ADDR_BASE,
-                   TPM_TIS_ADDR_SIZE, AML_READ_WRITE));
-    }
-    aml_append(scope, aml_name_decl("_CRS", crs));
+    scope = build_pci_host_bridge(dsdt, pci_host);
 
     /* reserve GPE0 block resources */
     dev = aml_device("GPE0");
@@ -1507,8 +1353,6 @@ build_dsdt(GArray *table_data, BIOSLinker *linker,
     );
     aml_append(dev, aml_name_decl("_CRS", crs));
     aml_append(scope, dev);
-
-    crs_range_set_free(&crs_range_set);
 
     /* reserve PCIHP resources */
     if (pm->pcihp_io_len) {
@@ -2065,6 +1909,11 @@ void acpi_build(AcpiBuildTables *tables,
                              64 /* Ensure FACS is aligned */,
                              false /* high memory */);
 
+    AcpiPciBus pci_host = {
+        .pci_bus    = PC_MACHINE(machine)->bus,
+        .pci_hole   = &pci_hole,
+        .pci_hole64 = &pci_hole64,
+    };
     /*
      * FACS is pointed to by FADT.
      * We place it first since it's the only table that has alignment
@@ -2076,7 +1925,7 @@ void acpi_build(AcpiBuildTables *tables,
     /* DSDT is pointed to by FADT */
     dsdt = tables_blob->len;
     build_dsdt(tables_blob, tables->linker, &pm, &misc,
-               &pci_hole, &pci_hole64, machine, conf);
+               &pci_host, machine, conf);
 
     /* Count the size of the DSDT and SSDT, we will need it for legacy
      * sizing of ACPI tables.
