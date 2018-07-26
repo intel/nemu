@@ -652,4 +652,18 @@ struct AcpiIortRC {
 } QEMU_PACKED;
 typedef struct AcpiIortRC AcpiIortRC;
 
+/* _OSC */
+
+#define ACPI_OSC_CTRL_PCIE_NATIVE_HP (1 << 0)
+#define ACPI_OSC_CTRL_SHPC_NATIVE_HP (1 << 1)
+#define ACPI_OSC_CTRL_PCIE_PM_EVT    (1 << 2)
+#define ACPI_OSC_CTRL_PCIE_AER       (1 << 3)
+#define ACPI_OSC_CTRL_PCIE_CAP_CTRL  (1 << 4)
+#define ACPI_OSC_CTRL_PCI_ALL \
+    (ACPI_OSC_CTRL_PCIE_NATIVE_HP |             \
+     ACPI_OSC_CTRL_SHPC_NATIVE_HP |             \
+     ACPI_OSC_CTRL_PCIE_PM_EVT |                \
+     ACPI_OSC_CTRL_PCIE_AER |                   \
+     ACPI_OSC_CTRL_PCIE_CAP_CTRL)
+
 #endif
