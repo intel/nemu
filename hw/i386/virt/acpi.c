@@ -29,10 +29,14 @@
 
 #include "hw/acpi/acpi.h"
 #include "hw/acpi/cpu.h"
+#include "hw/acpi/cpu_hotplug.h"
 #include "hw/acpi/acpi_dev_interface.h"
 
 typedef struct VirtAcpiState {
     SysBusDevice parent_obj;
+
+    AcpiCpuHotplug cpuhp;
+    CPUHotplugState cpuhp_state;
 } VirtAcpiState;
 
 #define TYPE_VIRT_ACPI "virt-acpi"
@@ -48,16 +52,40 @@ static const VMStateDescription vmstate_acpi = {
 static void virt_device_plug_cb(HotplugHandler *hotplug_dev,
                                 DeviceState *dev, Error **errp)
 {
+    VirtAcpiState *s = VIRT_ACPI(hotplug_dev);
+
+    if (object_dynamic_cast(OBJECT(dev), TYPE_CPU)) {
+        acpi_cpu_plug_cb(hotplug_dev, &s->cpuhp_state, dev, errp);
+    }  else {
+        error_setg(errp, "virt: device plug request for unsupported device"
+                   " type: %s", object_get_typename(OBJECT(dev)));
+    }
 }
 
 static void virt_device_unplug_request_cb(HotplugHandler *hotplug_dev,
                                           DeviceState *dev, Error **errp)
 {
+    VirtAcpiState *s = VIRT_ACPI(hotplug_dev);
+
+    if (object_dynamic_cast(OBJECT(dev), TYPE_CPU)) {
+        acpi_cpu_unplug_request_cb(hotplug_dev, &s->cpuhp_state, dev, errp);
+    } else {
+        error_setg(errp, "virt: device unplug request for unsupported device"
+                   " type: %s", object_get_typename(OBJECT(dev)));
+    }
 }
 
 static void virt_device_unplug_cb(HotplugHandler *hotplug_dev,
                                   DeviceState *dev, Error **errp)
 {
+    VirtAcpiState *s = VIRT_ACPI(hotplug_dev);
+
+    if (object_dynamic_cast(OBJECT(dev), TYPE_CPU)) {
+        acpi_cpu_unplug_cb(&s->cpuhp_state, dev, errp);
+    } else {
+        error_setg(errp, "virt: device unplug for unsupported device"
+                   " type: %s", object_get_typename(OBJECT(dev)));
+    }
 }
 
 static void virt_ospm_status(AcpiDeviceIf *adev, ACPIOSTInfoList ***list)
@@ -71,6 +99,16 @@ static void virt_send_ged(AcpiDeviceIf *adev, AcpiEventStatusBits ev)
 static int virt_device_sysbus_init(SysBusDevice *dev)
 {
     return 0;
+}
+
+static void virt_device_realize(DeviceState *dev, Error **errp)
+{
+    VirtAcpiState *s = VIRT_ACPI(dev);
+
+    s->cpuhp.device = OBJECT(s);
+
+    cpu_hotplug_hw_init(get_system_io(), s->cpuhp.device,
+                        &s->cpuhp_state, VIRT_CPU_HOTPLUG_IO_BASE);
 }
 
 DeviceState *virt_acpi_init(void)
@@ -92,6 +130,7 @@ static void virt_acpi_class_init(ObjectClass *class, void *data)
     dc->desc = "ACPI";
     dc->vmsd = &vmstate_acpi;
     dc->props = virt_acpi_properties;
+    dc->realize = virt_device_realize;
 
     sbc->init = virt_device_sysbus_init;
 
