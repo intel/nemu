@@ -30,11 +30,12 @@
 #include "hw/acpi/aml-build.h"
 #include "hw/acpi/bios-linker-loader.h"
 #include "hw/acpi/reduced.h"
-
+#include "qemu/range.h"
 #include "hw/nvram/fw_cfg.h"
 
 #include "hw/pci/pcie_host.h"
 #include "hw/pci/pci.h"
+#include "hw/i386/virt.h"
 
 #include "hw/loader.h"
 #include "hw/hw.h"
@@ -56,9 +57,9 @@ static void acpi_dsdt_add_cpus(Aml *scope, int smp_cpus)
 }
 
 /* DSDT */
-static void build_dsdt(GArray *table_data, BIOSLinker *linker)
+static void build_dsdt(GArray *table_data, BIOSLinker *linker, AcpiPciBus *pci_host)
 {
-    Aml *scope, *dsdt, *dev;
+    Aml *scope, *dsdt;
 
     dsdt = init_aml_allocator();
     /* Reserve space for header */
@@ -71,15 +72,9 @@ static void build_dsdt(GArray *table_data, BIOSLinker *linker)
      */
     scope = aml_scope("\\_SB");
     acpi_dsdt_add_cpus(scope, smp_cpus);
+    acpi_dsdt_add_pci(scope, pci_host);
 
-    dev = aml_device("PCI0");
-    aml_append(dev, aml_name_decl("_HID", aml_eisaid("PNP0A08")));
-    aml_append(dev, aml_name_decl("_CID", aml_eisaid("PNP0A03")));
-    aml_append(dev, aml_name_decl("_ADR", aml_int(0)));
-    aml_append(dev, aml_name_decl("_UID", aml_int(1)));
-    aml_append(scope, dev);
     aml_append(dsdt, scope);
-
     /* copy AML table into ACPI tables blob and patch header there */
     g_array_append_vals(table_data, dsdt->buf->data, dsdt->buf->len);
     build_header(linker, table_data,
@@ -110,8 +105,10 @@ static void acpi_reduced_build(MachineState *ms, AcpiBuildTables *tables, AcpiCo
     MachineClass *mc = MACHINE_GET_CLASS(ms);
     GArray *table_offsets;
     unsigned dsdt, xsdt;
+    Range pci_hole, pci_hole64;
     GArray *tables_blob = tables->table_data;
 
+    acpi_get_pci_holes(&pci_hole, &pci_hole64);
     table_offsets = g_array_new(false, true /* clear */,
                                         sizeof(uint32_t));
 
@@ -119,9 +116,15 @@ static void acpi_reduced_build(MachineState *ms, AcpiBuildTables *tables, AcpiCo
                              ACPI_BUILD_TABLE_FILE, tables_blob,
                              64, false /* high memory */);
 
+    AcpiPciBus pci_host = {
+        .pci_bus    = VIRT_MACHINE(ms)->pci_bus,
+        .pci_hole   = &pci_hole,
+        .pci_hole64 = &pci_hole64,
+    };
+
     /* DSDT is pointed to by FADT */
     dsdt = tables_blob->len;
-    build_dsdt(tables_blob, tables->linker);
+    build_dsdt(tables_blob, tables->linker, &pci_host);
 
     /* FADT pointed to by RSDT */
     acpi_add_table(table_offsets, tables_blob);
