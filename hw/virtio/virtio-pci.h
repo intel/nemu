@@ -238,4 +238,8 @@ typedef struct VirtioPCIDeviceTypeInfo {
 /* Register virtio-pci type(s).  @t must be static. */
 void virtio_pci_types_register(const VirtioPCIDeviceTypeInfo *t);
 
+int virtio_pci_add_shm_cap(VirtIOPCIProxy *proxy,
+                           uint8_t bar, uint64_t offset, uint64_t length,
+                           uint8_t id);
+
 #endif
