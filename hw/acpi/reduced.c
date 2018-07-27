@@ -106,6 +106,7 @@ static void acpi_reduced_build(MachineState *ms, AcpiBuildTables *tables, AcpiCo
     GArray *table_offsets;
     unsigned dsdt, xsdt;
     Range pci_hole, pci_hole64;
+    AcpiMcfgInfo mcfg;
     GArray *tables_blob = tables->table_data;
 
     acpi_get_pci_holes(&pci_hole, &pci_hole64);
@@ -134,6 +135,10 @@ static void acpi_reduced_build(MachineState *ms, AcpiBuildTables *tables, AcpiCo
     acpi_add_table(table_offsets, tables_blob);
     mc->firmware_build_methods.acpi.madt(tables_blob, tables->linker, ms, conf);
 
+    if (acpi_get_mcfg(&mcfg)) {
+        acpi_add_table(table_offsets, tables_blob);
+        mc->firmware_build_methods.acpi.mcfg(tables_blob, tables->linker, &mcfg);
+    }
     /* RSDT is pointed to by RSDP */
     xsdt = tables_blob->len;
     build_xsdt(tables_blob, tables->linker, table_offsets, NULL, NULL);
