@@ -23,8 +23,7 @@
 #include "hw/i386/memory.h"
 #include "hw/i386/fw.h"
 
-/* 3GB split */
-#define VIRT_LOWMEM 0xc0000000UL
+#define VIRT_LOWMEM 0x80000000
 
 static void virt_memory_setup_cmos(VirtMachineState *vms) {
     uint64_t val;
