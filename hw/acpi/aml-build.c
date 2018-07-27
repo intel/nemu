@@ -30,6 +30,8 @@
 #include "qemu/range.h"
 #include "hw/pci/pci_bridge.h"
 #include "hw/i386/pc.h"
+#include "qom/qom-qobject.h"
+#include "qapi/qmp/qnum.h"
 
 #define PCI_HOST_BRIDGE_CONFIG_ADDR        0xcf8
 #define PCI_HOST_BRIDGE_IO_0_MIN_ADDR      0x0000
@@ -1664,6 +1666,29 @@ void acpi_get_pci_holes(Range *hole, Range *hole64)
                       object_property_get_uint(pci_host,
                                                PCI_HOST_PROP_PCI_HOLE64_END,
                                                NULL));
+}
+
+
+bool acpi_get_mcfg(AcpiMcfgInfo *mcfg)
+{
+    Object *pci_host;
+    QObject *o;
+
+    pci_host = acpi_get_pci_host();
+    g_assert(pci_host);
+
+    o = object_property_get_qobject(pci_host, PCIE_HOST_MCFG_BASE, NULL);
+    if (!o) {
+        return false;
+    }
+    mcfg->mcfg_base = qnum_get_uint(qobject_to(QNum, o));
+    qobject_decref(o);
+
+    o = object_property_get_qobject(pci_host, PCIE_HOST_MCFG_SIZE, NULL);
+    assert(o);
+    mcfg->mcfg_size = qnum_get_uint(qobject_to(QNum, o));
+    qobject_decref(o);
+    return true;
 }
 
 static void crs_range_insert(GPtrArray *ranges, uint64_t base, uint64_t limit)
