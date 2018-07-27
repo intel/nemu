@@ -23,8 +23,7 @@
 #include "hw/i386/memory.h"
 #include "hw/i386/fw.h"
 
-/* 3GB split */
-#define VIRT_LOWMEM 0xc0000000UL
+#define VIRT_LOWMEM 0x80000000
 
 MemoryRegion *virt_memory_init(VirtMachineState *vms)
 {
