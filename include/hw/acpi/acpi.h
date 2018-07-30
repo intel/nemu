@@ -24,6 +24,7 @@
 #include "exec/memory.h"
 #include "hw/irq.h"
 #include "hw/acpi/acpi_dev_interface.h"
+#include "hw/acpi/reduced.h"
 #include "hw/hotplug.h"
 #include "hw/mem/nvdimm.h"
 
@@ -224,6 +225,9 @@ struct AcpiConfiguration {
     uint64_t *node_mem;
     bool apic_xrupt_override;
     unsigned apic_id_limit;
+    uint16_t cpu_hotplug_io_base;
+    GedEvent *ged_events;
+    uint8_t ged_events_size;
 
     /* Build state */
     AcpiBuildState *build_state;
