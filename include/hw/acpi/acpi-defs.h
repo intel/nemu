@@ -112,6 +112,7 @@ typedef struct AcpiFadtData {
     unsigned *facs_tbl_offset; /* FACS offset in */
     unsigned *dsdt_tbl_offset;
     unsigned *xdsdt_tbl_offset;
+    struct AcpiGenericAddress sleep_control_reg;  /* SLEEP_CONTROL_REG */
 } AcpiFadtData;
 
 #define ACPI_FADT_ARM_PSCI_COMPLIANT  (1 << 0)
