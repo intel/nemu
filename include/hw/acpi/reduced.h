@@ -22,6 +22,10 @@
 typedef struct AcpiConfiguration AcpiConfiguration;
 typedef struct Aml Aml;
 
+#define ACPI_REDUCED_SLEEP_LEVEL          5
+#define ACPI_REDUCED_SLEEP_ENABLE         (1 << 5) /* SLP_EN */
+#define ACPI_REDUCED_SLEEP_CONTROL_IOPORT 0x3B0
+
 typedef enum {
     GED_CPU_HOTPLUG    = 1,
     GED_MEMORY_HOTPLUG = 2,

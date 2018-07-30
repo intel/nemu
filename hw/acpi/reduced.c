@@ -81,6 +81,17 @@ static void acpi_dsdt_add_ged(Aml *scope, AcpiConfiguration *conf)
                   conf->ged_events, conf->ged_events_size);
 }
 
+static void acpi_dsdt_add_sleep_state(Aml *scope)
+{
+    Aml *pkg = aml_package(4);
+
+    aml_append(pkg, aml_int(ACPI_REDUCED_SLEEP_LEVEL));
+    aml_append(pkg, aml_int(0));
+    aml_append(pkg, aml_int(0));
+    aml_append(pkg, aml_int(0));
+    aml_append(scope, aml_name_decl("_S5", pkg));
+}
+
 /* DSDT */
 static void build_dsdt(MachineState *ms,
                        GArray *table_data, BIOSLinker *linker,
@@ -99,6 +110,7 @@ static void build_dsdt(MachineState *ms,
     acpi_dsdt_add_memory_hotplug(ms, dsdt);
     acpi_dsdt_add_cpus(ms, dsdt, scope, smp_cpus, conf);
     acpi_dsdt_add_ged(dsdt, conf);
+    acpi_dsdt_add_sleep_state(scope);
     aml_append(dsdt, scope);
 
     /* copy AML table into ACPI tables blob and patch header there */
@@ -121,6 +133,9 @@ static void build_fadt_reduced(GArray *table_data, BIOSLinker *linker,
         .dsdt_tbl_offset = &dsdt_tbl_offset,
         .xdsdt_tbl_offset = &dsdt_tbl_offset,
         .arm_boot_arch = 0,
+        .sleep_control_reg = { .space_id = AML_AS_SYSTEM_IO,
+                              .bit_width = 8, .bit_offset = 0,
+                              .address = ACPI_REDUCED_SLEEP_CONTROL_IOPORT },
     };
 
     build_fadt(table_data, linker, &fadt, NULL, NULL);
