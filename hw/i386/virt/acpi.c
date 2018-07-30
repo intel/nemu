@@ -33,6 +33,7 @@
 #include "hw/acpi/acpi_dev_interface.h"
 #include "hw/acpi/memory_hotplug.h"
 #include "hw/acpi/pc-hotplug.h"
+#include "hw/acpi/reduced.h"
 
 typedef struct VirtAcpiState {
     SysBusDevice parent_obj;
@@ -42,6 +43,8 @@ typedef struct VirtAcpiState {
 
     MemHotplugState memhp_state;
     qemu_irq *gsi;
+
+    MemoryRegion sleep_iomem;
 } VirtAcpiState;
 
 #define TYPE_VIRT_ACPI "virt-acpi"
@@ -122,9 +125,30 @@ static int virt_device_sysbus_init(SysBusDevice *dev)
     return 0;
 }
 
+static void virt_acpi_sleep_cnt_write(void *opaque, hwaddr addr,
+                                      uint64_t val, unsigned width)
+{
+    uint16_t sus_type = (val >> 2) & 7;
+
+    if (val & ACPI_REDUCED_SLEEP_ENABLE) {
+        switch (sus_type) {
+        case ACPI_REDUCED_SLEEP_LEVEL:
+            qemu_system_shutdown_request(SHUTDOWN_CAUSE_GUEST_SHUTDOWN);
+            break;
+        default:
+            break;
+        }
+    }
+}
+
+static const MemoryRegionOps virt_sleep_cnt_ops = {
+    .write = virt_acpi_sleep_cnt_write,
+};
+
 static void virt_device_realize(DeviceState *dev, Error **errp)
 {
     VirtAcpiState *s = VIRT_ACPI(dev);
+    SysBusDevice *sys = SYS_BUS_DEVICE(dev);
 
     s->cpuhp.device = OBJECT(s);
 
@@ -133,6 +157,11 @@ static void virt_device_realize(DeviceState *dev, Error **errp)
 
     acpi_memory_hotplug_init(get_system_io(), OBJECT(dev),
                              &s->memhp_state, ACPI_MEMORY_HOTPLUG_BASE);
+
+    memory_region_init_io(&s->sleep_iomem, OBJECT(dev),
+                          &virt_sleep_cnt_ops, s, TYPE_VIRT_ACPI, 1);
+    sysbus_add_io(sys, ACPI_REDUCED_SLEEP_CONTROL_IOPORT, &s->sleep_iomem);
+
 }
 
 DeviceState *virt_acpi_init(qemu_irq *gsi)
