@@ -29,6 +29,7 @@
 
 #include "hw/acpi/acpi.h"
 #include "hw/acpi/aml-build.h"
+#include "hw/acpi/pc-hotplug.h"
 #include "hw/acpi/reduced.h"
 
 #include "hw/i386/virt.h"
@@ -95,6 +96,7 @@ static void acpi_conf_virt_init(MachineState *machine)
     conf->node_mem = vms->node_mem;
     conf->apic_id_limit = vms->apic_id_limit;
     conf->acpi_dev = vms->acpi_dev;
+    conf->cpu_hotplug_io_base = VIRT_CPU_HOTPLUG_IO_BASE;
 }
 
 static void virt_machine_done(Notifier *notifier, void *data)
