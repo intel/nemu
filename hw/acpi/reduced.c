@@ -29,6 +29,8 @@
 #include "hw/acpi/acpi.h"
 #include "hw/acpi/aml-build.h"
 #include "hw/acpi/bios-linker-loader.h"
+#include "hw/acpi/cpu.h"
+#include "hw/acpi/pc-hotplug.h"
 #include "hw/acpi/reduced.h"
 #include "qemu/range.h"
 #include "hw/nvram/fw_cfg.h"
@@ -44,12 +46,30 @@
 
 #include "migration/vmstate.h"
 
-static void acpi_dsdt_add_cpus(Aml *scope, int smp_cpus)
+#define GED_DEVICE "GED"
+
+static void acpi_dsdt_add_cpus(MachineState *ms, Aml *dsdt, Aml *scope, int smp_cpus, AcpiConfiguration *conf)
 {
+    CPUHotplugFeatures opts = {
+        .apci_1_compatible = false,
+        .has_legacy_cphp = false,
+    };
+
+    build_cpus_aml(dsdt, ms, opts, conf->cpu_hotplug_io_base,
+                   "\\_SB.PCI1", GED_DEVICE);
+}
+
+static void acpi_dsdt_add_ged(Aml *scope, AcpiConfiguration *conf)
+{
+    if (!conf->ged_events || !conf->ged_events_size) {
+        return;
+    }
+
+    build_ged_aml(scope, GED_DEVICE, conf->ged_events, conf->ged_events_size);
 }
 
 /* DSDT */
-static void build_dsdt(GArray *table_data, BIOSLinker *linker, AcpiPciBus *pci_host)
+static void build_dsdt(MachineState *ms, GArray *table_data, BIOSLinker *linker, AcpiPciBus *pci_host, AcpiConfiguration *conf)
 {
     Aml *scope, *dsdt;
 
@@ -57,14 +77,10 @@ static void build_dsdt(GArray *table_data, BIOSLinker *linker, AcpiPciBus *pci_h
     /* Reserve space for header */
     acpi_data_push(dsdt->buf, sizeof(AcpiTableHeader));
 
-    /* When booting the VM with UEFI, UEFI takes ownership of the RTC hardware.
-     * While UEFI can use libfdt to disable the RTC device node in the DTB that
-     * it passes to the OS, it cannot modify AML. Therefore, we won't generate
-     * the RTC ACPI device at all when using UEFI.
-     */
     scope = aml_scope("\\_SB");
-    acpi_dsdt_add_cpus(scope, smp_cpus);
+    acpi_dsdt_add_cpus(ms, dsdt, scope, smp_cpus, conf);
     acpi_dsdt_add_pci_bus(scope, pci_host);
+    acpi_dsdt_add_ged(scope, conf);
 
     aml_append(dsdt, scope);
     /* copy AML table into ACPI tables blob and patch header there */
@@ -117,7 +133,7 @@ static void acpi_reduced_build(MachineState *ms, AcpiBuildTables *tables, AcpiCo
 
     /* DSDT is pointed to by FADT */
     dsdt = tables_blob->len;
-    build_dsdt(tables_blob, tables->linker, &pci_host);
+    build_dsdt(ms, tables_blob, tables->linker, &pci_host, conf);
 
     /* FADT pointed to by RSDT */
     acpi_add_table(table_offsets, tables_blob);
@@ -248,4 +264,139 @@ void acpi_reduced_setup(MachineState *machine, AcpiConfiguration *conf)
      * in build_state.
      */
     acpi_build_tables_cleanup(&tables, false);
+}
+
+#define CPU_SCAN_METHOD   "CSCN"
+
+static Aml *ged_event_aml(GedEvent *event)
+{
+    if (!event) {
+        return NULL;
+    }
+
+    switch (event->event) {
+    case GED_CPU_HOTPLUG:
+        /* We run a complete CPU SCAN when getting a CPU hotplug event */
+        return aml_call0("\\_SB.CPUS." CPU_SCAN_METHOD);
+    case GED_MEMORY_HOTPLUG:
+    case GED_PCI_HOTPLUG:
+    case GED_NVDIMM_HOTPLUG:
+        /* Not supported for now */
+        return NULL;
+    default:
+        break;
+    }
+
+    return NULL;
+}
+
+void build_ged_aml(Aml *table, const char *name,
+                   GedEvent *events, uint8_t events_size)
+{
+    Aml *crs = aml_resource_template();
+    Aml *evt;
+    Aml *zero = aml_int(0);
+    Aml *one = aml_int(1);
+    Aml *dev = aml_device("%s", name);
+    Aml *scope = aml_scope("_SB");
+    Aml *has_irq = aml_local(0);
+    Aml *while_ctx;
+    uint8_t i;
+
+    /*
+     * For each GED event we:
+     * - Add an interrupt to the CRS section.
+     * - Add a conditional block for each event, inside a while loop.
+     *   This is semantically equivalent to a switch/case implementation.
+     */
+    evt = aml_method("_EVT", 1, AML_SERIALIZED);
+    {
+        Aml *irq = aml_arg(0);
+        Aml *ged_aml;
+        Aml *if_ctx, *else_ctx;
+
+        /* Local0 = One */
+        aml_append(evt, aml_store(one, has_irq));
+
+
+        /*
+         * Here we want to call a method for each supported GED event type.
+         * The resulting ASL code looks like:
+         *
+         * Local0 = One
+         * While ((Local0 == One))
+         * {
+         *    Local0 = Zero
+         *    If (Arg0 == irq0)
+         *    {
+         *        MethodEvent0()
+         *        Local0 = Zero
+         *    }
+         *    ElseIf (Arg0 == irq1)
+         *    {
+         *        MethodEvent1()
+         *        Local0 = Zero
+         *    }
+         *    ElseIf (Arg0 == irq2)
+         *    {
+         *        MethodEvent2()
+         *        Local0 = Zero
+         *    }
+         * }
+         */
+
+        /* While ((Local0 == One)) */
+        while_ctx = aml_while(aml_equal(has_irq, one));
+        {
+            else_ctx = NULL;
+
+            /*
+             * Clear loop condition, we don't want to enter an infinite loop.
+             * Local0 = Zero
+             */
+            aml_append(while_ctx, aml_store(zero, has_irq));
+            for (i = 0; i < events_size; i++) {
+                ged_aml = ged_event_aml(&events[i]);
+                if (!ged_aml) {
+                    continue;
+                }
+
+                /* _CRS interrupt */
+                aml_append(crs, aml_interrupt(AML_CONSUMER, AML_LEVEL, AML_ACTIVE_HIGH,
+                                              AML_EXCLUSIVE, &events[i].irq, 1));
+
+                /* If ((Arg0 == irq))*/
+                if_ctx = aml_if(aml_equal(irq, aml_int(events[i].irq)));
+                {
+                    /* AML for this specific type of event */
+                    aml_append(if_ctx, ged_aml);
+                }
+
+                /*
+                 * We append the first if to the while context.
+                 * Other ifs will be elseifs.
+                 */
+                if (!else_ctx) {
+                    aml_append(while_ctx, if_ctx);
+                } else {
+                    aml_append(else_ctx, if_ctx);
+                    aml_append(while_ctx, else_ctx);
+                }
+
+                if (i != events_size - 1) {
+                    else_ctx = aml_else();
+                }
+            }
+        }
+
+        aml_append(evt, while_ctx);
+    }
+
+    aml_append(dev, aml_name_decl("_HID", aml_string("ACPI0013")));
+    aml_append(dev, aml_name_decl("_UID", zero));
+    aml_append(dev, aml_name_decl("_CRS", crs));
+    aml_append(dev, evt);
+    aml_append(scope, dev);
+
+    aml_append(table, scope);
 }
