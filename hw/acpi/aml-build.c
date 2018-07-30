@@ -2008,7 +2008,7 @@ Aml *build_osc_method(uint32_t value)
 }
 
 void
-build_mcfg(GArray *table_data, BIOSLinker *linker, AcpiMcfgInfo *info)
+acpi_build_mcfg(GArray *table_data, BIOSLinker *linker, AcpiMcfgInfo *info)
 {
     AcpiTableMcfg *mcfg;
     const char *sig;
@@ -2306,7 +2306,7 @@ void build_pci_host_bridge(Aml *table, AcpiPciBus *pci_host)
     aml_append(table, scope);
 }
 
-void acpi_dsdt_add_pci(Aml *table, AcpiPciBus *pci_host)
+void acpi_dsdt_add_pci_bus(Aml *table, AcpiPciBus *pci_host)
 {
     Aml *dev, *sb_scope;
 

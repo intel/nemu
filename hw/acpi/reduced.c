@@ -72,7 +72,7 @@ static void build_dsdt(GArray *table_data, BIOSLinker *linker, AcpiPciBus *pci_h
      */
     scope = aml_scope("\\_SB");
     acpi_dsdt_add_cpus(scope, smp_cpus);
-    acpi_dsdt_add_pci(scope, pci_host);
+    acpi_dsdt_add_pci_bus(scope, pci_host);
 
     aml_append(dsdt, scope);
     /* copy AML table into ACPI tables blob and patch header there */
