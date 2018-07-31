@@ -258,6 +258,11 @@ case "$PLATFORM" in
        pci_bus='pcie.0'
        SIMPLE_LAUNCH="true"
        ;;
+    x86_64_virt)
+       machine='virt'
+       accel='kvm,kernel_irqchip'
+       SIMPLE_LAUNCH="true"
+       ;;
     aarch64)
        machine='virt,gic-version=host'
        accel='kvm'
@@ -306,22 +311,31 @@ qemu_args+=" -nodefaults"
 qemu_args+=" -daemonize"
 
 if [ "$PLATFORM" != "aarch64" ]; then
+
+if [ "$PLATFORM" != "x86_64_virt" ]; then
    qemu_args+=" -device pci-bridge,bus=$pci_bus,id=bridge0,addr=2,chassis_nr=1,shpc=on"
+fi
 
    qemu_args+=" -drive file=$vmimagetmp,if=none,id=drive-virtio-disk0,format=$VM_IMAGE_TYPE \
          -device virtio-blk-pci,scsi=off,drive=drive-virtio-disk0,id=virtio-disk0,bootindex=$bootindex"
    ((bootindex++))
 
+if [ "$PLATFORM" != "x86_64_virt" ]; then
    qemu_args+=" -drive file=$cloudinitimg,if=virtio,media=cdrom"
-   qemu_args+=" -drive file=$scsiimg,if=none,id=drive-virtio-disk1,format=raw \
-         -device virtio-scsi-pci,id=virtio-disk1"
+else
+   qemu_args+=" -device sysbus-debugcon,iobase=0x402,chardev=debugcon -chardev file,path=/tmp/debug-log,id=debugcon"
+   qemu_args+=" -device virtio-blk-pci,drive=cloud \
+             -drive if=none,id=cloud,file=$cloudinitimg,format=raw"
+fi
 
    qemu_args+=" -netdev user,id=mynet0,hostfwd=tcp::$SSH_PORT-:22,hostname=$VM_NAME \
          -device virtio-net-pci,netdev=mynet0"
+   
+   qemu_args+=" -drive file=$scsiimg,if=none,id=drive-virtio-disk1,format=raw \
+         -device virtio-scsi-pci,id=virtio-disk1"
 
    qemu_args+=" -object memory-backend-file,id=mem0,share,mem-path=$nvdimmimg,size=$nvdimmsize \
          -device nvdimm,memdev=mem0,id=nv0"
-
    # Our ARM test system doesn't have CONFIG_VHOST_VSOCK
    if [[ "$VSOCK" == "true" ]]; then
        qemu_args+=" -device vhost-vsock-pci,id=vhost-vsock-pci0,guest-cid=3"
@@ -369,7 +383,7 @@ fi
 
 
 # Launch with all virtio devices
-$hypervisor $qemu_args "$@"
+$hypervisor $qemu_args "$@" || exit
 
 if [ "$SIMPLE_LAUNCH" = "false" ]; then
    hotplug_check
