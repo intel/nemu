@@ -37,6 +37,8 @@ typedef struct VirtAcpiState {
 
     AcpiCpuHotplug cpuhp;
     CPUHotplugState cpuhp_state;
+
+    qemu_irq *gsi;
 } VirtAcpiState;
 
 #define TYPE_VIRT_ACPI "virt-acpi"
@@ -94,6 +96,12 @@ static void virt_ospm_status(AcpiDeviceIf *adev, ACPIOSTInfoList ***list)
 
 static void virt_send_ged(AcpiDeviceIf *adev, AcpiEventStatusBits ev)
 {
+    VirtAcpiState *s = VIRT_ACPI(adev);
+
+    if (ev & ACPI_CPU_HOTPLUG_STATUS) {
+        /* We inject the CPU hotplug interrupt */
+        qemu_irq_pulse(s->gsi[VIRT_GED_CPU_HOTPLUG_IRQ]);
+    }
 }
 
 static int virt_device_sysbus_init(SysBusDevice *dev)
@@ -111,9 +119,17 @@ static void virt_device_realize(DeviceState *dev, Error **errp)
                         &s->cpuhp_state, VIRT_CPU_HOTPLUG_IO_BASE);
 }
 
-DeviceState *virt_acpi_init(void)
+DeviceState *virt_acpi_init(qemu_irq *gsi)
 {
-    return sysbus_create_simple(TYPE_VIRT_ACPI, -1, NULL);
+    DeviceState *dev;
+    VirtAcpiState *s;
+
+    dev = sysbus_create_simple(TYPE_VIRT_ACPI, -1, NULL);
+
+    s = VIRT_ACPI(dev);
+    s->gsi = gsi;
+
+    return dev;
 }
 
 static Property virt_acpi_properties[] = {
