@@ -114,28 +114,19 @@ static void virt_gsi_handler(void *opaque, int n, int level)
     qemu_set_irq(ioapic_irq[n], level);
 }
 
-static void virt_pci_init(VirtMachineState *vms)
+static void virt_ioapic_init(VirtMachineState *vms)
 {
-    MemoryRegion *pci_memory;
     qemu_irq *ioapic_irq;
     DeviceState *ioapic_dev;
     SysBusDevice *d;
     unsigned int i;
 
-    pci_memory = g_new(MemoryRegion, 1);
-
-    /* irq lines */
-    ioapic_irq = g_new0(qemu_irq, IOAPIC_NUM_PINS);
+    /* KVM IRQ chip */
     assert(kvm_irqchip_in_kernel());
+    ioapic_irq = g_new0(qemu_irq, IOAPIC_NUM_PINS);
     kvm_pc_setup_irq_routing(true);
 
-    qemu_allocate_irqs(virt_gsi_handler, ioapic_irq, IOAPIC_NUM_PINS);
-
-    memory_region_init(pci_memory, NULL, "pci", UINT64_MAX);
-
-    vms->pci_bus = pci_lite_init(get_system_memory(), get_system_io(),
-                                 pci_memory);
-
+    /* KVM IOAPIC */
     assert(kvm_ioapic_in_kernel());
     ioapic_dev = qdev_create(NULL, "kvm-ioapic");
 
@@ -148,6 +139,18 @@ static void virt_pci_init(VirtMachineState *vms)
     for (i = 0; i < IOAPIC_NUM_PINS; i++) {
         ioapic_irq[i] = qdev_get_gpio_in(ioapic_dev, i);
     }
+
+    vms->gsi = qemu_allocate_irqs(virt_gsi_handler, ioapic_irq, IOAPIC_NUM_PINS);
+}
+
+static void virt_pci_init(VirtMachineState *vms)
+{
+    MemoryRegion *pci_memory;
+
+    pci_memory = g_new(MemoryRegion, 1);
+    memory_region_init(pci_memory, NULL, "pci", UINT64_MAX);
+    vms->pci_bus = pci_lite_init(get_system_memory(), get_system_io(),
+                                 pci_memory);
 }
 
 static void virt_machine_state_init(MachineState *machine)
@@ -174,6 +177,7 @@ static void virt_machine_state_init(MachineState *machine)
     vms->acpi = virt_acpi_init();
     virt_memory_init(vms);
     virt_pci_init(vms);
+    virt_ioapic_init(vms);
 
     vms->apic_id_limit = cpus_init(machine, false);
 
