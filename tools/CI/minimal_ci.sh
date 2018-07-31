@@ -202,6 +202,11 @@ testimages_x86_64_q35=("coreos_production_openstack_image.img" "qcow2" "seabios"
                        "Fedora-Cloud-Base-28-1.1.x86_64.qcow2" "qcow2" "seabios" "x86_64_q35" "-s" \
                        "https://archives.fedoraproject.org/pub/fedora/linux/releases/28/Cloud/x86_64/images/Fedora-Cloud-Base-28-1.1.x86_64.qcow2")
 
+
+declare -a testimages_x86_64_virt
+testimages_x86_64_virt=("clear-24090-cloud.img" "qcow2" "uefi" "x86_64_virt" "-s" \
+                        "https://download.clearlinux.org/releases/24090/clear/clear-24090-cloud.img.xz")
+
 # Older unpatched images used to ensure backward compatibility is not broken
 # WARNING: These should be run with caution
 declare -a unsafeimages_x86_64_piix
@@ -277,6 +282,7 @@ if [[ "$RUN_UNSAFE" == "false" ]]; then
     echo "Testing safe images"
     if [[ "$IS_AARCH64" == "" ]]; then
         if [[ "$PIIX_TEST" == "false" ]]; then
+            run_tests "${testimages_x86_64_virt[@]}"
             run_tests "${testimages_x86_64_q35[@]}"
         else
             run_tests "${testimages_x86_64_piix[@]}"
