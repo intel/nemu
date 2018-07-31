@@ -77,6 +77,13 @@ typedef struct {
 #define VIRT_MACHINE_CLASS(class) \
     OBJECT_CLASS_CHECK(VirtMachineClass, class, TYPE_VIRT_MACHINE)
 
+/* Our first GED IRQ lives after the legacy IRQs */
+#define VIRT_GED_IRQ_BASE           16
+#define VIRT_GED_CPU_HOTPLUG_IRQ    VIRT_GED_IRQ_BASE
+#define VIRT_GED_MEMORY_HOTPLUG_IRQ VIRT_GED_IRQ_BASE + 1
+#define VIRT_GED_PCI_HOTPLUG_IRQ    VIRT_GED_IRQ_BASE + 2
+#define VIRT_GED_NVDIMM_HOTPLUG_IRQ VIRT_GED_IRQ_BASE + 3
+
 MemoryRegion *virt_memory_init(VirtMachineState *vms);
 
 DeviceState *virt_acpi_init(void);
