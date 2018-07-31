@@ -79,6 +79,7 @@ static void acpi_conf_virt_init(MachineState *machine)
 {
     VirtMachineState *vms = VIRT_MACHINE(machine);
     AcpiConfiguration *conf;
+    uint8_t events_size;
 
     if (!vms->acpi_configuration) {
         vms->acpi_configuration = g_malloc0(sizeof(AcpiConfiguration));
@@ -97,6 +98,20 @@ static void acpi_conf_virt_init(MachineState *machine)
     conf->apic_id_limit = vms->apic_id_limit;
     conf->acpi_dev = vms->acpi_dev;
     conf->cpu_hotplug_io_base = VIRT_CPU_HOTPLUG_IO_BASE;
+
+    /* GED events */
+    GedEvent events[] = {
+        {
+            .irq   = VIRT_GED_CPU_HOTPLUG_IRQ,
+            .event = GED_CPU_HOTPLUG,
+        },
+    };
+
+    events_size = ARRAY_SIZE(events);
+
+    conf->ged_events = g_malloc0(events_size * sizeof(GedEvent));
+    memcpy(conf->ged_events, events, events_size * sizeof(GedEvent));
+    conf->ged_events_size = events_size;
 }
 
 static void virt_machine_done(Notifier *notifier, void *data)
