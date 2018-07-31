@@ -39,6 +39,8 @@ VERBOSE="false"
 CHECK="false"
 VSOCK="true"
 
+fail_count=0
+
 die(){
    echo "${1}"
    exit 1
@@ -92,6 +94,7 @@ run_tests() {
            fi
            if [ $? -ne 0 ]; then
              echo "FAILED: Test failed for $image"
+             ((fail_count++))
            fi
       fi
    done
@@ -302,4 +305,8 @@ else
         fi
     fi
 fi
-exit
+if [[ $fail_count -gt 0 ]]; then
+  exit 1
+else
+  exit 0
+fi
