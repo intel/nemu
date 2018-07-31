@@ -53,6 +53,9 @@ typedef struct {
     /* number of CPUs */
     uint16_t boot_cpus;
 
+    /* GSI */
+    qemu_irq *gsi;
+
     PCIBus *pci_bus;
 
     /* ACPI device for hotplug and PM */
