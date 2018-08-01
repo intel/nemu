@@ -208,7 +208,9 @@ testimages_x86_64_q35=("coreos_production_openstack_image.img" "qcow2" "seabios"
 
 declare -a testimages_x86_64_virt
 testimages_x86_64_virt=("clear-24090-cloud.img" "qcow2" "uefi" "x86_64_virt" "-s" \
-                        "https://download.clearlinux.org/releases/24090/clear/clear-24090-cloud.img.xz")
+                        "https://download.clearlinux.org/releases/24090/clear/clear-24090-cloud.img.xz"
+                        "bionic-server-cloudimg-amd64.img" "qcow2" "uefi" "x86_64_virt" "-s" \
+                        "http://cloud-images.ubuntu.com/bionic/current/bionic-server-cloudimg-amd64.img")
 
 # Older unpatched images used to ensure backward compatibility is not broken
 # WARNING: These should be run with caution
