@@ -44,6 +44,7 @@ typedef struct VirtAcpiState {
     qemu_irq *gsi;
 
     MemoryRegion sleep_iomem;
+    MemoryRegion reset_iomem;
 } VirtAcpiState;
 
 #define TYPE_VIRT_ACPI "virt-acpi"
@@ -144,6 +145,20 @@ static const MemoryRegionOps virt_sleep_cnt_ops = {
     .write = virt_acpi_sleep_cnt_write,
 };
 
+static void virt_acpi_reset_write(void *opaque, hwaddr addr,
+                                      uint64_t val, unsigned width)
+{
+    if (val & ACPI_REDUCED_RESET_VALUE) {
+        qemu_system_reset_request(SHUTDOWN_CAUSE_GUEST_RESET);
+        return;
+    }
+}
+
+
+static const MemoryRegionOps virt_reset_ops = {
+    .write = virt_acpi_reset_write,
+};
+
 static void virt_device_realize(DeviceState *dev, Error **errp)
 {
     VirtAcpiState *s = VIRT_ACPI(dev);
@@ -161,6 +176,9 @@ static void virt_device_realize(DeviceState *dev, Error **errp)
                           &virt_sleep_cnt_ops, s, TYPE_VIRT_ACPI, 1);
     sysbus_add_io(sys, ACPI_REDUCED_SLEEP_CONTROL_IOPORT, &s->sleep_iomem);
 
+    memory_region_init_io(&s->reset_iomem, OBJECT(dev),
+                          &virt_reset_ops, s, TYPE_VIRT_ACPI, 1);
+    sysbus_add_io(sys, ACPI_REDUCED_RESET_IOPORT, &s->reset_iomem);
 }
 
 DeviceState *virt_acpi_init(qemu_irq *gsi)
