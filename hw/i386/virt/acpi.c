@@ -31,6 +31,8 @@
 #include "hw/acpi/cpu.h"
 #include "hw/acpi/cpu_hotplug.h"
 #include "hw/acpi/acpi_dev_interface.h"
+#include "hw/acpi/memory_hotplug.h"
+#include "hw/acpi/pc-hotplug.h"
 
 typedef struct VirtAcpiState {
     SysBusDevice parent_obj;
@@ -38,6 +40,7 @@ typedef struct VirtAcpiState {
     AcpiCpuHotplug cpuhp;
     CPUHotplugState cpuhp_state;
 
+    MemHotplugState memhp_state;
     qemu_irq *gsi;
 } VirtAcpiState;
 
@@ -58,6 +61,9 @@ static void virt_device_plug_cb(HotplugHandler *hotplug_dev,
 
     if (object_dynamic_cast(OBJECT(dev), TYPE_CPU)) {
         acpi_cpu_plug_cb(hotplug_dev, &s->cpuhp_state, dev, errp);
+    } else if (object_dynamic_cast(OBJECT(dev), TYPE_PC_DIMM)) {
+        acpi_memory_plug_cb(hotplug_dev, &s->memhp_state,
+                            dev, errp);
     }  else {
         error_setg(errp, "virt: device plug request for unsupported device"
                    " type: %s", object_get_typename(OBJECT(dev)));
@@ -71,6 +77,8 @@ static void virt_device_unplug_request_cb(HotplugHandler *hotplug_dev,
 
     if (object_dynamic_cast(OBJECT(dev), TYPE_CPU)) {
         acpi_cpu_unplug_request_cb(hotplug_dev, &s->cpuhp_state, dev, errp);
+    } else if (object_dynamic_cast(OBJECT(dev), TYPE_PC_DIMM)) {
+        acpi_memory_unplug_request_cb(hotplug_dev, &s->memhp_state, dev, errp);
     } else {
         error_setg(errp, "virt: device unplug request for unsupported device"
                    " type: %s", object_get_typename(OBJECT(dev)));
@@ -84,6 +92,8 @@ static void virt_device_unplug_cb(HotplugHandler *hotplug_dev,
 
     if (object_dynamic_cast(OBJECT(dev), TYPE_CPU)) {
         acpi_cpu_unplug_cb(&s->cpuhp_state, dev, errp);
+    } else if (object_dynamic_cast(OBJECT(dev), TYPE_PC_DIMM)) {
+        acpi_memory_unplug_cb(&s->memhp_state, dev, errp);
     } else {
         error_setg(errp, "virt: device unplug for unsupported device"
                    " type: %s", object_get_typename(OBJECT(dev)));
@@ -117,6 +127,9 @@ static void virt_device_realize(DeviceState *dev, Error **errp)
 
     cpu_hotplug_hw_init(get_system_io(), s->cpuhp.device,
                         &s->cpuhp_state, VIRT_CPU_HOTPLUG_IO_BASE);
+
+    acpi_memory_hotplug_init(get_system_io(), OBJECT(dev),
+                             &s->memhp_state, ACPI_MEMORY_HOTPLUG_BASE);
 }
 
 DeviceState *virt_acpi_init(qemu_irq *gsi)
