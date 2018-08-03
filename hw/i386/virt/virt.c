@@ -106,6 +106,10 @@ static void acpi_conf_virt_init(MachineState *machine)
             .irq   = VIRT_GED_CPU_HOTPLUG_IRQ,
             .event = GED_CPU_HOTPLUG,
         },
+        {
+            .irq   = VIRT_GED_MEMORY_HOTPLUG_IRQ,
+            .event = GED_MEMORY_HOTPLUG,
+        },
     };
 
     events_size = ARRAY_SIZE(events);
