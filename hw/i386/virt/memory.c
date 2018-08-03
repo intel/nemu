@@ -22,12 +22,14 @@
 #include "hw/i386/virt.h"
 #include "hw/i386/memory.h"
 #include "hw/i386/fw.h"
+#include "qemu/error-report.h"
+#include "cpu.h"
 
 #define VIRT_LOWMEM 0x80000000
 
 MemoryRegion *virt_memory_init(VirtMachineState *vms)
 {
-    MachineState *machine = MACHINE(vms);  
+    MachineState *machine = MACHINE(vms);
     MemoryRegion *ram = g_new(MemoryRegion, 1), *lowmem, *highmem, *system_memory = get_system_memory();
     uint64_t lowmem_size, highmem_size;
     
@@ -54,6 +56,43 @@ MemoryRegion *virt_memory_init(VirtMachineState *vms)
         memory_region_init_alias(highmem, NULL, "highmem", ram, lowmem_size, highmem_size);
         memory_region_add_subregion(system_memory, 0x100000000ULL, highmem);
         e820_add_entry(0x100000000ULL, highmem_size, E820_RAM);
+    }
+
+    /* initialize hotplug memory address space */
+    if (machine->ram_size < machine->maxram_size) {
+        ram_addr_t hotplug_mem_size =
+            machine->maxram_size - machine->ram_size;
+
+        if (machine->ram_slots > ACPI_MAX_RAM_SLOTS) {
+            error_report("unsupported amount of memory slots: %"PRIu64,
+                         machine->ram_slots);
+            exit(EXIT_FAILURE);
+        }
+
+        if (QEMU_ALIGN_UP(machine->maxram_size,
+                          TARGET_PAGE_SIZE) != machine->maxram_size) {
+            error_report("maximum memory size must by aligned to multiple of "
+                         "%d bytes", TARGET_PAGE_SIZE);
+            exit(EXIT_FAILURE);
+        }
+
+        vms->hotplug_memory.base =
+            ROUND_UP(0x100000000ULL + highmem_size, 1ULL << 30);
+
+        /* size hotplug region assuming 1G page max alignment per slot */
+        hotplug_mem_size += (1ULL << 30) * machine->ram_slots;
+
+        if ((vms->hotplug_memory.base + hotplug_mem_size) <
+            hotplug_mem_size) {
+            error_report("unsupported amount of maximum memory: " RAM_ADDR_FMT,
+                         machine->maxram_size);
+            exit(EXIT_FAILURE);
+        }
+
+        memory_region_init(&vms->hotplug_memory.mr, OBJECT(vms),
+                           "hotplug-memory", hotplug_mem_size);
+        memory_region_add_subregion(system_memory, vms->hotplug_memory.base,
+                                    &vms->hotplug_memory.mr);
     }
 
     if (vms->fw) {
