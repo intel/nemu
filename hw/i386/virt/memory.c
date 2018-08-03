@@ -42,7 +42,7 @@ MemoryRegion *virt_memory_init(VirtMachineState *vms)
     }
 
     vms->below_4g_mem_size = lowmem_size;
-    
+    vms->above_4g_mem_size = highmem_size;
     memory_region_allocate_system_memory(ram, NULL, "virt.ram",
                                          machine->ram_size);
 
