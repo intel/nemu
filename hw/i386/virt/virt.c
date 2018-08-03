@@ -529,9 +529,6 @@ static void virt_machine_device_pre_plug_cb(HotplugHandler *hotplug_dev,
 {
     if (object_dynamic_cast(OBJECT(dev), TYPE_CPU)) {
         virt_cpu_pre_plug(hotplug_dev, dev, errp);
-    } else {
-        error_setg(errp, "virt: device pre-plug for unsupported device"
-                   " type: %s", object_get_typename(OBJECT(dev)));
     }
 }
 
