@@ -111,6 +111,9 @@ static void virt_send_ged(AcpiDeviceIf *adev, AcpiEventStatusBits ev)
     if (ev & ACPI_CPU_HOTPLUG_STATUS) {
         /* We inject the CPU hotplug interrupt */
         qemu_irq_pulse(s->gsi[VIRT_GED_CPU_HOTPLUG_IRQ]);
+    } else if (ev & ACPI_MEMORY_HOTPLUG_STATUS) {
+        /* We inject the memory hotplug interrupt */
+        qemu_irq_pulse(s->gsi[VIRT_GED_MEMORY_HOTPLUG_IRQ]);
     }
 }
 
