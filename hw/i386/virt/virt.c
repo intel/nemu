@@ -99,6 +99,7 @@ static void acpi_conf_virt_init(MachineState *machine, AcpiConfiguration *conf)
     conf->below_4g_mem_size = vms->below_4g_mem_size;
     conf->acpi_dev = vms->acpi_dev;
     conf->cpu_hotplug_io_base = VIRT_CPU_HOTPLUG_IO_BASE;
+    conf->hotplug_memory = vms->hotplug_memory;
 
     /* GED events */
     GedEvent events[] = {
@@ -215,6 +216,17 @@ static void virt_machine_state_init(MachineState *machine)
     if (vms->fw) {
         fw_cfg = fw_cfg_init(machine, smp_cpus, mc->possible_cpu_arch_ids(machine), vms->apic_id_limit);
         rom_set_fw(fw_cfg);
+
+        if (vms->hotplug_memory.base) {
+            uint64_t *val = g_malloc(sizeof(*val));
+            uint64_t res_mem_end = vms->hotplug_memory.base;
+
+            res_mem_end += memory_region_size(&vms->hotplug_memory.mr);
+            *val = cpu_to_le64(ROUND_UP(res_mem_end, 0x1ULL << 30));
+            fw_cfg_add_file(fw_cfg, "etc/reserved-memory-end",
+                            val, sizeof(*val));
+        }
+
         vms->fw_cfg = fw_cfg;
         if (linux_boot) {
             load_linux_bzimage(MACHINE(vms), vms->acpi_configuration, fw_cfg);
