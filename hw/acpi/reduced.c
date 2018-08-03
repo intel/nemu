@@ -66,7 +66,10 @@ static void acpi_dsdt_add_cpus(MachineState *ms, Aml *dsdt, Aml *scope, int smp_
 
     build_cpus_aml(dsdt, ms, opts, conf->cpu_hotplug_io_base,
                    "\\_SB.PCI1", GED_DEVICE);
+}
 
+static void acpi_dsdt_add_ged(Aml *scope, AcpiConfiguration *conf)
+{
     if (!conf->ged_events || !conf->ged_events_size) {
         return;
     }
@@ -86,6 +89,7 @@ static void build_dsdt(MachineState *ms, GArray *table_data, BIOSLinker *linker,
     scope = aml_scope("\\_SB");
     acpi_dsdt_add_cpus(ms, dsdt, scope, smp_cpus, conf);
     acpi_dsdt_add_pci_bus(scope, pci_host);
+    acpi_dsdt_add_ged(scope, conf);
 
     aml_append(dsdt, scope);
     /* copy AML table into ACPI tables blob and patch header there */
