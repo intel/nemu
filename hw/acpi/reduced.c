@@ -34,6 +34,7 @@
 #include "hw/acpi/cpu.h"
 #include "hw/acpi/pc-hotplug.h"
 #include "hw/acpi/reduced.h"
+#include "hw/acpi/memory_hotplug.h"
 
 #include "hw/nvram/fw_cfg.h"
 
@@ -47,7 +48,16 @@
 
 #include "migration/vmstate.h"
 
-#define GED_DEVICE "GED"
+#define GED_DEVICE               "GED"
+#define CPU_SCAN_METHOD          "CSCN"
+#define MEMORY_SLOT_SCAN_METHOD  "MSCN"
+
+static void acpi_dsdt_add_memory_hotplug(MachineState *ms, Aml *dsdt)
+{
+    uint32_t nr_mem = ms->ram_slots;
+
+    build_memory_hotplug_aml(dsdt, nr_mem, "\\_SB", NULL);
+}
 
 static void acpi_dsdt_add_cpus(MachineState *ms, Aml *dsdt, Aml *scope,
                                int smp_cpus, AcpiConfiguration *conf)
@@ -86,6 +96,7 @@ static void build_dsdt(MachineState *ms,
     if (pci_host->pci_bus) {
         acpi_dsdt_add_pci_bus(dsdt, pci_host);
     }
+    acpi_dsdt_add_memory_hotplug(ms, dsdt);
     acpi_dsdt_add_cpus(ms, dsdt, scope, smp_cpus, conf);
     acpi_dsdt_add_ged(dsdt, conf);
     aml_append(dsdt, scope);
@@ -299,8 +310,6 @@ void acpi_reduced_setup(MachineState *machine, AcpiConfiguration *conf)
     acpi_build_tables_cleanup(&tables, false);
 }
 
-#define CPU_SCAN_METHOD   "CSCN"
-
 static Aml *ged_event_aml(GedEvent *event)
 {
     if (!event) {
@@ -312,6 +321,8 @@ static Aml *ged_event_aml(GedEvent *event)
         /* We run a complete CPU SCAN when getting a CPU hotplug event */
         return aml_call0("\\_SB.CPUS." CPU_SCAN_METHOD);
     case GED_MEMORY_HOTPLUG:
+        /* We run a complete memory SCAN when getting a memory hotplug event */
+        return aml_call0("\\_SB.MHPC." MEMORY_SLOT_SCAN_METHOD);
     case GED_PCI_HOTPLUG:
     case GED_NVDIMM_HOTPLUG:
         /* Not supported for now */
