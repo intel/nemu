@@ -41,6 +41,7 @@
 #include "hw/i386/ioapic.h"
 #include "qapi/visitor.h"
 #include "qemu/error-report.h"
+#include "hw/i386/virt.h"
 
 #define TYPE_PCI_LITE_HOST      "pci-lite-host"
 #define TYPE_PCI_LITE_DEVICE    "pci-lite-device"
@@ -53,6 +54,7 @@
 #define PCI_LITE_PCIEXBAR_SIZE  (0x10000000) /* 256M for bus 0 */
 
 #define DEFAULT_PCI_HOLE64_SIZE (1ULL << 35)
+#define PCI_LITE_HOLE64_START_BASE 0x100000000ULL
 
 typedef struct PCILiteHost {
     /*< private >*/
@@ -64,6 +66,26 @@ typedef struct PCILiteHost {
     qemu_irq irq[PCI_LITE_NUM_IRQS];
     uint64_t pci_hole64_size;
 } PCILiteHost;
+
+/*
+ * The 64bit pci hole starts after "above 4G RAM" and
+ * potentially the space reserved for memory device.
+ */
+static uint64_t pci_lite_pci_hole64_start(void)
+{
+    VirtMachineState *vms = VIRT_MACHINE(qdev_get_machine());
+    MachineState *machine = MACHINE(vms);
+    uint64_t hole64_start = 0;
+
+    if (machine->device_memory->base) {
+        hole64_start = machine->device_memory->base;
+        hole64_start += memory_region_size(&machine->device_memory->mr);
+    } else {
+        hole64_start = PCI_LITE_HOLE64_START_BASE + vms->above_4g_mem_size;
+    }
+
+    return ROUND_UP(hole64_start, 1ULL << 30);
+}
 
 static void pci_lite_get_pci_hole_start(Object *obj, Visitor *v,
                                         const char *name, void *opaque,
@@ -104,7 +126,7 @@ static void pci_lite_get_pci_hole64_start(Object *obj, Visitor *v,
     pci_bus_get_w64_range(h->bus, &w64);
     value = range_is_empty(&w64) ? 0 : range_lob(&w64);
     if (!value) {
-        value = ROUND_UP(0x100000000ULL, 1ULL << 30);
+        value = pci_lite_pci_hole64_start();
     }
     visit_type_uint64(v, name, &value, errp);
 }
@@ -115,7 +137,7 @@ static void pci_lite_get_pci_hole64_end(Object *obj, Visitor *v,
 {
     PCIHostState *h = PCI_HOST_BRIDGE(obj);
     PCILiteHost *s = PCI_LITE_HOST(obj);
-    uint64_t hole64_start = ROUND_UP(0x100000000ULL, 1ULL << 30);
+    uint64_t hole64_start = pci_lite_pci_hole64_start();
     Range w64;
     uint64_t value, hole64_end;
 
