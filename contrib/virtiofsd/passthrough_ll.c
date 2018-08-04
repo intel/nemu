@@ -143,6 +143,7 @@ static const struct fuse_opt lo_opts[] = {
 	  offsetof(struct lo_data, readdirplus_clear), 1 },
 	FUSE_OPT_END
 };
+static void unref_inode(struct lo_data *lo, struct lo_inode *inode, uint64_t n);
 
 static struct lo_data *lo_data(fuse_req_t req)
 {
@@ -502,13 +503,13 @@ static int lo_do_lookup(fuse_req_t req, fuse_ino_t parent, const char *name,
 	int res;
 	int saverr;
 	struct lo_data *lo = lo_data(req);
-	struct lo_inode *inode;
+	struct lo_inode *inode, *dir = lo_inode(req, parent);
 
 	memset(e, 0, sizeof(*e));
 	e->attr_timeout = lo->timeout;
 	e->entry_timeout = lo->timeout;
 
-	newfd = openat(lo_fd(req, parent), name, O_PATH | O_NOFOLLOW);
+	newfd = openat(dir->fd, name, O_PATH | O_NOFOLLOW);
 	if (newfd == -1)
 		goto out_err;
 
@@ -516,7 +517,7 @@ static int lo_do_lookup(fuse_req_t req, fuse_ino_t parent, const char *name,
 	if (res == -1)
 		goto out_err;
 
-	inode = lo_find(lo_data(req), &e->attr);
+	inode = lo_find(lo, &e->attr);
 	if (inode) {
 		close(newfd);
 		newfd = -1;
@@ -531,6 +532,7 @@ static int lo_do_lookup(fuse_req_t req, fuse_ino_t parent, const char *name,
 		inode->is_symlink = S_ISLNK(e->attr.st_mode);
 		inode->refcount = 1;
 		inode->fd = newfd;
+		newfd = -1;
 		inode->ino = e->attr.st_ino;
 		inode->dev = e->attr.st_dev;
 
@@ -544,6 +546,14 @@ static int lo_do_lookup(fuse_req_t req, fuse_ino_t parent, const char *name,
 		prev->next = inode;
 		pthread_mutex_unlock(&lo->mutex);
 	}
+
+	res = fstatat(inode->fd, "", &e->attr,
+		      AT_EMPTY_PATH | AT_SYMLINK_NOFOLLOW);
+	if (res == -1) {
+		unref_inode(lo, inode, 1);
+		goto out_err;
+	}
+
 	e->ino = inode->fuse_ino;
 
 	if (lo_debug(req))
@@ -752,13 +762,33 @@ out_err:
 	fuse_reply_err(req, saverr);
 }
 
+static struct lo_inode *lookup_name(fuse_req_t req, fuse_ino_t parent,
+				    const char *name)
+{
+	int res;
+	struct stat attr;
+
+	res = fstatat(lo_fd(req, parent), name, &attr,
+		      AT_EMPTY_PATH | AT_SYMLINK_NOFOLLOW);
+	if (res == -1)
+		return NULL;
+
+	return lo_find(lo_data(req), &attr);
+}
+
 static void lo_rmdir(fuse_req_t req, fuse_ino_t parent, const char *name)
 {
 	int res;
+	struct lo_inode *inode = lookup_name(req, parent, name);
+	struct lo_data *lo = lo_data(req);
+
+	if (!inode) {
+		fuse_reply_err(req, EIO);
+		return;
+	}
 
 	res = unlinkat(lo_fd(req, parent), name, AT_REMOVEDIR);
-
-	fuse_reply_err(req, res == -1 ? errno : 0);
+        fuse_reply_err(req, res == -1 ? errno : 0);
 }
 
 static void lo_rename(fuse_req_t req, fuse_ino_t parent, const char *name,
@@ -766,6 +796,15 @@ static void lo_rename(fuse_req_t req, fuse_ino_t parent, const char *name,
 		      unsigned int flags)
 {
 	int res;
+	struct lo_inode *oldinode = lookup_name(req, parent, name);
+	struct lo_inode *newinode = lookup_name(req, newparent, newname);
+	struct lo_data *lo = lo_data(req);
+
+	if (!oldinode) {
+		fuse_reply_err(req, EIO);
+		return;
+	}
+
 
 	if (flags) {
 #ifndef SYS_renameat2
@@ -783,17 +822,22 @@ static void lo_rename(fuse_req_t req, fuse_ino_t parent, const char *name,
 
 	res = renameat(lo_fd(req, parent), name,
 			lo_fd(req, newparent), newname);
-
-	fuse_reply_err(req, res == -1 ? errno : 0);
+        fuse_reply_err(req, res == -1 ? errno : 0);
 }
 
 static void lo_unlink(fuse_req_t req, fuse_ino_t parent, const char *name)
 {
 	int res;
+	struct lo_inode *inode = lookup_name(req, parent, name);
+	struct lo_data *lo = lo_data(req);
+
+	if (!inode) {
+		fuse_reply_err(req, EIO);
+		return;
+	}
 
 	res = unlinkat(lo_fd(req, parent), name, 0);
-
-	fuse_reply_err(req, res == -1 ? errno : 0);
+        fuse_reply_err(req, res == -1 ? errno : 0);
 }
 
 static void unref_inode(struct lo_data *lo, struct lo_inode *inode, uint64_t n)
@@ -1693,6 +1737,25 @@ static struct fuse_lowlevel_ops lo_oper = {
         .removemapping  = lo_removemapping,
 };
 
+static void setup_root(struct lo_data *lo, struct lo_inode *root)
+{
+	int fd, res;
+	struct stat stat;
+
+	fd = open(lo->source, O_PATH);
+	if (fd == -1)
+		err(1, "open(%s, O_PATH)", lo->source);
+
+	res = fstatat(fd, "", &stat, AT_EMPTY_PATH | AT_SYMLINK_NOFOLLOW);
+	if (res == -1)
+		err(1, "fstatat(%s)", lo->source);
+
+	root->fd = fd;
+	root->ino = stat.st_ino;
+	root->dev = stat.st_dev;
+	root->refcount = 2;
+}
+
 int main(int argc, char *argv[])
 {
 	struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
@@ -1743,7 +1806,6 @@ int main(int argc, char *argv[])
 		return 1;
 
 	lo.debug = opts.debug;
-	lo.root.refcount = 2;
 	if (lo.source) {
 		struct stat stat;
 		int res;
@@ -1776,9 +1838,7 @@ int main(int argc, char *argv[])
 		errx(1, "timeout is negative (%lf)", lo.timeout);
 	}
 
-	lo.root.fd = open(lo.source, O_PATH);
-	if (lo.root.fd == -1)
-		err(1, "open(\"%s\", O_PATH)", lo.source);
+	setup_root(&lo, &lo.root);
 
 	se = fuse_session_new(&args, &lo_oper, sizeof(lo_oper), &lo);
 	if (se == NULL)
