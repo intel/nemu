@@ -100,7 +100,8 @@ static void acpi_conf_virt_init(MachineState *machine, AcpiConfiguration *conf)
     conf->acpi_dev = vms->acpi_dev;
     conf->cpu_hotplug_io_base = VIRT_CPU_HOTPLUG_IO_BASE;
     conf->hotplug_memory = vms->hotplug_memory;
-
+    conf->acpi_nvdimm_state = vms->acpi_nvdimm_state;
+ 
     /* GED events */
     GedEvent events[] = {
         {
@@ -110,6 +111,10 @@ static void acpi_conf_virt_init(MachineState *machine, AcpiConfiguration *conf)
         {
             .irq   = VIRT_GED_MEMORY_HOTPLUG_IRQ,
             .event = GED_MEMORY_HOTPLUG,
+        },
+        {
+            .irq   = VIRT_GED_NVDIMM_HOTPLUG_IRQ,
+            .event = GED_NVDIMM_HOTPLUG,
         },
     };
 
@@ -228,6 +233,11 @@ static void virt_machine_state_init(MachineState *machine)
                             val, sizeof(*val));
         }
 
+        if (vms->acpi_nvdimm_state.is_enabled) {
+            nvdimm_init_acpi_state(&vms->acpi_nvdimm_state, get_system_io(),
+                                   fw_cfg, OBJECT(vms));
+        }
+
         vms->fw_cfg = fw_cfg;
         acpi_conf_virt_init(MACHINE(vms), vms->acpi_configuration);
 
@@ -235,6 +245,11 @@ static void virt_machine_state_init(MachineState *machine)
             load_linux_bzimage(MACHINE(vms), vms->acpi_configuration, fw_cfg);
         }
     } else {
+        if (vms->acpi_nvdimm_state.is_enabled) {
+            nvdimm_init_acpi_state(&vms->acpi_nvdimm_state, get_system_io(),
+                                   NULL, OBJECT(vms));
+        }
+
         acpi_conf_virt_init(MACHINE(vms), vms->acpi_configuration);
 
         if (linux_boot) {
@@ -257,11 +272,28 @@ static void virt_machine_set_fw(Object *obj, bool value, Error **errp)
     vms->fw = value;
 }
 
+static bool virt_machine_get_nvdimm(Object *obj, Error **errp)
+{
+    VirtMachineState *vms = VIRT_MACHINE(obj);
+
+    return vms->acpi_nvdimm_state.is_enabled;
+}
+
+static void virt_machine_set_nvdimm(Object *obj, bool value, Error **errp)
+{
+    VirtMachineState *vms = VIRT_MACHINE(obj);
+
+    vms->acpi_nvdimm_state.is_enabled = value;
+}
+
 static void virt_machine_instance_init(Object *obj)
 {
     VirtMachineState *vms = VIRT_MACHINE(obj);
 
     vms->fw = true;
+
+    /* Disable NVDIMM by default */
+    vms->acpi_nvdimm_state.is_enabled = false;
 }
 
 static void virt_machine_reset(void)
@@ -317,6 +349,11 @@ static void virt_class_init(ObjectClass *oc, void *data)
     object_class_property_add_bool(oc, VIRT_MACHINE_FW,
                                    virt_machine_get_fw, virt_machine_set_fw, &error_abort);
 
+    /* NVDIMM property */
+    object_class_property_add_bool(oc, VIRT_MACHINE_NVDIMM,
+                                   virt_machine_get_nvdimm,
+                                   virt_machine_set_nvdimm,
+                                   &error_abort);
 }
 
 static const TypeInfo virt_machine_info = {
@@ -553,6 +590,7 @@ static void virt_dimm_plug(HotplugHandler *hotplug_dev,
     PCDIMMDeviceClass *ddc = PC_DIMM_GET_CLASS(dimm);
     MemoryRegion *mr;
     uint64_t align = TARGET_PAGE_SIZE;
+    bool is_nvdimm = object_dynamic_cast(OBJECT(dev), TYPE_NVDIMM);
 
     assert(vms->acpi);
     mr = ddc->get_memory_region(dimm, &local_err);
@@ -564,10 +602,19 @@ static void virt_dimm_plug(HotplugHandler *hotplug_dev,
         align = memory_region_get_alignment(mr);
     }
 
-    pc_dimm_memory_plug(dev, &vms->hotplug_memory, mr, align, &local_err);
+    if (is_nvdimm && !vms->acpi_nvdimm_state.is_enabled) {
+        error_setg(&local_err,
+                   "nvdimm is not enabled: missing 'nvdimm' in '-M'");
+        goto out;
+    }
 
+    pc_dimm_memory_plug(dev, &vms->hotplug_memory, mr, align, &local_err);
     if (local_err) {
         goto out;
+    }
+
+    if (is_nvdimm) {
+        nvdimm_plug(&vms->acpi_nvdimm_state);
     }
 
     hhc = HOTPLUG_HANDLER_GET_CLASS(vms->acpi);
