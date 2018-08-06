@@ -58,11 +58,15 @@ typedef struct {
     /* ACPI device for hotplug and PM */
     HotplugHandler *acpi_dev;
 
+    AcpiNVDIMMState acpi_nvdimm_state;
+
     /* RAM size */
     ram_addr_t above_4g_mem_size;
 
     DeviceState *acpi;
 } VirtMachineState;
+
+#define VIRT_MACHINE_NVDIMM "nvdimm"
 
 #define TYPE_VIRT_MACHINE   MACHINE_TYPE_NAME("virt")
 #define VIRT_MACHINE(obj) \

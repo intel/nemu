@@ -260,7 +260,7 @@ case "$PLATFORM" in
        ;;
     x86_64_virt)
        machine='virt'
-       accel='kvm,kernel_irqchip'
+       accel='kvm,kernel_irqchip,nvdimm'
        SIMPLE_LAUNCH="true"
        ;;
     aarch64)

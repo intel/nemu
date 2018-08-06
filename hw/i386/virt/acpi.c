@@ -66,8 +66,12 @@ static void virt_device_plug_cb(HotplugHandler *hotplug_dev,
     if (object_dynamic_cast(OBJECT(dev), TYPE_CPU)) {
         acpi_cpu_plug_cb(hotplug_dev, &s->cpuhp_state, dev, errp);
     } else if (object_dynamic_cast(OBJECT(dev), TYPE_PC_DIMM)) {
-        acpi_memory_plug_cb(hotplug_dev, &s->memhp_state,
-                            dev, errp);
+        if (object_dynamic_cast(OBJECT(dev), TYPE_NVDIMM)) {
+            nvdimm_acpi_plug_cb(hotplug_dev, dev);
+        } else {
+            acpi_memory_plug_cb(hotplug_dev, &s->memhp_state,
+                                dev, errp);
+        }
     }  else {
         error_setg(errp, "virt: device plug request for unsupported device"
                    " type: %s", object_get_typename(OBJECT(dev)));
@@ -118,6 +122,8 @@ static void virt_send_ged(AcpiDeviceIf *adev, AcpiEventStatusBits ev)
     } else if (ev & ACPI_MEMORY_HOTPLUG_STATUS) {
         /* We inject the memory hotplug interrupt */
         qemu_irq_pulse(s->gsi[VIRT_GED_MEMORY_HOTPLUG_IRQ]);
+    } else if (ev & ACPI_NVDIMM_HOTPLUG_STATUS) {
+        qemu_irq_pulse(s->gsi[VIRT_GED_NVDIMM_HOTPLUG_IRQ]);
     }
 }
 
