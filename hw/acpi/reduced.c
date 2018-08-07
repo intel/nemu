@@ -60,15 +60,6 @@ static void acpi_dsdt_add_memory_hotplug(MachineState *ms, Aml *dsdt)
 
 static void acpi_dsdt_add_cpus(MachineState *ms, Aml *dsdt, Aml *scope, int smp_cpus, AcpiConfiguration *conf)
 {
-    uint16_t i;
-
-    for (i = 0; i < smp_cpus; i++) {
-        Aml *dev = aml_device("C%.03X", i);
-        aml_append(dev, aml_name_decl("_HID", aml_string("ACPI0007")));
-        aml_append(dev, aml_name_decl("_UID", aml_int(i)));
-        aml_append(scope, dev);
-    }
-
     CPUHotplugFeatures opts = {
         .apci_1_compatible = false,
         .has_legacy_cphp = false,
