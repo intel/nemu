@@ -40,6 +40,7 @@
 #include "hw/i386/amd_iommu.h"
 #include "hw/i386/intel_iommu.h"
 #include "hw/mem/pc-dimm.h"
+#include "hw/mem/memory-device.h"
 
 #include "hw/pci-host/pci-lite.h"
 
@@ -546,27 +547,9 @@ static void virt_dimm_plug(HotplugHandler *hotplug_dev,
     Error *local_err = NULL;
     VirtMachineState *vms = VIRT_MACHINE(hotplug_dev);
     PCDIMMDevice *dimm = PC_DIMM(dev);
-    PCDIMMDeviceClass *ddc = PC_DIMM_GET_CLASS(dimm);
-    MemoryRegion *mr;
-    uint64_t align = TARGET_PAGE_SIZE;
     bool is_nvdimm = object_dynamic_cast(OBJECT(dev), TYPE_NVDIMM);
 
-    assert(vms->acpi);
-    mr = ddc->get_memory_region(dimm, &local_err);
-    if (local_err) {
-        goto out;
-    }
-
-    if (memory_region_get_alignment(mr)) {
-        align = memory_region_get_alignment(mr);
-    }
-
-    if (is_nvdimm && !vms->acpi_nvdimm_state.is_enabled) {
-        error_setg(&local_err,
-                   "nvdimm is not enabled: missing 'nvdimm' in '-M'");
-        goto out;
-    }
-    pc_dimm_plug(dev, MACHINE(vms), align, &local_err);
+    pc_dimm_plug(dimm, MACHINE(vms), &local_err);
     if (local_err) {
         goto out;
     }
@@ -581,6 +564,27 @@ out:
     error_propagate(errp, local_err);
 }
 
+static void virt_dimm_pre_plug(HotplugHandler *hotplug_dev,
+                         DeviceState *dev, Error **errp)
+{
+    VirtMachineState *vms = VIRT_MACHINE(hotplug_dev);
+    const uint64_t legacy_align = TARGET_PAGE_SIZE;
+    const bool is_nvdimm = object_dynamic_cast(OBJECT(dev), TYPE_NVDIMM);
+    Error *local_err = NULL;
+
+    assert(vms->acpi);
+
+    if (is_nvdimm && !vms->acpi_nvdimm_state.is_enabled) {
+        error_setg(&local_err,
+                   "nvdimm is not enabled: missing 'nvdimm' in '-M'");
+        goto out;
+    }
+
+    pc_dimm_pre_plug(PC_DIMM(dev), MACHINE(hotplug_dev),
+                     &legacy_align, errp);
+out:
+    error_propagate(errp, local_err);
+}
 
 static void virt_dimm_unplug(HotplugHandler *hotplug_dev,
                            DeviceState *dev, Error **errp)
@@ -596,7 +600,7 @@ static void virt_dimm_unplug(HotplugHandler *hotplug_dev,
         goto out;
     }
 
-    pc_dimm_unplug(dev, MACHINE(vms));
+    pc_dimm_unplug(PC_DIMM(dev), MACHINE(vms));
     object_unparent(OBJECT(dev));
 
  out:
@@ -621,6 +625,9 @@ static void virt_machine_device_pre_plug_cb(HotplugHandler *hotplug_dev,
 {
     if (object_dynamic_cast(OBJECT(dev), TYPE_CPU)) {
         virt_cpu_pre_plug(hotplug_dev, dev, errp);
+    }
+    if (object_dynamic_cast(OBJECT(dev), TYPE_PC_DIMM)) {
+        virt_dimm_pre_plug(hotplug_dev, dev, errp);
     }
 }
 
