@@ -22,6 +22,7 @@
 #include "qemu/osdep.h"
 #include <glib/gprintf.h>
 #include "hw/acpi/aml-build.h"
+#include "hw/mem/memory-device.h"
 #include "qemu/bswap.h"
 #include "qemu/bitops.h"
 #include "sysemu/numa.h"
@@ -2330,6 +2331,178 @@ void acpi_dsdt_add_pci_bus(Aml *table, AcpiPciBus *pci_host)
     aml_append(table, sb_scope);
 
     build_pci_host_bridge(table, pci_host);
+}
+
+#define HOLE_640K_START  (640 * 1024)
+#define HOLE_640K_END    (1024 * 1024)
+
+void build_srat_hotpluggable_memory(GArray *table_data, uint64_t base,
+                                    uint64_t len, int default_node)
+{
+    MemoryDeviceInfoList *info_list = qmp_memory_device_list();
+    MemoryDeviceInfoList *info;
+    MemoryDeviceInfo *mi;
+    PCDIMMDeviceInfo *di;
+    uint64_t end = base + len, cur, size;
+    bool is_nvdimm;
+    AcpiSratMemoryAffinity *numamem;
+    MemoryAffinityFlags flags;
+
+    for (cur = base, info = info_list;
+         cur < end;
+         cur += size, info = info->next) {
+        numamem = acpi_data_push(table_data, sizeof *numamem);
+
+        if (!info) {
+            build_srat_memory(numamem, cur, end - cur, default_node,
+                              MEM_AFFINITY_HOTPLUGGABLE | MEM_AFFINITY_ENABLED);
+            break;
+        }
+
+        mi = info->value;
+        is_nvdimm = (mi->type == MEMORY_DEVICE_INFO_KIND_NVDIMM);
+        di = !is_nvdimm ? mi->u.dimm.data : mi->u.nvdimm.data;
+
+        if (cur < di->addr) {
+            build_srat_memory(numamem, cur, di->addr - cur, default_node,
+                              MEM_AFFINITY_HOTPLUGGABLE | MEM_AFFINITY_ENABLED);
+            numamem = acpi_data_push(table_data, sizeof *numamem);
+        }
+
+        size = di->size;
+
+        flags = MEM_AFFINITY_ENABLED;
+        if (di->hotpluggable) {
+            flags |= MEM_AFFINITY_HOTPLUGGABLE;
+        }
+        if (is_nvdimm) {
+            flags |= MEM_AFFINITY_NON_VOLATILE;
+        }
+
+        build_srat_memory(numamem, di->addr, size, di->node, flags);
+    }
+
+    qapi_free_MemoryDeviceInfoList(info_list);
+}
+
+void acpi_build_srat(GArray *table_data, BIOSLinker *linker,
+                     MachineState *machine, AcpiConfiguration *conf)
+{
+    AcpiSystemResourceAffinityTable *srat;
+    AcpiSratMemoryAffinity *numamem;
+
+    int i;
+    int srat_start, numa_start, slots;
+    uint64_t mem_len, mem_base, next_base;
+    MachineClass *mc = MACHINE_GET_CLASS(machine);
+    const CPUArchIdList *apic_ids = mc->possible_cpu_arch_ids(machine);
+    ram_addr_t hotplugabble_address_space_size =
+        object_property_get_int(OBJECT(machine), PC_MACHINE_DEVMEM_REGION_SIZE,
+                                NULL);
+
+    srat_start = table_data->len;
+
+    srat = acpi_data_push(table_data, sizeof *srat);
+    srat->reserved1 = cpu_to_le32(1);
+
+    for (i = 0; i < apic_ids->len; i++) {
+        int node_id = apic_ids->cpus[i].props.node_id;
+        uint32_t apic_id = apic_ids->cpus[i].arch_id;
+
+        if (apic_id < 255) {
+            AcpiSratProcessorAffinity *core;
+
+            core = acpi_data_push(table_data, sizeof *core);
+            core->type = ACPI_SRAT_PROCESSOR_APIC;
+            core->length = sizeof(*core);
+            core->local_apic_id = apic_id;
+            core->proximity_lo = node_id;
+            memset(core->proximity_hi, 0, 3);
+            core->local_sapic_eid = 0;
+            core->flags = cpu_to_le32(1);
+        } else {
+            AcpiSratProcessorX2ApicAffinity *core;
+
+            core = acpi_data_push(table_data, sizeof *core);
+            core->type = ACPI_SRAT_PROCESSOR_x2APIC;
+            core->length = sizeof(*core);
+            core->x2apic_id = cpu_to_le32(apic_id);
+            core->proximity_domain = cpu_to_le32(node_id);
+            core->flags = cpu_to_le32(1);
+        }
+    }
+
+    /* the memory map is a bit tricky, it contains at least one hole
+     * from 640k-1M and possibly another one from 3.5G-4G.
+     */
+    next_base = 0;
+    numa_start = table_data->len;
+
+    for (i = 1; i < conf->numa_nodes + 1; ++i) {
+        mem_base = next_base;
+        mem_len = conf->node_mem[i - 1];
+        next_base = mem_base + mem_len;
+
+        /* Cut out the 640K hole */
+        if (mem_base <= HOLE_640K_START &&
+            next_base > HOLE_640K_START) {
+            mem_len -= next_base - HOLE_640K_START;
+            if (mem_len > 0) {
+                numamem = acpi_data_push(table_data, sizeof *numamem);
+                build_srat_memory(numamem, mem_base, mem_len, i - 1,
+                                  MEM_AFFINITY_ENABLED);
+            }
+
+            /* Check for the rare case: 640K < RAM < 1M */
+            if (next_base <= HOLE_640K_END) {
+                next_base = HOLE_640K_END;
+                continue;
+            }
+            mem_base = HOLE_640K_END;
+            mem_len = next_base - HOLE_640K_END;
+        }
+
+        /* Cut out the ACPI_PCI hole */
+        if (mem_base <= conf->below_4g_mem_size &&
+            next_base > conf->below_4g_mem_size) {
+            mem_len -= next_base - conf->below_4g_mem_size;
+            if (mem_len > 0) {
+                numamem = acpi_data_push(table_data, sizeof *numamem);
+                build_srat_memory(numamem, mem_base, mem_len, i - 1,
+                                  MEM_AFFINITY_ENABLED);
+            }
+            mem_base = 1ULL << 32;
+            mem_len = next_base - conf->below_4g_mem_size;
+            next_base = mem_base + mem_len;
+        }
+        numamem = acpi_data_push(table_data, sizeof *numamem);
+        build_srat_memory(numamem, mem_base, mem_len, i - 1,
+                          MEM_AFFINITY_ENABLED);
+    }
+    slots = (table_data->len - numa_start) / sizeof *numamem;
+    for (; slots < conf->numa_nodes + 2; slots++) {
+        numamem = acpi_data_push(table_data, sizeof *numamem);
+        build_srat_memory(numamem, 0, 0, 0, MEM_AFFINITY_NOFLAGS);
+    }
+
+    /*
+     * Entry is required for Windows to enable memory hotplug in OS
+     * and for Linux to enable SWIOTLB when booted with less than
+     * 4G of RAM. Windows works better if the entry sets proximity
+     * to the highest NUMA node in the machine.
+     * Memory devices may override proximity set by this entry,
+     * providing _PXM method if necessary.
+     */
+    if (hotplugabble_address_space_size) {
+        build_srat_hotpluggable_memory(table_data, machine->device_memory->base,
+                                       hotplugabble_address_space_size,
+                                       conf->numa_nodes - 1);
+    }
+
+    build_header(linker, table_data,
+                 (void *)(table_data->data + srat_start),
+                 "SRAT",
+                 table_data->len - srat_start, 1, NULL, NULL);
 }
 
 /* Build rsdt table */
