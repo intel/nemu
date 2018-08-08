@@ -1,0 +1,6 @@
+#cloud-config
+users:
+  - name: nemu
+    passwd: $6$9QXzaUZiZah4ROVl$GiE4IrGaK8njlpSEF029edj2TBbfpjT3DLTI9D5Gm7lXSqP2RvzUr3CHk/SWzkC/0FxX3TJLcxikt3G58xHZz/
+    sudo:
+      - ALL=(ALL) NOPASSWD:ALL

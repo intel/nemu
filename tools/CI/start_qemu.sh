@@ -123,8 +123,8 @@ cloudinit_setup() {
    rm -f "$cloudinitimg"
 
    truncate --size 2M "$cloudinitimg"
-   mkfs.vfat -n cidata "$cloudinitimg" &> /dev/null
-   mcopy -oi seed.img  "$CINIT"/user-data  "$CINIT"/meta-data :: 
+   mkfs.vfat -n config-2 "$cloudinitimg" &> /dev/null
+   mcopy -oi seed.img  -s "$CINIT"/* :: 
 }
 
 arm_efi_setup() {
