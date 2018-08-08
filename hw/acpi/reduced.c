@@ -78,10 +78,21 @@ static void acpi_dsdt_add_ged(Aml *scope, AcpiConfiguration *conf)
     build_ged_aml(scope, GED_DEVICE, conf->ged_events, conf->ged_events_size);
 }
 
+static void acpi_dsdt_add_sleep_state(Aml *scope)
+{
+    Aml *pkg = aml_package(4);
+
+    aml_append(pkg, aml_int(ACPI_REDUCED_SLEEP_LEVEL));
+    aml_append(pkg, aml_int(0));
+    aml_append(pkg, aml_int(0));
+    aml_append(pkg, aml_int(0));
+    aml_append(scope, aml_name_decl("_S5", pkg));
+}
+
 /* DSDT */
 static void build_dsdt(MachineState *ms, GArray *table_data, BIOSLinker *linker, AcpiPciBus *pci_host, AcpiConfiguration *conf)
 {
-    Aml *scope, *dsdt, *pkg;
+    Aml *scope, *dsdt;
 
     dsdt = init_aml_allocator();
     /* Reserve space for header */
@@ -92,13 +103,7 @@ static void build_dsdt(MachineState *ms, GArray *table_data, BIOSLinker *linker,
     acpi_dsdt_add_cpus(ms, dsdt, scope, smp_cpus, conf);
     acpi_dsdt_add_pci_bus(scope, pci_host);
     acpi_dsdt_add_ged(scope, conf);
-
-    pkg = aml_package(4);
-    aml_append(pkg, aml_int(ACPI_REDUCED_SLEEP_LEVEL));
-    aml_append(pkg, aml_int(0));
-    aml_append(pkg, aml_int(0));
-    aml_append(pkg, aml_int(0));
-    aml_append(scope, aml_name_decl("_S5", pkg));
+    acpi_dsdt_add_sleep_state(scope);
 
     aml_append(dsdt, scope);
     /* copy AML table into ACPI tables blob and patch header there */
