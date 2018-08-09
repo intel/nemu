@@ -693,6 +693,7 @@ static void acpi_conf_pc_init(MachineState *machine, AcpiConfiguration *conf)
     conf->apic_id_limit = pcms->apic_id_limit;
     conf->acpi_nvdimm_state = pcms->acpi_nvdimm_state;
     conf->hotplug_memory = pcms->hotplug_memory;
+    conf->hotplug_memory_size = pcms->hotplug_memory_size;
 
     /* ACPI build state */
     conf->build_state = NULL;
@@ -915,6 +916,7 @@ void pc_memory_init(PCMachineState *pcms,
                            "hotplug-memory", hotplug_mem_size);
         memory_region_add_subregion(system_memory, pcms->hotplug_memory.base,
                                     &pcms->hotplug_memory.mr);
+        pcms->hotplug_memory_size = memory_region_size(&pcms->hotplug_memory.mr);
     }
 
     /* Initialize PC system firmware */
@@ -1548,17 +1550,6 @@ static HotplugHandler *pc_get_hotpug_handler(MachineState *machine,
         pcmc->get_hotplug_handler(machine, dev) : NULL;
 }
 
-static void
-pc_machine_get_hotplug_memory_region_size(Object *obj, Visitor *v,
-                                          const char *name, void *opaque,
-                                          Error **errp)
-{
-    PCMachineState *pcms = PC_MACHINE(obj);
-    int64_t value = memory_region_size(&pcms->hotplug_memory.mr);
-
-    visit_type_int(v, name, &value, errp);
-}
-
 static void pc_machine_get_max_ram_below_4g(Object *obj, Visitor *v,
                                             const char *name, void *opaque,
                                             Error **errp)
@@ -1803,10 +1794,6 @@ static void pc_machine_class_init(ObjectClass *oc, void *data)
     hc->unplug = pc_machine_device_unplug_cb;
     nc->nmi_monitor_handler = x86_nmi;
     mc->default_cpu_type = TARGET_DEFAULT_CPU_TYPE;
-
-    object_class_property_add(oc, PC_MACHINE_MEMHP_REGION_SIZE, "int",
-        pc_machine_get_hotplug_memory_region_size, NULL,
-        NULL, NULL, &error_abort);
 
     object_class_property_add(oc, PC_MACHINE_MAX_RAM_BELOW_4G, "size",
         pc_machine_get_max_ram_below_4g, pc_machine_set_max_ram_below_4g,

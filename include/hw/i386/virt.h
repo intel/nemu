@@ -62,6 +62,7 @@ typedef struct {
     HotplugHandler *acpi_dev;
 
     MemoryHotplugState hotplug_memory;
+    uint32_t hotplug_memory_size;
 
     /* RAM size */
     ram_addr_t below_4g_mem_size, above_4g_mem_size;
