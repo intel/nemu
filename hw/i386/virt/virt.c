@@ -100,6 +100,7 @@ static void acpi_conf_virt_init(MachineState *machine, AcpiConfiguration *conf)
     conf->acpi_dev = vms->acpi_dev;
     conf->cpu_hotplug_io_base = VIRT_CPU_HOTPLUG_IO_BASE;
     conf->hotplug_memory = vms->hotplug_memory;
+    conf->hotplug_memory_size = vms->hotplug_memory_size;
 
     /* GED events */
     GedEvent events[] = {
@@ -700,6 +701,7 @@ static void virt_machine_class_init(MachineClass *mc)
     machine_class_allow_dynamic_sysbus_dev(mc, "sysbus-debugcon");
     mc->max_cpus = 288;
     mc->has_hotpluggable_cpus = true;
+    mc->auto_enable_numa_with_memhp = true;
 
     /* Machine class handlers */
     mc->cpu_index_to_instance_props = cpu_index_to_props;
@@ -720,6 +722,8 @@ static void virt_machine_class_init(MachineClass *mc)
     mc->firmware_build_methods.acpi.rsdp = build_rsdp;
     mc->firmware_build_methods.acpi.setup = acpi_reduced_setup;
     mc->firmware_build_methods.acpi.mcfg = acpi_build_mcfg;
+    mc->firmware_build_methods.acpi.srat = build_srat;
+    mc->firmware_build_methods.acpi.slit = build_slit;
 }
 
 static void virt_2_12_machine_class_init(MachineClass *mc)

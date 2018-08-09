@@ -93,6 +93,7 @@ MemoryRegion *virt_memory_init(VirtMachineState *vms)
                            "hotplug-memory", hotplug_mem_size);
         memory_region_add_subregion(system_memory, vms->hotplug_memory.base,
                                     &vms->hotplug_memory.mr);
+        vms->hotplug_memory_size = memory_region_size(&vms->hotplug_memory.mr);
     }
 
     if (vms->fw) {
