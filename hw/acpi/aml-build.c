@@ -2388,9 +2388,7 @@ void build_srat(GArray *table_data, BIOSLinker *linker,
     uint64_t mem_len, mem_base, next_base;
     MachineClass *mc = MACHINE_GET_CLASS(machine);
     const CPUArchIdList *apic_ids = mc->possible_cpu_arch_ids(machine);
-    ram_addr_t hotplugabble_address_space_size =
-        object_property_get_int(OBJECT(machine), PC_MACHINE_MEMHP_REGION_SIZE,
-                                NULL);
+    ram_addr_t hotplugabble_address_space_size = conf->hotplug_memory_size;
 
     srat_start = table_data->len;
 

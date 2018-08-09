@@ -219,6 +219,7 @@ struct AcpiConfiguration {
     unsigned apic_id_limit;
     AcpiNVDIMMState acpi_nvdimm_state;
     MemoryHotplugState hotplug_memory;
+    uint32_t hotplug_memory_size;
     uint16_t cpu_hotplug_io_base;
     GedEvent *ged_events;
     uint8_t ged_events_size;
