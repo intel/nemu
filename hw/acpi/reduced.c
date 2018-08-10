@@ -189,6 +189,15 @@ static void acpi_reduced_build(MachineState *ms, AcpiBuildTables *tables,
     acpi_add_table(table_offsets, tables_blob);
     acpi_builder_madt(ab, tables_blob, tables->linker, ms, conf);
 
+    if (conf->numa_nodes) {
+        acpi_add_table(table_offsets, tables_blob);
+        acpi_builder_srat(ab, tables_blob, tables->linker, ms, conf);
+        if (have_numa_distance) {
+            acpi_add_table(table_offsets, tables_blob);
+            acpi_builder_slit(ab, tables_blob, tables->linker);
+        }
+    }
+
     if (acpi_get_mcfg(&mcfg)) {
         acpi_add_table(table_offsets, tables_blob);
         acpi_builder_mcfg(ab, tables_blob,
