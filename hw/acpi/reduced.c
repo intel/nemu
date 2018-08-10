@@ -183,6 +183,15 @@ static void acpi_reduced_build(MachineState *ms, AcpiBuildTables *tables, AcpiCo
     acpi_add_table(table_offsets, tables_blob);
     mc->firmware_build_methods.acpi.madt(tables_blob, tables->linker, ms, conf);
 
+    if (conf->numa_nodes) {
+        acpi_add_table(table_offsets, tables_blob);
+        mc->firmware_build_methods.acpi.srat(tables_blob, tables->linker, ms, conf);
+        if (have_numa_distance) {
+            acpi_add_table(table_offsets, tables_blob);
+            mc->firmware_build_methods.acpi.slit(tables_blob, tables->linker);
+        }
+    }
+
     if (acpi_get_mcfg(&mcfg)) {
         acpi_add_table(table_offsets, tables_blob);
         mc->firmware_build_methods.acpi.mcfg(tables_blob, tables->linker, &mcfg);
