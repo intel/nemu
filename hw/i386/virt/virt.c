@@ -18,6 +18,7 @@
 #include "qemu/osdep.h"
 #include "qemu/error-report.h"
 #include "qapi/error.h"
+#include "qapi/visitor.h"
 #include "sysemu/sysemu.h"
 #include "sysemu/cpus.h"
 #include "sysemu/numa.h"
@@ -39,6 +40,7 @@
 #include "hw/i386/topology.h"
 #include "hw/i386/amd_iommu.h"
 #include "hw/i386/intel_iommu.h"
+#include "hw/i386/pc.h"
 #include "hw/mem/pc-dimm.h"
 
 #include "hw/pci-host/pci-lite.h"
@@ -259,6 +261,17 @@ static void virt_machine_set_nvdimm(Object *obj, bool value, Error **errp)
     vms->acpi_nvdimm_state.is_enabled = value;
 }
 
+static void
+virt_machine_get_device_memory_region_size(Object *obj, Visitor *v,
+                                           const char *name, void *opaque,
+                                          Error **errp)
+{
+    MachineState *ms = MACHINE(obj);
+    int64_t value = memory_region_size(&ms->device_memory->mr);
+
+    visit_type_int(v, name, &value, errp);
+}
+
 static void virt_machine_instance_init(Object *obj)
 {
     VirtMachineState *vms = VIRT_MACHINE(obj);
@@ -313,6 +326,10 @@ static void virt_class_init(ObjectClass *oc, void *data)
                                    virt_machine_get_nvdimm,
                                    virt_machine_set_nvdimm,
                                    &error_abort);
+    /* MEMHP setting */
+    object_class_property_add(oc, PC_MACHINE_DEVMEM_REGION_SIZE, "int",
+                              virt_machine_get_device_memory_region_size, NULL,
+                              NULL, NULL, &error_abort);
 }
 
 static const TypeInfo virt_machine_info = {
@@ -697,6 +714,7 @@ static void virt_machine_class_init(MachineClass *mc)
     machine_class_allow_dynamic_sysbus_dev(mc, "sysbus-debugcon");
     mc->max_cpus = 288;
     mc->has_hotpluggable_cpus = true;
+    mc->auto_enable_numa_with_memhp = true;
 
     /* Machine class handlers */
     mc->cpu_index_to_instance_props = cpu_index_to_props;
@@ -717,6 +735,8 @@ static void virt_machine_class_init(MachineClass *mc)
     mc->firmware_build_methods.acpi.rsdp = build_rsdp;
     mc->firmware_build_methods.acpi.setup = acpi_reduced_setup;
     mc->firmware_build_methods.acpi.mcfg = acpi_build_mcfg;
+    mc->firmware_build_methods.acpi.srat = acpi_build_srat;
+    mc->firmware_build_methods.acpi.slit = build_slit;
 }
 
 static void virt_2_12_machine_class_init(MachineClass *mc)
