@@ -1154,6 +1154,12 @@ static void lo_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 		fprintf(stderr, "lo_open(ino=%" PRIu64 ", flags=%d)\n",
 			ino, fi->flags);
 
+	/* Promote O_WRONLY to O_RDWR. Otherwise later mmap(PROT_WRITE) fails */
+	if ((fi->flags & O_ACCMODE) == O_WRONLY) {
+		fi->flags &= ~O_ACCMODE;
+		fi->flags |= O_RDWR;
+	}
+
 	/* With writeback cache, kernel may send read requests even
 	   when userspace opened write-only */
 	if (lo->writeback && (fi->flags & O_ACCMODE) == O_WRONLY) {
