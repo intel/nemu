@@ -833,8 +833,8 @@ struct fuse_setupmapping_out {
 struct fuse_removemapping_in {
         /* An already open handle */
 	uint64_t	fh;
-        /* Offset into the file to start the mapping */
-        uint64_t        foffset;
+        /* Offset into the dax to start the unmapping */
+        uint64_t        moffset;
         /* Length of mapping required */
         uint64_t        len;
 };

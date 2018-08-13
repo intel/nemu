@@ -1556,7 +1556,7 @@ static void do_removemapping(fuse_req_t req, fuse_ino_t nodeid, const void *inar
 	fi.fh = arg->fh;
 
 	if (req->se->op.removemapping)
-		req->se->op.removemapping(req, req->se, nodeid, arg->foffset,
+		req->se->op.removemapping(req, req->se, nodeid, arg->moffset,
                                           arg->len, &fi);
 	else
 		fuse_reply_err(req, ENOSYS);
