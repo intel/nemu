@@ -112,9 +112,15 @@ disk_setup() {
    printf "g\nn\n\n\n\nw\n" | fdisk $scsiimg 2&> /dev/null
 
    nvdimmimg=testnvdimm.img
-   dd if=/dev/zero of=$nvdimmimg count=1 bs=50M &> /dev/null
+
+   # 128 MiB so that memory hotplug will succeed 
+
+   # Memory hotplug needs start addresses that are aligned to 128MiB, if we
+   # attach an nvdimm qemu will try and attach the hotplug memory after, if we
+   # use something non-aligned then it will fail as the start address is bad
+   nvdimmsize=134217728
+   dd if=/dev/zero of=$nvdimmimg count=1 bs=$nvdimmsize &> /dev/null
    printf "g\nn\n\n\n\nw\n" | fdisk $nvdimmimg 2&> /dev/null
-   nvdimmsize=$(ls -s $nvdimmimg | cut -f1 -d' ')
 }
 
 cloudinit_setup() {
