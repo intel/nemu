@@ -596,6 +596,8 @@ out:
     error_propagate(errp, local_err);
 }
 
+// 128MiB requirement for alignment on Linux
+#define LINUX_SPARSE_MEMORY_ALIGNMENT 0x8000000
 
 static void virt_dimm_plug(HotplugHandler *hotplug_dev,
                          DeviceState *dev, Error **errp)
@@ -608,6 +610,7 @@ static void virt_dimm_plug(HotplugHandler *hotplug_dev,
     MemoryRegion *mr;
     uint64_t align = TARGET_PAGE_SIZE;
     bool is_nvdimm = object_dynamic_cast(OBJECT(dev), TYPE_NVDIMM);
+    uint64_t free_addr;
 
     assert(vms->acpi);
     mr = ddc->get_memory_region(dimm, &local_err);
@@ -624,6 +627,22 @@ static void virt_dimm_plug(HotplugHandler *hotplug_dev,
                    "nvdimm is not enabled: missing 'nvdimm' in '-M'");
         goto out;
     }
+
+    // Ensure that the start address is always aligned to the 128MiB boundary
+    // and for non-NVDIMM devices ensure that the size is a multiple of 128MiB
+    // otherwise the Linux kernel will reject
+    if (!is_nvdimm) {
+        align = LINUX_SPARSE_MEMORY_ALIGNMENT;
+    }
+
+    free_addr = pc_dimm_get_free_addr(vms->hotplug_memory.base,
+                                      memory_region_size(&vms->hotplug_memory.mr),
+                                      NULL, align, memory_region_size(mr), &local_err);
+    if (local_err) {
+        goto out;
+    }
+
+    dimm->addr = ROUND_UP(free_addr, LINUX_SPARSE_MEMORY_ALIGNMENT);
 
     pc_dimm_memory_plug(dev, &vms->hotplug_memory, mr, align, &local_err);
     if (local_err) {
