@@ -77,6 +77,11 @@ struct lo_inode {
 	uint64_t refcount; /* protected by lo->mutex */
 };
 
+struct lo_cred {
+	uid_t euid;
+	gid_t egid;
+};
+
 enum {
 	CACHE_NEVER,
 	CACHE_NORMAL,
@@ -375,6 +380,47 @@ static void lo_lookup(fuse_req_t req, fuse_ino_t parent, const char *name)
 		fuse_reply_entry(req, &e);
 }
 
+/*
+ * Change to uid/gid of caller so that file is created with
+ * ownership of caller.
+ * TODO: What about selinux context?
+ */
+static int lo_change_cred(fuse_req_t req, struct lo_cred *old)
+{
+	int res;
+
+	old->euid = geteuid();
+	old->egid = getegid();
+
+	res = syscall(SYS_setresgid, -1,fuse_req_ctx(req)->gid, -1);
+	if (res == -1)
+		return errno;
+
+	res = syscall(SYS_setresuid, -1, fuse_req_ctx(req)->uid, -1);
+	if (res == -1) {
+		int errno_save = errno;
+
+		syscall(SYS_setresgid, -1, old->egid, -1);
+		return errno_save;
+	}
+
+	return 0;
+}
+
+/* Regain Privileges */
+static void lo_restore_cred(struct lo_cred *old)
+{
+	int res;
+
+	res = syscall(SYS_setresuid, -1, old->euid, -1);
+	if (res == -1)
+		err(1, "seteuid(%u)", old->euid);
+
+	res = syscall(SYS_setresgid, -1, old->egid, -1);
+	if (res == -1)
+		err(1, "setegid(%u)", old->egid);
+}
+
 static void lo_mknod_symlink(fuse_req_t req, fuse_ino_t parent,
 			     const char *name, mode_t mode, dev_t rdev,
 			     const char *link)
@@ -384,8 +430,13 @@ static void lo_mknod_symlink(fuse_req_t req, fuse_ino_t parent,
 	int saverr;
 	struct lo_inode *dir = lo_inode(req, parent);
 	struct fuse_entry_param e;
+	struct lo_cred old = {};
 
 	saverr = ENOMEM;
+
+	saverr = lo_change_cred(req, &old);
+	if (saverr)
+		goto out;
 
 	if (S_ISDIR(mode))
 		res = mkdirat(dir->fd, name, mode);
@@ -394,6 +445,9 @@ static void lo_mknod_symlink(fuse_req_t req, fuse_ino_t parent,
 	else
 		res = mknodat(dir->fd, name, mode, rdev);
 	saverr = errno;
+
+	lo_restore_cred(&old);
+
 	if (res == -1)
 		goto out;
 
@@ -783,23 +837,31 @@ static void lo_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 	struct lo_data *lo = lo_data(req);
 	struct fuse_entry_param e;
 	int err;
+	struct lo_cred old = {};
 
 	if (lo_debug(req))
 		fprintf(stderr, "lo_create(parent=%" PRIu64 ", name=%s)\n",
 			parent, name);
 
+	err = lo_change_cred(req, &old);
+	if (err)
+		goto out;
+
 	fd = openat(lo_fd(req, parent), name,
 		    (fi->flags | O_CREAT) & ~O_NOFOLLOW, mode);
-	if (fd == -1)
-		return (void) fuse_reply_err(req, errno);
+	err = fd == -1 ? errno : 0;
+	lo_restore_cred(&old);
 
-	fi->fh = fd;
+	if (!err) {
+		fi->fh = fd;
+		err = lo_do_lookup(req, parent, name, &e);
+	}
 	if (lo->cache == CACHE_NEVER)
 		fi->direct_io = 1;
 	else if (lo->cache == CACHE_ALWAYS)
 		fi->keep_cache = 1;
 
-	err = lo_do_lookup(req, parent, name, &e);
+out:
 	if (err)
 		fuse_reply_err(req, err);
 	else
