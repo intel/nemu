@@ -65,6 +65,8 @@ typedef struct PCILiteHost {
     Range pci_hole64;
     qemu_irq irq[PCI_LITE_NUM_IRQS];
     uint64_t pci_hole64_size;
+
+    AcpiPciHpState acpi_pci_hotplug;
 } PCILiteHost;
 
 /*
@@ -201,6 +203,14 @@ static void pci_lite_realize(DeviceState *dev, Error **errp)
     }
 }
 
+PCIBus *find_pcilite(void)
+{
+    PCIHostState *s = OBJECT_CHECK(PCIHostState,
+                                   object_resolve_path("/machine/pcilite", NULL),
+                                   TYPE_PCI_HOST_BRIDGE);
+    return s ? s->bus : NULL;
+}
+
 PCIBus *pci_lite_init(MemoryRegion *address_space_mem,
                       MemoryRegion *address_space_io,
                       MemoryRegion *pci_address_space)
@@ -237,6 +247,13 @@ PCIBus *pci_lite_init(MemoryRegion *address_space_mem,
     pc_pci_as_mapping_init(OBJECT(dev), address_space_mem, pci_address_space);
 
     pci_create_simple(pci->bus, 0, TYPE_PCI_LITE_DEVICE);
+
+    qbus_set_hotplug_handler(BUS(pci->bus), dev, &error_abort);
+
+    acpi_pcihp_init(OBJECT(dev), &pci_lite->acpi_pci_hotplug, pci->bus,
+                    get_system_io(), true);
+
+    acpi_set_pci_info();
     return pci->bus;
 }
 
@@ -244,6 +261,28 @@ static const char *pci_lite_root_bus_path(PCIHostState *host_bridge,
                                           PCIBus *rootbus)
 {
     return "0000:00";
+}
+static void pci_lite_plug(HotplugHandler *hotplug_dev,
+                          DeviceState *dev, Error **errp)
+{
+    PCILiteHost *pci_lite = PCI_LITE_HOST(hotplug_dev); 
+
+    if (object_dynamic_cast(OBJECT(dev), TYPE_PCI_DEVICE)) {
+        acpi_pcihp_device_plug_cb(hotplug_dev, &pci_lite->acpi_pci_hotplug, dev, errp);
+    } else {
+        error_setg(errp, "pci-lite: device plug request for unsupported device"
+                   " type: %s", object_get_typename(OBJECT(dev)));
+    }
+}
+
+static void pci_lite_send_ged(AcpiDeviceIf *adev, AcpiEventStatusBits ev)
+{
+    VirtMachineState *vms = VIRT_MACHINE(adev);
+
+    if ((ev & ACPI_CPU_HOTPLUG_STATUS) &&
+        (ev & ACPI_PCI_HOTPLUG_STATUS)) {
+        qemu_irq_pulse(vms->gsi[VIRT_GED_PCI_HOTPLUG_IRQ]);
+    }
 }
 
 static Property pci_lite_props[] = {
@@ -260,11 +299,16 @@ static void pci_lite_host_class_init(ObjectClass *klass, void *data)
 {
     DeviceClass *dc = DEVICE_CLASS(klass);
     PCIHostBridgeClass *hc = PCI_HOST_BRIDGE_CLASS(klass);
+    HotplugHandlerClass *hhc = HOTPLUG_HANDLER_CLASS(klass);
+    AcpiDeviceIfClass *adevc = ACPI_DEVICE_IF_CLASS(klass);
 
     set_bit(DEVICE_CATEGORY_BRIDGE, dc->categories);
     dc->realize = pci_lite_realize;
     dc->props = pci_lite_props;
     hc->root_bus_path = pci_lite_root_bus_path;
+
+    hhc->plug = pci_lite_plug;
+    adevc->send_event = pci_lite_send_ged;
 }
 
 static const TypeInfo pci_lite_host_info = {
@@ -273,6 +317,11 @@ static const TypeInfo pci_lite_host_info = {
     .instance_size = sizeof(PCILiteHost),
     .instance_init = pci_lite_initfn,
     .class_init    = pci_lite_host_class_init,
+    .interfaces = (InterfaceInfo[]) {
+        { TYPE_HOTPLUG_HANDLER },
+        { TYPE_ACPI_DEVICE_IF },
+        {}
+    }
 };
 
 static void pci_lite_device_class_init(ObjectClass *klass, void *data)

@@ -27,8 +27,9 @@
 #ifndef HW_ACPI_PCIHP_H
 #define HW_ACPI_PCIHP_H
 
-#include "hw/acpi/acpi.h"
 #include "hw/hotplug.h"
+#include "exec/memory.h"
+#include "migration/vmstate.h"
 
 #define ACPI_PCIHP_IO_BASE_PROP "acpi-pcihp-io-base"
 #define ACPI_PCIHP_IO_LEN_PROP "acpi-pcihp-io-len"
@@ -63,6 +64,8 @@ void acpi_pcihp_device_unplug_cb(HotplugHandler *hotplug_dev, AcpiPciHpState *s,
 
 /* Called on reset */
 void acpi_pcihp_reset(AcpiPciHpState *s);
+
+void acpi_set_pci_info(void);
 
 extern const VMStateDescription vmstate_acpi_pcihp_pci_status;
 
