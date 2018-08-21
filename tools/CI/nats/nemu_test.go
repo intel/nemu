@@ -152,14 +152,7 @@ func launchQemu(t *testing.T) {
 
 }
 
-func startQemu(ctx context.Context, t *testing.T) {
-	monitorFile, err := ioutil.TempFile("", "nemu-test")
-	if err != nil {
-		t.Fatalf("Error creating temporary file for monitor socket: %v", err)
-	}
-	monitorFile.Close()
-	defer os.Remove(monitorFile.Name())
-
+func startQemu(ctx context.Context, monitorSocketCh chan string, t *testing.T) {
 	sysbusDebugLogFile, err := ioutil.TempFile("", "nemu-test")
 	if err != nil {
 		t.Fatalf("Error creating temporary file for sysbus debug log: %v", err)
@@ -179,7 +172,6 @@ func startQemu(ctx context.Context, t *testing.T) {
 
 	params := []string{
 		"-machine", "virt,accel=kvm,kernel_irqchip,nvdimm",
-		"-qmp", fmt.Sprintf("unix:%s,server,nowait", monitorFile.Name()),
 		"-bios", getBiosPath(t),
 		"-smp", "2,cores=1,threads=1,sockets=2,maxcpus=32",
 		"-m", "512,slots=4,maxmem=16384M",
@@ -206,6 +198,18 @@ func startQemu(ctx context.Context, t *testing.T) {
 		"-object", "cryptodev-backend-builtin,id=cryptodev0",
 		"-device", "virtio-crypto-pci,id=crypto0,cryptodev=cryptodev0",
 	}
+
+	if monitorSocketCh != nil {
+		monitorSocketFile, err := ioutil.TempFile("", "nemu-test")
+		if err != nil {
+			t.Fatalf("Error creating temporary file for QMP socket: %v", err)
+		}
+		monitorSocketCh <- monitorSocketFile.Name()
+		defer os.Remove(monitorSocketFile.Name())
+		params = append(params, "-qmp", fmt.Sprintf("unix:%s,server,nowait", monitorSocketFile.Name()))
+		monitorSocketFile.Close()
+	}
+
 	fds := []*os.File{}
 
 	_, err = qemu.LaunchCustomQemu(ctx, getNemuPath(t), params, fds, nil, simpleLogger{})
@@ -231,7 +235,7 @@ func startQemu(ctx context.Context, t *testing.T) {
 func TestSimpleBoot(t *testing.T) {
 	ctx, cancelFunc := context.WithTimeout(context.Background(), 120*time.Second)
 	go func() {
-		startQemu(ctx, t)
+		startQemu(ctx, nil, t)
 		cancelFunc()
 	}()
 	time.Sleep(time.Second * 15)
@@ -242,7 +246,7 @@ func TestSimpleBoot(t *testing.T) {
 func TestReboot(t *testing.T) {
 	ctx, cancelFunc := context.WithTimeout(context.Background(), 120*time.Second)
 	go func() {
-		startQemu(ctx, t)
+		startQemu(ctx, nil, t)
 		cancelFunc()
 	}()
 	time.Sleep(time.Second * 15)
@@ -255,7 +259,7 @@ func TestReboot(t *testing.T) {
 func TestCheckDmesg(t *testing.T) {
 	ctx, cancelFunc := context.WithTimeout(context.Background(), 120*time.Second)
 	go func() {
-		startQemu(ctx, t)
+		startQemu(ctx, nil, t)
 		cancelFunc()
 	}()
 	time.Sleep(time.Second * 15)
@@ -270,6 +274,32 @@ func TestCheckDmesg(t *testing.T) {
 		fmt.Fprintln(os.Stderr, dmesgOutput)
 	}
 
+	time.Sleep(time.Second * 15)
+	runCommandBySSH("sudo shutdown -h now", t)
+	<-ctx.Done()
+}
+
+func TestQMPConnect(t *testing.T) {
+	monitorSocketCh := make(chan string, 1)
+	ctx, cancelFunc := context.WithTimeout(context.Background(), 120*time.Second)
+	go func() {
+		startQemu(ctx, monitorSocketCh, t)
+		cancelFunc()
+	}()
+	time.Sleep(time.Second * 15)
+
+	eventCh := make(chan qemu.QMPEvent)
+	config := qemu.QMPConfig{
+		EventCh: eventCh,
+		Logger:  simpleLogger{},
+	}
+	disconnectedCh := make(chan struct{})
+	qmp, qmpVersion, err := qemu.QMPStart(ctx, <-monitorSocketCh, config, disconnectedCh)
+	if err != nil {
+		t.Errorf("Errror connecting to QMP: %v", err)
+	}
+	defer qmp.Shutdown()
+	t.Logf("QMP version: %v", *qmpVersion)
 	time.Sleep(time.Second * 15)
 	runCommandBySSH("sudo shutdown -h now", t)
 	<-ctx.Done()
