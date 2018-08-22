@@ -328,3 +328,23 @@ func TestCheckDmesg(t *testing.T) {
 	<-q.doneCh
 	cancelFunc()
 }
+
+func TestQMPQuit(t *testing.T) {
+	q := qemuTest{}
+	ctx, cancelFunc := context.WithTimeout(context.Background(), 120*time.Second)
+	err := q.startQemu(ctx, t)
+	if err != nil {
+		cancelFunc()
+		<-q.doneCh
+		t.Fatalf("Error starting qemu: %v", err)
+	}
+
+	time.Sleep(time.Second * 15)
+	err = q.qmp.ExecuteQuit(ctx)
+	if err != nil {
+		t.Errorf("Error quiting via QMP: %v", err)
+	}
+
+	<-q.doneCh
+	cancelFunc()
+}
