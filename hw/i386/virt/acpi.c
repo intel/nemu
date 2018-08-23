@@ -33,6 +33,7 @@
 #include "hw/acpi/memory_hotplug.h"
 #include "hw/acpi/pc-hotplug.h"
 #include "hw/acpi/reduced.h"
+#include "hw/acpi/pcihp.h"
 
 typedef struct VirtAcpiState {
     SysBusDevice parent_obj;
@@ -42,6 +43,9 @@ typedef struct VirtAcpiState {
 
     MemHotplugState memhp_state;
     qemu_irq *gsi;
+
+    AcpiPciHpState pcihp_state;
+    PCIBus *pci_bus;
 
     MemoryRegion sleep_iomem;
     MemoryRegion reset_iomem;
@@ -71,7 +75,9 @@ static void virt_device_plug_cb(HotplugHandler *hotplug_dev,
             acpi_memory_plug_cb(hotplug_dev, &s->memhp_state,
                                 dev, errp);
         }
-    }  else {
+    } else if (object_dynamic_cast(OBJECT(dev), TYPE_PCI_DEVICE)) {
+        acpi_pcihp_device_plug_cb(hotplug_dev, &s->pcihp_state, dev, errp);
+    } else {
         error_setg(errp, "virt: device plug request for unsupported device"
                    " type: %s", object_get_typename(OBJECT(dev)));
     }
@@ -86,7 +92,9 @@ static void virt_device_unplug_request_cb(HotplugHandler *hotplug_dev,
         acpi_cpu_unplug_request_cb(hotplug_dev, &s->cpuhp_state, dev, errp);
     } else if (object_dynamic_cast(OBJECT(dev), TYPE_PC_DIMM)) {
         acpi_memory_unplug_request_cb(hotplug_dev, &s->memhp_state, dev, errp);
-    } else {
+    } else if (object_dynamic_cast(OBJECT(dev), TYPE_PCI_DEVICE)) {
+        acpi_pcihp_device_unplug_cb(hotplug_dev, &s->pcihp_state, dev, errp);
+    }else {
         error_setg(errp, "virt: device unplug request for unsupported device"
                    " type: %s", object_get_typename(OBJECT(dev)));
     }
@@ -123,6 +131,9 @@ static void virt_send_ged(AcpiDeviceIf *adev, AcpiEventStatusBits ev)
         qemu_irq_pulse(s->gsi[VIRT_GED_MEMORY_HOTPLUG_IRQ]);
     } else if (ev & ACPI_NVDIMM_HOTPLUG_STATUS) {
         qemu_irq_pulse(s->gsi[VIRT_GED_NVDIMM_HOTPLUG_IRQ]);
+    } else if (ev & ACPI_PCI_HOTPLUG_STATUS) {
+        /* Inject PCI hotplug interrupt */
+        qemu_irq_pulse(s->gsi[VIRT_GED_PCI_HOTPLUG_IRQ]);
     }
 }
 
@@ -187,7 +198,7 @@ static void virt_device_realize(DeviceState *dev, Error **errp)
     sysbus_add_io(sys, ACPI_REDUCED_RESET_IOPORT, &s->reset_iomem);
 }
 
-DeviceState *virt_acpi_init(qemu_irq *gsi)
+DeviceState *virt_acpi_init(qemu_irq *gsi, PCIBus *pci_bus)
 {
     DeviceState *dev;
     VirtAcpiState *s;
@@ -196,6 +207,14 @@ DeviceState *virt_acpi_init(qemu_irq *gsi)
 
     s = VIRT_ACPI(dev);
     s->gsi = gsi;
+    s->pci_bus = pci_bus;
+
+    /* Initialize PCI hotplug */
+    qbus_set_hotplug_handler(BUS(pci_bus), dev, NULL);
+
+    acpi_pcihp_init(OBJECT(s), &s->pcihp_state, s->pci_bus,
+                    get_system_io(), true);
+    acpi_pcihp_reset(&s->pcihp_state);
 
     return dev;
 }
