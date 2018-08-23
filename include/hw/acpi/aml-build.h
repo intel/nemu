@@ -421,6 +421,7 @@ void acpi_build_mcfg(GArray *table_data, BIOSLinker *linker, AcpiMcfgInfo *info)
 Aml *build_gsi_link_dev(const char *name, uint8_t uid, uint8_t gsi);
 Aml *build_prt(bool is_pci0_prt);
 void acpi_dsdt_add_pci_bus(Aml *table, AcpiPciBus *pci_host);
+void build_acpi_pci_hotplug(Aml *scope);
 void build_pci_host_bridge(Aml *table, AcpiPciBus *pci_host);
 void crs_range_set_init(CrsRangeSet *range_set);
 Aml *build_crs(PCIHostState *host, CrsRangeSet *range_set);
