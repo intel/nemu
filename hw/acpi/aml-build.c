@@ -2510,7 +2510,7 @@ void build_append_pci_bus_devices(Aml *parent_scope, PCIBus *bus,
 
 void acpi_dsdt_add_pci_bus(Aml *dsdt, AcpiPciBus *pci_host)
 {
-    Aml *dev, *pci_scope;
+    Aml *dev, *pci_scope, *hp_scope;
 
     dev = aml_device("\\_SB.PCI0");
     aml_append(dev, aml_name_decl("_HID", aml_eisaid("PNP0A08")));
@@ -2521,6 +2521,12 @@ void acpi_dsdt_add_pci_bus(Aml *dsdt, AcpiPciBus *pci_host)
     aml_append(dev, aml_name_decl("CTRL", aml_int(0)));
     aml_append(dev, build_osc_method(0x1F));
     aml_append(dsdt, dev);
+
+    /* PCIHP */
+    hp_scope =  aml_scope("\\_SB.PCI0");
+    build_acpi_pci_hotplug(hp_scope);
+    build_append_pci_bus_devices(hp_scope, pci_host->pci_bus, false);
+    aml_append(dsdt, hp_scope);
 
     pci_scope = build_pci_host_bridge(dsdt, pci_host);
     aml_append(dsdt, pci_scope);

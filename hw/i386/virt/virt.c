@@ -119,6 +119,10 @@ static void acpi_conf_virt_init(MachineState *machine)
             .irq   = VIRT_GED_NVDIMM_HOTPLUG_IRQ,
             .event = GED_NVDIMM_HOTPLUG,
         },
+        {
+            .irq   = VIRT_GED_PCI_HOTPLUG_IRQ,
+            .event = GED_PCI_HOTPLUG,
+        },
     };
 
     events_size = ARRAY_SIZE(events);
@@ -208,7 +212,7 @@ static void virt_machine_state_init(MachineState *machine)
     virt_memory_init(vms);
     virt_pci_init(vms);
     virt_ioapic_init(vms);
-    vms->acpi = virt_acpi_init(vms->gsi);
+    vms->acpi = virt_acpi_init(vms->gsi, vms->pci_bus);
 
     vms->apic_id_limit = cpus_init(machine, false);
 
