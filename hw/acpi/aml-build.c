@@ -2360,7 +2360,7 @@ void acpi_dsdt_add_pci_bus(Aml *table, AcpiPciBus *pci_host)
     aml_append(table, sb_scope);
 
     /* PCIHP */
-    scope =  aml_scope("_SB.PCI0");
+    scope =  aml_scope("PCI0");
 
     build_acpi_pci_hotplug(scope);
 
@@ -2368,10 +2368,9 @@ void acpi_dsdt_add_pci_bus(Aml *table, AcpiPciBus *pci_host)
     /* End of PCIHP */
 
     /* Add devices for PCIHP */
-    sb_scope = aml_scope("\\_SB");
     scope = aml_scope("PCI0");
     build_append_pci_bus_devices(scope, pci_host->pci_bus, false);
-    aml_append(sb_scope, scope);
+    aml_append(table, scope);
     /* End of Add devices for PCIHP */
 
     build_pci_host_bridge(table, pci_host);
