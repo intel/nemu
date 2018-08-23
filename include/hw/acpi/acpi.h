@@ -27,7 +27,7 @@
 #include "hw/acpi/reduced.h"
 #include "hw/hotplug.h"
 #include "hw/mem/nvdimm.h"
-
+#include "hw/acpi/pcihp.h"
 /*
  * current device naming scheme supports up to 256 memory devices
  */
@@ -220,6 +220,7 @@ struct AcpiConfiguration {
     AcpiNVDIMMState acpi_nvdimm_state;
     MemoryHotplugState hotplug_memory;
     uint16_t cpu_hotplug_io_base;
+    //AcpiPciHpState acpi_pci_hotplug;
     GedEvent *ged_events;
     uint8_t ged_events_size;
 

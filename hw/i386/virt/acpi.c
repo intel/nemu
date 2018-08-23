@@ -32,6 +32,7 @@
 #include "hw/acpi/acpi_dev_interface.h"
 #include "hw/acpi/memory_hotplug.h"
 #include "hw/acpi/pc-hotplug.h"
+#include "hw/acpi/pcihp.h"
 #include "hw/acpi/reduced.h"
 
 typedef struct VirtAcpiState {
@@ -41,6 +42,7 @@ typedef struct VirtAcpiState {
     CPUHotplugState cpuhp_state;
 
     MemHotplugState memhp_state;
+
     qemu_irq *gsi;
 
     MemoryRegion sleep_iomem;
@@ -71,7 +73,7 @@ static void virt_device_plug_cb(HotplugHandler *hotplug_dev,
             acpi_memory_plug_cb(hotplug_dev, &s->memhp_state,
                                 dev, errp);
         }
-    }  else {
+    } else {
         error_setg(errp, "virt: device plug request for unsupported device"
                    " type: %s", object_get_typename(OBJECT(dev)));
     }

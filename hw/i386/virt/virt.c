@@ -103,6 +103,7 @@ static void acpi_conf_virt_init(MachineState *machine, AcpiConfiguration *conf)
     conf->cpu_hotplug_io_base = VIRT_CPU_HOTPLUG_IO_BASE;
     conf->hotplug_memory = vms->hotplug_memory;
     conf->acpi_nvdimm_state = vms->acpi_nvdimm_state;
+    //conf->acpi_pci_hotplug = vms->acpi_pci_hotplug;
  
     /* GED events */
     GedEvent events[] = {
@@ -701,7 +702,25 @@ static void virt_dimm_unplug_request(HotplugHandler *hotplug_dev,
     hhc = HOTPLUG_HANDLER_GET_CLASS(vms->acpi);
     hhc->unplug_request(HOTPLUG_HANDLER(vms->acpi), dev, &local_err);
 }
+/*
+static void virt_pci_plug(HotplugHandler *hotplug_dev,
+                          DeviceState *dev, Error **errp)
+{
+    HotplugHandlerClass *hhc;
+    Error *local_err = NULL;
+    VirtMachineState *vms = VIRT_MACHINE(hotplug_dev);
 
+    assert(vms->acpi);
+
+    hhc = HOTPLUG_HANDLER_GET_CLASS(vms->acpi);
+    hhc->plug(HOTPLUG_HANDLER(vms->acpi), dev, &local_err);
+    if (local_err) {
+        goto out;
+    }
+out:
+    error_propagate(errp, local_err);
+}
+*/
 static void virt_machine_device_pre_plug_cb(HotplugHandler *hotplug_dev,
                                             DeviceState *dev, Error **errp)
 {
