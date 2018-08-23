@@ -11,7 +11,5 @@ GArray *build_madt(GArray *table_data, BIOSLinker *linker, MachineState *ms, Acp
 
 /* ACPI setup */
 void acpi_setup(MachineState *machine, AcpiConfiguration *conf);
-void build_append_pci_bus_devices(Aml *parent_scope, PCIBus *bus,
-                                  bool pcihp_bridge_en);
 
 #endif
