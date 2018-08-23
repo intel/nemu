@@ -114,11 +114,13 @@ func runCommandBySSH(command string, t *testing.T) string {
 	client, err := ssh.Dial("tcp", "127.0.0.1:2222", config)
 	if err != nil {
 		t.Errorf("Failed to dial: %v", err)
+		return ""
 	}
 
 	session, err := client.NewSession()
 	if err != nil {
 		t.Errorf("Failed to create session: %v", err)
+		return ""
 	}
 	defer session.Close()
 
