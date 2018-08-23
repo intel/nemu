@@ -32,6 +32,7 @@
 #include "hw/i386/pc.h"
 #include "qom/qom-qobject.h"
 #include "qapi/qmp/qnum.h"
+#include "hw/i386/acpi-build.h"
 
 #define PCI_HOST_BRIDGE_CONFIG_ADDR        0xcf8
 #define PCI_HOST_BRIDGE_IO_0_MIN_ADDR      0x0000
@@ -2309,6 +2310,9 @@ void build_pci_host_bridge(Aml *table, AcpiPciBus *pci_host)
 void acpi_dsdt_add_pci_bus(Aml *table, AcpiPciBus *pci_host)
 {
     Aml *dev, *sb_scope;
+    Aml *scope;
+    Aml *field;
+    Aml *method;
 
     sb_scope = aml_scope("_SB");
     dev = aml_device("PCI0");
@@ -2321,6 +2325,49 @@ void acpi_dsdt_add_pci_bus(Aml *table, AcpiPciBus *pci_host)
     aml_append(dev, build_osc_method(0x1F));
     aml_append(sb_scope, dev);
     aml_append(table, sb_scope);
+
+    /* PCIHP */
+    scope =  aml_scope("_SB.PCI0");
+
+    aml_append(scope,
+        aml_operation_region("PCST", AML_SYSTEM_IO, aml_int(0xae00), 0x08));
+    field = aml_field("PCST", AML_DWORD_ACC, AML_NOLOCK, AML_WRITE_AS_ZEROS);
+    aml_append(field, aml_named_field("PCIU", 32));
+    aml_append(field, aml_named_field("PCID", 32));
+    aml_append(scope, field);
+
+    aml_append(scope,
+        aml_operation_region("SEJ", AML_SYSTEM_IO, aml_int(0xae08), 0x04));
+    field = aml_field("SEJ", AML_DWORD_ACC, AML_NOLOCK, AML_WRITE_AS_ZEROS);
+    aml_append(field, aml_named_field("B0EJ", 32));
+    aml_append(scope, field);
+
+    aml_append(scope,
+        aml_operation_region("BNMR", AML_SYSTEM_IO, aml_int(0xae10), 0x04));
+    field = aml_field("BNMR", AML_DWORD_ACC, AML_NOLOCK, AML_WRITE_AS_ZEROS);
+    aml_append(field, aml_named_field("BNUM", 32));
+    aml_append(scope, field);
+
+    aml_append(scope, aml_mutex("BLCK", 0));
+
+    method = aml_method("PCEJ", 2, AML_NOTSERIALIZED);
+    aml_append(method, aml_acquire(aml_name("BLCK"), 0xFFFF));
+    aml_append(method, aml_store(aml_arg(0), aml_name("BNUM")));
+    aml_append(method,
+        aml_store(aml_shiftleft(aml_int(1), aml_arg(1)), aml_name("B0EJ")));
+    aml_append(method, aml_release(aml_name("BLCK")));
+    aml_append(method, aml_return(aml_int(0)));
+    aml_append(scope, method);
+
+    aml_append(table, scope);
+    /* End of PCIHP */
+
+    /* Add devices for PCIHP */
+    sb_scope = aml_scope("\\_SB");
+    scope = aml_scope("PCI0");
+    build_append_pci_bus_devices(scope, pci_host->pci_bus, false);
+    aml_append(sb_scope, scope);
+    /* End of Add devices for PCIHP */
 
     build_pci_host_bridge(table, pci_host);
 }
