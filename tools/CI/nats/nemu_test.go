@@ -167,7 +167,7 @@ func (q *qemuTest) launchQemu(ctx context.Context, monitorSocketCh chan string, 
 	defer os.Remove(cloudInitImagePath)
 
 	q.params = []string{
-		"-machine", "virt,accel=kvm,kernel_irqchip,nvdimm",
+		"-machine", fmt.Sprintf("%s,accel=kvm,kernel_irqchip,nvdimm", q.machine),
 		"-bios", getBiosPath(t),
 		"-smp", "2,cores=1,threads=1,sockets=2,maxcpus=32",
 		"-m", "512,slots=4,maxmem=16384M",
@@ -177,10 +177,6 @@ func (q *qemuTest) launchQemu(ctx context.Context, monitorSocketCh chan string, 
 		"-nodefaults",
 		"-drive", fmt.Sprintf("file=%s,if=none,id=drive-virtio-disk0,format=qcow2", primaryDiskImagePath),
 		"-device", "virtio-blk-pci,scsi=off,drive=drive-virtio-disk0,id=virtio-disk0",
-		"-device", "sysbus-debugcon,iobase=0x402,chardev=debugcon",
-		"-chardev", fmt.Sprintf("file,path=%s,id=debugcon", sysbusDebugLogFile.Name()),
-		"-device", "sysbus-debugcon,iobase=0x3f8,chardev=serialcon",
-		"-chardev", fmt.Sprintf("file,path=%s,id=serialcon", serialOutputLogFile.Name()),
 		"-device", "virtio-blk-pci,drive=cloud",
 		"-drive", fmt.Sprintf("if=none,id=cloud,file=%s,format=raw", cloudInitImagePath),
 		"-netdev", "user,id=mynet0,hostfwd=tcp::2222-:22,hostname=nemuvm",
@@ -193,6 +189,20 @@ func (q *qemuTest) launchQemu(ctx context.Context, monitorSocketCh chan string, 
 		"-device", "virtio-balloon-pci",
 		"-object", "cryptodev-backend-builtin,id=cryptodev0",
 		"-device", "virtio-crypto-pci,id=crypto0,cryptodev=cryptodev0",
+	}
+
+	if q.machine == "virt" {
+		q.params = append(q.params,
+			"-device", "sysbus-debugcon,iobase=0x402,chardev=debugcon",
+			"-chardev", fmt.Sprintf("file,path=%s,id=debugcon", sysbusDebugLogFile.Name()),
+			"-device", "sysbus-debugcon,iobase=0x3f8,chardev=serialcon",
+			"-chardev", fmt.Sprintf("file,path=%s,id=serialcon", serialOutputLogFile.Name()))
+	} else {
+		q.params = append(q.params,
+			"-device", "isa-debugcon,iobase=0x402,chardev=debugcon",
+			"-chardev", fmt.Sprintf("file,path=%s,id=debugcon", sysbusDebugLogFile.Name()),
+			"-device", "isa-debugcon,iobase=0x3f8,chardev=serialcon",
+			"-chardev", fmt.Sprintf("file,path=%s,id=serialcon", serialOutputLogFile.Name()))
 	}
 
 	if monitorSocketCh != nil {
@@ -230,9 +240,10 @@ func (q *qemuTest) launchQemu(ctx context.Context, monitorSocketCh chan string, 
 }
 
 type qemuTest struct {
-	qmp    *qemu.QMP
-	params []string
-	doneCh chan interface{}
+	qmp     *qemu.QMP
+	params  []string
+	doneCh  chan interface{}
+	machine string
 }
 
 func (q *qemuTest) startQemu(ctx context.Context, t *testing.T) error {
@@ -264,87 +275,114 @@ func (q *qemuTest) startQemu(ctx context.Context, t *testing.T) error {
 	return nil
 }
 
+var machines = []string{"pc", "q35", "virt"}
+
 func TestShutdown(t *testing.T) {
-	q := qemuTest{}
-	ctx, cancelFunc := context.WithTimeout(context.Background(), 120*time.Second)
-	err := q.startQemu(ctx, t)
-	if err != nil {
-		cancelFunc()
+	for _, m := range machines {
+		t.Logf("Testing machine: %s", m)
+		q := qemuTest{
+			machine: m,
+		}
+		ctx, cancelFunc := context.WithTimeout(context.Background(), 120*time.Second)
+		err := q.startQemu(ctx, t)
+		if err != nil {
+			cancelFunc()
+			<-q.doneCh
+			t.Fatalf("Error starting qemu: %v", err)
+		}
+
+		time.Sleep(time.Second * 15)
+		runCommandBySSH("sudo shutdown -h now", t)
+
 		<-q.doneCh
-		t.Fatalf("Error starting qemu: %v", err)
+		cancelFunc()
 	}
-
-	time.Sleep(time.Second * 15)
-	runCommandBySSH("sudo shutdown -h now", t)
-
-	<-q.doneCh
-	cancelFunc()
 }
 
 func TestReboot(t *testing.T) {
-	q := qemuTest{}
-	ctx, cancelFunc := context.WithTimeout(context.Background(), 120*time.Second)
-	err := q.startQemu(ctx, t)
-	if err != nil {
-		cancelFunc()
+	for _, m := range machines {
+		t.Logf("Testing machine: %s", m)
+		q := qemuTest{
+			machine: m,
+		}
+		ctx, cancelFunc := context.WithTimeout(context.Background(), 120*time.Second)
+		err := q.startQemu(ctx, t)
+		if err != nil {
+			cancelFunc()
+			<-q.doneCh
+			t.Fatalf("Error starting qemu: %v", err)
+		}
+
+		time.Sleep(time.Second * 15)
+		runCommandBySSH("sudo reboot", t)
+		time.Sleep(time.Second * 15)
+		runCommandBySSH("sudo shutdown -h now", t)
+
 		<-q.doneCh
-		t.Fatalf("Error starting qemu: %v", err)
+		cancelFunc()
 	}
-
-	time.Sleep(time.Second * 15)
-	runCommandBySSH("sudo reboot", t)
-	time.Sleep(time.Second * 15)
-	runCommandBySSH("sudo shutdown -h now", t)
-
-	<-q.doneCh
-	cancelFunc()
 }
 
-func TestCheckDmesg(t *testing.T) {
-	q := qemuTest{}
-	ctx, cancelFunc := context.WithTimeout(context.Background(), 120*time.Second)
-	err := q.startQemu(ctx, t)
-	if err != nil {
-		cancelFunc()
+func TestCheckAcpiTables(t *testing.T) {
+	tableCounts := map[string]int{
+		"pc":   8,
+		"q35":  9,
+		"virt": 8,
+	}
+	for _, m := range machines {
+		t.Logf("Testing machine: %s", m)
+		q := qemuTest{
+			machine: m,
+		}
+		ctx, cancelFunc := context.WithTimeout(context.Background(), 120*time.Second)
+		err := q.startQemu(ctx, t)
+		if err != nil {
+			cancelFunc()
+			<-q.doneCh
+			t.Fatalf("Error starting qemu: %v", err)
+		}
+
+		time.Sleep(time.Second * 15)
+		dmesgOutput := runCommandBySSH("sudo dmesg", t)
+
+		r := regexp.MustCompile("ACPI:.*BOCHS.*")
+		matches := r.FindAllStringIndex(dmesgOutput, -1)
+
+		if len(matches) != tableCounts[m] {
+			t.Errorf("Unexpected number of ACPI tables from QEMU: %v", len(matches))
+			fmt.Fprintf(os.Stderr, "\n\n==== dmesg output: ===\n\n")
+			fmt.Fprintln(os.Stderr, dmesgOutput)
+		}
+
+		time.Sleep(time.Second * 15)
+		runCommandBySSH("sudo shutdown -h now", t)
+
 		<-q.doneCh
-		t.Fatalf("Error starting qemu: %v", err)
+		cancelFunc()
 	}
-
-	time.Sleep(time.Second * 15)
-	dmesgOutput := runCommandBySSH("sudo dmesg", t)
-
-	r := regexp.MustCompile("ACPI:.*BOCHS.*")
-	matches := r.FindAllStringIndex(dmesgOutput, -1)
-
-	if len(matches) != 8 {
-		t.Errorf("Unexpected number of ACPI tables from QEMU: %v", len(matches))
-		fmt.Fprintf(os.Stderr, "\n\n==== dmesg output: ===\n\n")
-		fmt.Fprintln(os.Stderr, dmesgOutput)
-	}
-
-	time.Sleep(time.Second * 15)
-	runCommandBySSH("sudo shutdown -h now", t)
-
-	<-q.doneCh
-	cancelFunc()
 }
 
 func TestQMPQuit(t *testing.T) {
-	q := qemuTest{}
-	ctx, cancelFunc := context.WithTimeout(context.Background(), 120*time.Second)
-	err := q.startQemu(ctx, t)
-	if err != nil {
-		cancelFunc()
+	for _, m := range machines {
+		t.Logf("Testing machine: %s", m)
+		q := qemuTest{
+			machine: m,
+		}
+		ctx, cancelFunc := context.WithTimeout(context.Background(), 120*time.Second)
+		err := q.startQemu(ctx, t)
+		if err != nil {
+			cancelFunc()
+			<-q.doneCh
+			t.Fatalf("Error starting qemu: %v", err)
+		}
+
+		time.Sleep(time.Second * 15)
+		err = q.qmp.ExecuteQuit(ctx)
+		if err != nil {
+			t.Errorf("Error quiting via QMP: %v", err)
+		}
+
 		<-q.doneCh
-		t.Fatalf("Error starting qemu: %v", err)
+		cancelFunc()
 	}
-
-	time.Sleep(time.Second * 15)
-	err = q.qmp.ExecuteQuit(ctx)
-	if err != nil {
-		t.Errorf("Error quiting via QMP: %v", err)
-	}
-
-	<-q.doneCh
-	cancelFunc()
 }
