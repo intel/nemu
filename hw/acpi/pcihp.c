@@ -83,18 +83,21 @@ static void *acpi_set_bsel(PCIBus *bus, void *opaque)
     unsigned *bsel_alloc = opaque;
     unsigned *bus_bsel;
 
-    if (qbus_is_hotpluggable(BUS(bus))) {
+    printf("acpi_set_bsel() 1\n");
+//    if (qbus_is_hotpluggable(BUS(bus))) {
+	printf("acpi_set_bsel() 2\n");
         bus_bsel = g_malloc(sizeof *bus_bsel);
 
         *bus_bsel = (*bsel_alloc)++;
         object_property_add_uint32_ptr(OBJECT(bus), ACPI_PCIHP_PROP_BSEL,
                                        bus_bsel, &error_abort);
-    }
+//    }
+    printf("acpi_set_bsel() 3\n");
 
     return bsel_alloc;
 }
 
-static void acpi_set_pci_info(void)
+static void acpi_set_pci_info(AcpiPciHpState *s)
 {
     static bool bsel_is_set;
     PCIBus *bus;
@@ -105,10 +108,14 @@ static void acpi_set_pci_info(void)
     }
     bsel_is_set = true;
 
-    bus = find_i440fx(); /* TODO: Q35 support */
+//    bus = find_i440fx(); /* TODO: Q35 support */
+    bus = s->root;
+    printf("acpi_set_pci_info() 1\n");
     if (bus) {
+	printf("acpi_set_pci_info() 2\n");
         /* Scan all PCI buses. Set property to enable acpi based hotplug. */
         pci_for_each_bus_depth_first(bus, acpi_set_bsel, NULL, &bsel_alloc);
+	printf("acpi_set_pci_info() 3\n");
     }
 }
 
@@ -214,7 +221,7 @@ static void acpi_pcihp_update(AcpiPciHpState *s)
 
 void acpi_pcihp_reset(AcpiPciHpState *s)
 {
-    acpi_set_pci_info();
+    acpi_set_pci_info(s);
     acpi_pcihp_update(s);
 }
 
@@ -252,6 +259,7 @@ void acpi_pcihp_device_unplug_cb(HotplugHandler *hotplug_dev, AcpiPciHpState *s,
                    ACPI_PCIHP_PROP_BSEL "' set");
         return;
     }
+    printf("acpi_pcihp_device_unplug_cb()\n");
 
     s->acpi_pcihp_pci_status[bsel].down |= (1U << slot);
     acpi_send_event(DEVICE(hotplug_dev), ACPI_PCI_HOTPLUG_STATUS);
