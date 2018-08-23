@@ -419,6 +419,9 @@ Aml *build_osc_method(uint32_t value);
 void build_mcfg(GArray *table_data, BIOSLinker *linker, AcpiMcfgInfo *info);
 Aml *build_gsi_link_dev(const char *name, uint8_t uid, uint8_t gsi);
 Aml *build_prt(bool is_pci0_prt);
+void build_acpi_pci_hotplug(Aml *scope);
+void build_append_pci_bus_devices(Aml *parent_scope, PCIBus *bus,
+                                  bool pcihp_bridge_en);
 void acpi_dsdt_add_pci_bus(Aml *dsdt, AcpiPciBus *pci_host);
 Aml *build_pci_host_bridge(Aml *table, AcpiPciBus *pci_host);
 void crs_range_set_init(CrsRangeSet *range_set);
