@@ -182,8 +182,8 @@ testimages_x86_64_piix=("clear-22180-cloud.img" "qcow2" "uefi" "x86_64_pc" "-s" 
                         "http://cloud-images.ubuntu.com/bionic/current/bionic-server-cloudimg-amd64.img" \
                         "CentOS-7-x86_64-GenericCloud-1802.qcow2" "qcow2" "seabios" "x86_64_pc" "-s"  \
                         "https://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud-1802.qcow2" \
-                        "CentOS-Atomic-Host-7-GenericCloud.qcow2" "qcow2" "seabios" "x86_64_pc" "-s" \
-                        "http://cloud.centos.org/centos/7/atomic/images/CentOS-Atomic-Host-7-GenericCloud.qcow2" \
+                        "CentOS-Atomic-Host-7.1807-GenericCloud.qcow2" "qcow2" "seabios" "x86_64_pc" "-s" \
+                        "http://cloud.centos.org/centos/7/atomic/images/CentOS-Atomic-Host-7.1807-GenericCloud.qcow2.xz" \
                         "Fedora-AtomicHost-28-1.1.x86_64.qcow2" "qcow2" "seabios" "x86_64_pc" "-s" \
                         "https://archives.fedoraproject.org/pub/fedora/linux/releases/28/AtomicHost/x86_64/images/Fedora-AtomicHost-28-1.1.x86_64.qcow2" \
                         "Fedora-Cloud-Base-27-1.6.x86_64.qcow2" "qcow2" "seabios" "x86_64_pc" "-s" \
@@ -196,8 +196,8 @@ testimages_x86_64_q35=("coreos_production_openstack_image.img" "qcow2" "seabios"
                        "https://stable.release.core-os.net/amd64-usr/current/coreos_production_openstack_image.img.bz2" \
                        "CentOS-7-x86_64-GenericCloud-1802.qcow2" "qcow2" "seabios" "x86_64_q35" "-s" \
                        "https://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud-1802.qcow2" \
-                       "CentOS-Atomic-Host-7-GenericCloud.qcow2" "qcow2" "seabios" "x86_64_q35" "-s" \
-                       "http://cloud.centos.org/centos/7/atomic/images/CentOS-Atomic-Host-7-GenericCloud.qcow2" \
+                       "CentOS-Atomic-Host-7.1807-GenericCloud.qcow2" "qcow2" "seabios" "x86_64_pc" "-s" \
+                       "http://cloud.centos.org/centos/7/atomic/images/CentOS-Atomic-Host-7.1807-GenericCloud.qcow2.xz" \
                        "Fedora-AtomicHost-28-1.1.x86_64.qcow2" "qcow2" "seabios" "x86_64_q35" "-s" \
                        "https://archives.fedoraproject.org/pub/fedora/linux/releases/28/AtomicHost/x86_64/images/Fedora-AtomicHost-28-1.1.x86_64.qcow2" \
                        "Fedora-Cloud-Base-27-1.6.x86_64.qcow2" "qcow2" "seabios" "x86_64_q35" "-s" \
