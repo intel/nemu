@@ -111,10 +111,20 @@ func runCommandBySSH(command string, t *testing.T) string {
 		},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
-	client, err := ssh.Dial("tcp", "127.0.0.1:2222", config)
-	if err != nil {
-		t.Errorf("Failed to dial: %v", err)
-		return ""
+
+	var client *ssh.Client
+	var err error
+	for i := 1; i <= 3; i++ {
+		client, err = ssh.Dial("tcp", "127.0.0.1:2222", config)
+		if err != nil {
+			if i == 3 {
+				t.Errorf("Failed to dial: %v", err)
+				return ""
+			}
+		} else {
+			break
+		}
+		time.Sleep(5 * time.Second)
 	}
 
 	session, err := client.NewSession()
