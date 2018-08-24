@@ -44,7 +44,7 @@
 #include "qapi/qapi-commands-misc.h"
 #include "qemu/cutils.h"
 
-//#define DEBUG_PCI
+#define DEBUG_PCI
 #ifdef DEBUG_PCI
 # define PCI_DPRINTF(format, ...)       printf(format, ## __VA_ARGS__)
 #else
@@ -196,7 +196,7 @@ static void pci_del_option_rom(PCIDevice *pdev);
 static uint16_t pci_default_sub_vendor_id = PCI_SUBVENDOR_ID_REDHAT_QUMRANET;
 static uint16_t pci_default_sub_device_id = PCI_SUBDEVICE_ID_QEMU;
 
-static QLIST_HEAD(, PCIHostState) pci_host_bridges;
+static QLIST_HEAD(, PCIHostState) pci_host_bridges;  //TODO: This has to support non host bridge devices at a segment level
 
 int pci_bar(PCIDevice *d, int reg)
 {
@@ -371,7 +371,7 @@ static void pci_root_bus_init(PCIBus *bus, DeviceState *parent,
     bus->devfn_min = devfn_min;
     bus->slot_reserved_mask = 0x0;
     bus->address_space_mem = address_space_mem;
-    bus->address_space_io = address_space_io;
+    bus->address_space_io = address_space_io; //TODO: Will this cause a issue
 
     /* host bridge */
     QLIST_INIT(&bus->child);

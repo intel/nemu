@@ -53,7 +53,9 @@ typedef struct {
     /* GSI */
     qemu_irq *gsi;
 
+    /* TODO: Chain these buses together */
     PCIBus *pci_bus;
+    PCIBus *pci_virt_bus;
 
     /* ACPI device for hotplug and PM */
     HotplugHandler *acpi_dev;

@@ -2,13 +2,15 @@
 set -e
 
 if [[ "$EXTRA_CFLAGS" == "" ]]; then
-    EXTRA_CFLAGS=" -O3 -fno-semantic-interposition -falign-functions=32 -D_FORTIFY_SOURCE=2 -fPIE"
+    EXTRA_CFLAGS=" -O3 -fno-semantic-interposition -falign-functions=32 -D_FORTIFY_SOURCE=2 -fPIE -Wno-maybe-uninitialized -Wno-format-truncation"
 fi
 
 mkdir -p $HOME/build-x86_64
 pushd $HOME/build-x86_64
 make distclean || true
 $SRCDIR/configure \
+ --enable-debug \
+ --enable-trace-backends=ftrace \
  --disable-fdt \
  --disable-libiscsi \
  --disable-libnfs \

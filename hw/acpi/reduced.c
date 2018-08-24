@@ -90,7 +90,8 @@ static void acpi_dsdt_add_sleep_state(Aml *scope)
 }
 
 /* DSDT */
-static void build_dsdt(MachineState *ms, GArray *table_data, BIOSLinker *linker, AcpiPciBus *pci_host, AcpiConfiguration *conf)
+/* TODO: Make this more generic to support multiple segments */
+static void build_dsdt(MachineState *ms, GArray *table_data, BIOSLinker *linker, AcpiPciBus *pci_host, AcpiPciBus *pci_host_1, AcpiConfiguration *conf)
 {
     Aml *scope, *dsdt;
 
@@ -98,10 +99,13 @@ static void build_dsdt(MachineState *ms, GArray *table_data, BIOSLinker *linker,
     /* Reserve space for header */
     acpi_data_push(dsdt->buf, sizeof(AcpiTableHeader));
 
+    //TODO: Assumes single PCI bus
     scope = aml_scope("\\_SB");
+    acpi_dsdt_add_pci_bus_segment(scope, pci_host_1);
     acpi_dsdt_add_pci_bus(dsdt, pci_host);
     acpi_dsdt_add_memory_hotplug(ms, dsdt);
     acpi_dsdt_add_cpus(ms, dsdt, scope, smp_cpus, conf);
+
     acpi_dsdt_add_ged(scope, conf);
     acpi_dsdt_add_sleep_state(scope);
 
@@ -113,7 +117,6 @@ static void build_dsdt(MachineState *ms, GArray *table_data, BIOSLinker *linker,
         "DSDT", dsdt->buf->len, 2, NULL, NULL);
     free_aml_allocator();
 }
-
 
 static void build_fadt_reduced(GArray *table_data, BIOSLinker *linker,
                                unsigned dsdt_tbl_offset)
@@ -145,10 +148,12 @@ static void acpi_reduced_build(MachineState *ms, AcpiBuildTables *tables, AcpiCo
     GArray *table_offsets;
     unsigned dsdt, xsdt;
     Range pci_hole, pci_hole64;
+    Range pci_hole_2, pci_hole64_2;
     AcpiMcfgInfo mcfg;
     GArray *tables_blob = tables->table_data;
 
     acpi_get_pci_holes(&pci_hole, &pci_hole64);
+    acpi_get_pci_holes_secondary(&pci_hole_2, &pci_hole64_2);
     table_offsets = g_array_new(false, true /* clear */,
                                         sizeof(uint32_t));
 
@@ -156,15 +161,23 @@ static void acpi_reduced_build(MachineState *ms, AcpiBuildTables *tables, AcpiCo
                              ACPI_BUILD_TABLE_FILE, tables_blob,
                              64, false /* high memory */);
 
+    //TODO: This only comprehends a single hole and bus
     AcpiPciBus pci_host = {
         .pci_bus    = VIRT_MACHINE(ms)->pci_bus,
         .pci_hole   = &pci_hole,
         .pci_hole64 = &pci_hole64,
     };
 
+    //TODO: This only comprehends a single hole and bus
+    AcpiPciBus pci_host2 = {
+        .pci_bus    = VIRT_MACHINE(ms)->pci_virt_bus,
+        .pci_hole   = &pci_hole_2,
+        .pci_hole64 = &pci_hole64_2,
+    };
+
     /* DSDT is pointed to by FADT */
     dsdt = tables_blob->len;
-    build_dsdt(ms, tables_blob, tables->linker, &pci_host, conf);
+    build_dsdt(ms, tables_blob, tables->linker, &pci_host, &pci_host2, conf);
 
     /* FADT pointed to by RSDT */
     acpi_add_table(table_offsets, tables_blob);

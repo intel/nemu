@@ -51,6 +51,7 @@ static const char *pci_hosts[] = {
    "/machine/i440fx",
    "/machine/q35",
    "/machine/pcilite",
+   "/machine/pcivirt",
    NULL,
 };
 
@@ -1629,6 +1630,7 @@ void acpi_build_tables_cleanup(AcpiBuildTables *tables, bool mfre)
 /*
  * Because of the PXB hosts we cannot simply query TYPE_PCI_HOST_BRIDGE.
  * On i386 arch we only have two pci hosts, so we can look only for them.
+ * TODO: We need to find a way to accomodate directly connected PCI devices
  */
 Object *acpi_get_pci_host(void)
 {
@@ -1649,10 +1651,37 @@ Object *acpi_get_pci_host(void)
     return NULL;
 }
 
+/* TODO: Make the get host list function generic */
+Object *acpi_get_pci_host_secondary(void)
+{
+    PCIHostState *host;
+    int i = 0;
+    int hostseen = 0;
+
+    while (pci_hosts[i]) {
+        host = OBJECT_CHECK(PCIHostState,
+                            object_resolve_path(pci_hosts[i], NULL),
+                            TYPE_PCI_HOST_BRIDGE); //TODO: Make this not a bridge
+        if (host) {
+	   //Skip the primary
+	   hostseen++;
+	   if (hostseen == 2) {
+              return OBJECT(host);
+	   }
+        }
+
+        i++;
+    }
+
+    return NULL;
+}
+
+//TODO: We can have multiple holes. We need to combine them together
 void acpi_get_pci_holes(Range *hole, Range *hole64)
 {
     Object *pci_host;
 
+    /* TODO: THis assumes a single host. Needs to be addressed */
     pci_host = acpi_get_pci_host();
     g_assert(pci_host);
 
@@ -1672,25 +1701,68 @@ void acpi_get_pci_holes(Range *hole, Range *hole64)
                                                NULL));
 }
 
+//TODO: Temporary function
+void acpi_get_pci_holes_secondary(Range *hole, Range *hole64)
+{
+    Object *pci_host;
 
+    /* TODO: THis assumes a single host. Needs to be addressed */
+    pci_host = acpi_get_pci_host_secondary();
+    g_assert(pci_host);
+
+    range_set_bounds1(hole,
+                      object_property_get_uint(pci_host,
+                                               PCI_HOST_PROP_PCI_HOLE_START,
+                                               NULL),
+                      object_property_get_uint(pci_host,
+                                               PCI_HOST_PROP_PCI_HOLE_END,
+                                               NULL));
+    range_set_bounds1(hole64,
+                      object_property_get_uint(pci_host,
+                                               PCI_HOST_PROP_PCI_HOLE64_START,
+                                               NULL),
+                      object_property_get_uint(pci_host,
+                                               PCI_HOST_PROP_PCI_HOLE64_END,
+                                               NULL));
+}
+
+
+//TODO: Enable multisegment support
 bool acpi_get_mcfg(AcpiMcfgInfo *mcfg)
 {
     Object *pci_host;
     QObject *o;
 
     pci_host = acpi_get_pci_host();
+    //TODO: Fix the assumption that PCI host bridge always exists
     g_assert(pci_host);
 
     o = object_property_get_qobject(pci_host, PCIE_HOST_MCFG_BASE, NULL);
     if (!o) {
         return false;
     }
-    mcfg->mcfg_base = qnum_get_uint(qobject_to(QNum, o));
+    mcfg->mcfg_base[0] = qnum_get_uint(qobject_to(QNum, o));
     qobject_unref(o);
 
     o = object_property_get_qobject(pci_host, PCIE_HOST_MCFG_SIZE, NULL);
     assert(o);
-    mcfg->mcfg_size = qnum_get_uint(qobject_to(QNum, o));
+    mcfg->mcfg_size[0] = qnum_get_uint(qobject_to(QNum, o));
+    qobject_unref(o);
+
+    //TODO: Hardcode the second segment for now
+    pci_host = acpi_get_pci_host_secondary();
+    g_assert(pci_host);
+
+    o = object_property_get_qobject(pci_host, PCIE_HOST_MCFG_BASE, NULL);
+    if (!o) {
+        return false;
+    }
+    mcfg->mcfg_base[1] = qnum_get_uint(qobject_to(QNum, o));
+    qobject_unref(o);
+
+    o = object_property_get_qobject(pci_host, PCIE_HOST_MCFG_SIZE, NULL);
+    assert(o);
+    mcfg->mcfg_size[1] = qnum_get_uint(qobject_to(QNum, o));
     qobject_unref(o);
     return true;
 }
@@ -2011,19 +2083,29 @@ Aml *build_osc_method(uint32_t value)
     return method;
 }
 
+
+//TODO: Fix the assumption that there is only one segment
 void
 acpi_build_mcfg(GArray *table_data, BIOSLinker *linker, AcpiMcfgInfo *info)
 {
     AcpiTableMcfg *mcfg;
     const char *sig;
-    int len = sizeof(*mcfg) + 1 * sizeof(mcfg->allocation[0]);
+    //int len = sizeof(*mcfg) + 1 * sizeof(mcfg->allocation[0]);
+    int len = sizeof(*mcfg) + 2 * sizeof(mcfg->allocation[0]);
 
     mcfg = acpi_data_push(table_data, len);
-    mcfg->allocation[0].address = cpu_to_le64(info->mcfg_base);
+    mcfg->allocation[0].address = cpu_to_le64(info->mcfg_base[0]);
     /* Only a single allocation so no need to play with segments */
     mcfg->allocation[0].pci_segment = cpu_to_le16(0);
     mcfg->allocation[0].start_bus_number = 0;
-    mcfg->allocation[0].end_bus_number = PCIE_MMCFG_BUS(info->mcfg_size - 1);
+    mcfg->allocation[0].end_bus_number = PCIE_MMCFG_BUS(info->mcfg_size[0] - 1);
+
+    //TODO: hardcoded for now
+    mcfg->allocation[1].address = cpu_to_le64(info->mcfg_base[1]);
+    /* Only a single allocation so no need to play with segments */
+    mcfg->allocation[1].pci_segment = cpu_to_le16(1);
+    mcfg->allocation[1].start_bus_number = 0;
+    mcfg->allocation[1].end_bus_number = PCIE_MMCFG_BUS(info->mcfg_size[1] - 1);
 
     /* MCFG is used for ECAM which can be enabled or disabled by guest.
      * To avoid table size changes (which create migration issues),
@@ -2031,7 +2113,7 @@ acpi_build_mcfg(GArray *table_data, BIOSLinker *linker, AcpiMcfgInfo *info)
      * but set the signature to a reserved value in this case.
      * ACPI spec requires OSPMs to ignore such tables.
      */
-    if (info->mcfg_base == PCIE_BASE_ADDR_UNMAPPED) {
+    if (info->mcfg_base[0] == PCIE_BASE_ADDR_UNMAPPED) {
         /* Reserved signature: ignored by OSPM */
         sig = "QEMU";
     } else {
@@ -2189,6 +2271,86 @@ Aml *build_prt(bool is_pci0_prt)
     return method;
 }
 
+//TODO: Temporary function
+Aml *build_pci_segment_bridge(Aml *table, AcpiPciBus *pci_host)
+{
+    CrsRangeEntry *entry;
+    Aml *scope, *dev, *crs;
+    CrsRangeSet crs_range_set;
+    Range *pci_hole64 = NULL;
+    PCIBus *bus = NULL;
+    int root_bus_limit = 0xFF;
+    int i;
+
+    bus = pci_host->pci_bus;
+    assert(bus);
+    pci_hole64 = pci_host->pci_hole64;
+
+    crs_range_set_init(&crs_range_set);
+    QLIST_FOREACH(bus, &bus->child, sibling) {
+        uint8_t bus_num = pci_bus_num(bus);
+        uint8_t numa_node = pci_bus_numa_node(bus);
+
+        /* look only for expander root buses */
+        if (!pci_bus_is_root(bus)) {
+            continue;
+        }
+
+        if (bus_num < root_bus_limit) {
+            root_bus_limit = bus_num - 1;
+        }
+
+        scope = aml_scope("\\_SB");
+        dev = aml_device("PC%.02X", bus_num);
+        aml_append(dev, aml_name_decl("_UID", aml_int(bus_num)));
+        aml_append(dev, aml_name_decl("_HID", aml_eisaid("PNP0A03")));
+        aml_append(dev, aml_name_decl("_BBN", aml_int(bus_num)));
+        if (pci_bus_is_express(bus)) {
+            aml_append(dev, aml_name_decl("SUPP", aml_int(0)));
+            aml_append(dev, aml_name_decl("CTRL", aml_int(0)));
+            aml_append(dev, build_osc_method(0x1F));
+        }
+        if (numa_node != NUMA_NODE_UNASSIGNED) {
+            aml_append(dev, aml_name_decl("_PXM", aml_int(numa_node)));
+        }
+
+        aml_append(dev, build_prt(false));
+        crs = build_crs(PCI_HOST_BRIDGE(BUS(bus)->parent), &crs_range_set);
+        aml_append(dev, aml_name_decl("_CRS", crs));
+        aml_append(scope, dev);
+        aml_append(table, scope);
+    }
+    /* TODO: This is hardcoded */
+    scope = aml_scope("\\_SB.PCI2");
+    /* build PCI0._CRS */
+    crs = aml_resource_template();
+    /* set the pcie bus num */
+    aml_append(crs,
+        aml_word_bus_number(AML_MIN_FIXED, AML_MAX_FIXED, AML_POS_DECODE,
+                            0x0000, 0x0, root_bus_limit,
+                            0x0000, root_bus_limit + 1));
+    
+    /* set the mem region 2 in pci host bridge */
+    if (!range_is_empty(pci_hole64)) {
+        crs_replace_with_free_ranges(crs_range_set.mem_64bit_ranges,
+                                     range_lob(pci_hole64),
+                                     range_upb(pci_hole64));
+        for (i = 0; i < crs_range_set.mem_64bit_ranges->len; i++) {
+            entry = g_ptr_array_index(crs_range_set.mem_64bit_ranges, i);
+            aml_append(crs,
+                       aml_qword_memory(AML_POS_DECODE, AML_MIN_FIXED,
+                                        AML_MAX_FIXED,
+                                        AML_CACHEABLE, AML_READ_WRITE,
+                                        0, entry->base, entry->limit,
+                                        0, entry->limit - entry->base + 1));
+        }
+    }
+
+    aml_append(scope, aml_name_decl("_CRS", crs));
+    crs_range_set_free(&crs_range_set);
+    return scope;
+}
+
 Aml *build_pci_host_bridge(Aml *table, AcpiPciBus *pci_host)
 {
     CrsRangeEntry *entry;
@@ -2239,6 +2401,7 @@ Aml *build_pci_host_bridge(Aml *table, AcpiPciBus *pci_host)
         aml_append(scope, dev);
         aml_append(table, scope);
     }
+    /* TODO: This is hardcoded */
     scope = aml_scope("\\_SB.PCI0");
     /* build PCI0._CRS */
     crs = aml_resource_template();
@@ -2269,6 +2432,7 @@ Aml *build_pci_host_bridge(Aml *table, AcpiPciBus *pci_host)
                         0x0000, entry->limit - entry->base + 1));
     }
 
+    /* TODO: Do we need this for virt */
     /* set the vga mem region(0) in pci host bridge */
     aml_append(crs,
         aml_dword_memory(AML_POS_DECODE, AML_MIN_FIXED, AML_MAX_FIXED,
@@ -2277,6 +2441,9 @@ Aml *build_pci_host_bridge(Aml *table, AcpiPciBus *pci_host)
                          0, VGA_MEM_LEN));
 
     /* set the mem region 1 in pci host bridge */
+    /* TODO: This hole may not exist for secondary segments
+     * needs to be handled properly
+     */
     crs_replace_with_free_ranges(crs_range_set.mem_ranges,
                                  range_lob(pci_hole),
                                  range_upb(pci_hole));
@@ -2528,7 +2695,31 @@ void acpi_dsdt_add_pci_bus(Aml *dsdt, AcpiPciBus *pci_host)
     build_append_pci_bus_devices(hp_scope, pci_host->pci_bus, false);
     aml_append(dsdt, hp_scope);
 
+    //TODO: This assumes a host bridge
     pci_scope = build_pci_host_bridge(dsdt, pci_host);
+    aml_append(dsdt, pci_scope);
+}
+
+void acpi_dsdt_add_pci_bus_segment(Aml *dsdt, AcpiPciBus *pci_host)
+{
+    Aml *dev, *pci_scope;//, *hp_scope;
+
+    //TODO: Make this generic 
+    dev = aml_device("\\_SB.PCI2");
+    aml_append(dev, aml_name_decl("_HID", aml_eisaid("PNP0A08")));
+    aml_append(dev, aml_name_decl("_CID", aml_eisaid("PNP0A03")));
+    aml_append(dev, aml_name_decl("_ADR", aml_int(0)));
+    //TODO: Indicate the right segment number, hardcode for now
+    aml_append(dev, aml_name_decl("_SEG", aml_int(1)));
+    aml_append(dev, aml_name_decl("_UID", aml_int(1)));
+    aml_append(dev, aml_name_decl("SUPP", aml_int(0)));
+    aml_append(dev, aml_name_decl("CTRL", aml_int(0)));
+    aml_append(dev, build_osc_method(0x1F));
+    aml_append(dsdt, dev);
+
+    //TODO: Handle hotplug
+
+    pci_scope = build_pci_segment_bridge(dsdt, pci_host);
     aml_append(dsdt, pci_scope);
 }
 

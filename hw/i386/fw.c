@@ -58,6 +58,7 @@ static void fw_build_smbios(MachineState *ms, FWCfgState *fw_cfg)
             mem_array[array_count].address = addr;
             mem_array[array_count].length = len;
             array_count++;
+
         }
     }
     smbios_get_tables(mem_array, array_count,

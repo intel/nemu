@@ -45,11 +45,15 @@
 #include "hw/mem/memory-device.h"
 
 #include "hw/pci-host/pci-lite.h"
+#include "hw/pci-host/pci-virt.h"
 
 #include "cpu.h"
 #include "kvm_i386.h"
 
 #include "../acpi-build.h"
+
+//FOr debugging only
+#include "hw/i386/memory.h"
 
 #define DEFINE_VIRT_MACHINE_LATEST(major, minor, latest) \
     static void virt_##major##_##minor##_object_class_init(ObjectClass *oc, \
@@ -142,9 +146,20 @@ static void virt_machine_done(Notifier *notifier, void *data)
     mc->firmware_build_methods.acpi.setup(ms, vms->acpi_configuration);
 }
 
+#define DEBUG_IRQ
+
+#ifdef DEBUG_IRQ
+#define DPRINTF(fmt, ...)                                       \
+    do { printf("CPUIRQ: " fmt , ## __VA_ARGS__); } while (0)
+#else
+#define DPRINTF(fmt, ...)
+#endif
+
 static void virt_gsi_handler(void *opaque, int n, int level)
 {
     qemu_irq *ioapic_irq = opaque;
+
+    DPRINTF("virt: %s GSI %d\n", level ? "raising" : "lowering", n);
 
     qemu_set_irq(ioapic_irq[n], level);
 }
@@ -181,11 +196,21 @@ static void virt_ioapic_init(VirtMachineState *vms)
 static void virt_pci_init(VirtMachineState *vms)
 {
     MemoryRegion *pci_memory;
+    MemoryRegion *pci_virt_memory;
 
     pci_memory = g_new(MemoryRegion, 1);
+    pci_virt_memory = g_new(MemoryRegion, 1);
+
+
+    /* TODO: The order here matters. Not sure why */
+    memory_region_init(pci_virt_memory, NULL, "0.pci", UINT64_MAX);
+    vms->pci_virt_bus = pci_virt_init(get_system_memory(), get_system_io(),
+		                      pci_virt_memory);
+
     memory_region_init(pci_memory, NULL, "pci", UINT64_MAX);
     vms->pci_bus = pci_lite_init(get_system_memory(), get_system_io(),
                                  pci_memory);
+
 }
 
 static void virt_machine_state_init(MachineState *machine)
