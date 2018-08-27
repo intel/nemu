@@ -1,4 +1,4 @@
-common-obj-y += pam.o
+common-obj-$(call lor,$(CONFIG_PCI_PIIX),$(CONFIG_PCI_Q35)) += pam.o
 
 # PPC devices
 common-obj-$(CONFIG_PREP_PCI) += prep.o
