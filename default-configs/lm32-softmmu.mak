@@ -1,5 +1,6 @@
 # Default configuration for lm32-softmmu
 
+include hw-common.mak
 CONFIG_LM32=y
 CONFIG_MILKYMIST=y
 CONFIG_MILKYMIST_TMU2=$(CONFIG_OPENGL)

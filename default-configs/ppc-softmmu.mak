@@ -3,6 +3,7 @@
 include pci.mak
 include sound.mak
 include usb.mak
+include hw-common.mak
 
 # For embedded PPCs:
 CONFIG_PPC4XX=y

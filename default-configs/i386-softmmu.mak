@@ -3,6 +3,7 @@
 include pci.mak
 include sound.mak
 include usb.mak
+include hw-common.mak
 CONFIG_QXL=$(CONFIG_SPICE)
 CONFIG_VGA_ISA=y
 CONFIG_VGA_CIRRUS=y

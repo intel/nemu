@@ -2,6 +2,7 @@
 
 include pci.mak
 include usb.mak
+include hw-common.mak
 CONFIG_VGA=y
 CONFIG_NAND=y
 CONFIG_ECC=y

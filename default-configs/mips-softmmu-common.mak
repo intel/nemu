@@ -3,6 +3,7 @@
 include pci.mak
 include sound.mak
 include usb.mak
+include hw-common.mak
 CONFIG_ESP=y
 CONFIG_SCSI=y
 CONFIG_VGA_ISA=y

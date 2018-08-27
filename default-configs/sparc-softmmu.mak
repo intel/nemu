@@ -1,5 +1,6 @@
 # Default configuration for sparc-softmmu
 
+include hw-common.mak
 CONFIG_ISA_BUS=y
 CONFIG_ECC=y
 CONFIG_SCSI=y
