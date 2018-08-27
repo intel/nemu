@@ -1,4 +1,5 @@
-common-obj-y += block.o cdrom.o hd-geometry.o
+common-obj-y += block.o hd-geometry.o
+common-obj-$(call lor,$(CONFIG_IDE_CORE),$(CONFIG_SCSI)) += cdrom.o
 common-obj-$(CONFIG_FDC) += fdc.o
 common-obj-$(CONFIG_SSI_M25P80) += m25p80.o
 common-obj-$(CONFIG_NAND) += nand.o
@@ -14,3 +15,5 @@ obj-$(CONFIG_SH4) += tc58128.o
 obj-$(CONFIG_VIRTIO_BLK) += virtio-blk.o
 obj-$(CONFIG_VIRTIO_BLK) += dataplane/
 obj-$(CONFIG_VHOST_USER_BLK) += vhost-user-blk.o
+
+common-obj-$(call lnot,$(call lor,$(CONFIG_IDE_CORE),$(CONFIG_SCSI))) += stub.o
