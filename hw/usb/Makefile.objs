@@ -1,5 +1,5 @@
 # usb subsystem core
-common-obj-y += core.o combined-packet.o bus.o libhw.o
+common-obj-$(CONFIG_USB_CORE) += core.o combined-packet.o bus.o libhw.o
 common-obj-$(CONFIG_USB) += desc.o desc-msos.o
 
 # usb host adapters
