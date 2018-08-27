@@ -6494,6 +6494,7 @@ if test "$usb_redir" = "yes" ; then
   echo "CONFIG_USB_REDIR=y" >> $config_host_mak
   echo "USB_REDIR_CFLAGS=$usb_redir_cflags" >> $config_host_mak
   echo "USB_REDIR_LIBS=$usb_redir_libs" >> $config_host_mak
+  echo "CONFIG_USB_CORE=y" >> $config_host_mak
 fi
 
 if test "$opengl" = "yes" ; then
