@@ -100,6 +100,7 @@ static void acpi_conf_virt_init(MachineState *machine)
     conf->numa_nodes = vms->numa_nodes;
     conf->node_mem = vms->node_mem;
     conf->apic_id_limit = vms->apic_id_limit;
+    conf->below_4g_mem_size = vms->below_4g_mem_size;
     conf->acpi_dev = vms->acpi_dev;
     conf->cpu_hotplug_io_base = VIRT_CPU_HOTPLUG_IO_BASE;
     conf->acpi_nvdimm_state = vms->acpi_nvdimm_state;
