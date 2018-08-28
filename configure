@@ -194,6 +194,7 @@ supported_kvm_target() {
         arm:arm | aarch64:aarch64 | \
         i386:i386 | i386:x86_64 | i386:x32 | \
         x86_64:i386 | x86_64:x86_64 | x86_64:x32 | \
+        x86_64_virt:i386 | x86_64_virt:x86_64 | x86_64_virt:x32 | \
         mips:mips | mipsel:mips | \
         ppc:ppc | ppcemb:ppc | ppc64:ppc | \
         ppc:ppc64 | ppcemb:ppc64 | ppc64:ppc64 | \
@@ -6932,7 +6933,7 @@ case "$target_name" in
     target_compiler=$cross_cc_i386
     target_compiler_cflags=$cross_cc_ccflags_i386
   ;;
-  x86_64)
+  x86_64|x86_64_virt)
     TARGET_BASE_ARCH=i386
     gdb_xml_files="i386-64bit.xml i386-64bit-core.xml i386-64bit-sse.xml"
     target_compiler=$cross_cc_x86_64
@@ -7131,6 +7132,9 @@ target_arch_name="$(upper $TARGET_ARCH)"
 echo "TARGET_$target_arch_name=y" >> $config_target_mak
 echo "TARGET_NAME=$target_name" >> $config_target_mak
 echo "TARGET_BASE_ARCH=$TARGET_BASE_ARCH" >> $config_target_mak
+if test "$target_name" = x86_64_virt; then
+    echo "TARGET_X86_64=y" >> $config_target_mak
+fi
 if [ "$TARGET_ABI_DIR" = "" ]; then
   TARGET_ABI_DIR=$TARGET_ARCH
 fi
