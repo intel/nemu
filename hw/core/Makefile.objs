@@ -22,4 +22,4 @@ common-obj-$(CONFIG_SOFTMMU) += split-irq.o
 common-obj-$(CONFIG_PLATFORM_BUS) += platform-bus.o
 
 obj-$(CONFIG_SOFTMMU) += generic-loader.o
-obj-$(CONFIG_SOFTMMU) += null-machine.o
+obj-$(CONFIG_NULL_MACHINE) += null-machine.o
