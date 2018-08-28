@@ -2384,7 +2384,7 @@ Aml *build_pci_host_bridge(Aml *table, AcpiPciBus *pci_host)
 
 void acpi_dsdt_add_pci_bus(Aml *table, AcpiPciBus *pci_host)
 {
-    Aml *dev, *sb_scope;
+    Aml *dev, *sb_scope, *pci_scope;
 
     sb_scope = aml_scope("_SB");
     dev = aml_device("PCI0");
@@ -2398,7 +2398,8 @@ void acpi_dsdt_add_pci_bus(Aml *table, AcpiPciBus *pci_host)
     aml_append(sb_scope, dev);
     aml_append(table, sb_scope);
 
-    build_pci_host_bridge(table, pci_host);
+    pci_scope = build_pci_host_bridge(table, pci_host);
+    aml_append(table, pci_scope);
 }
 
 #define HOLE_640K_START  (640 * 1024)
