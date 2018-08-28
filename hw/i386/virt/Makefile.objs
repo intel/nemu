@@ -1,1 +1,2 @@
 obj-y += virt.o memory.o acpi.o
+obj-$(call lnot,$(call lor,$(CONFIG_X86_Q35),$(CONFIG_X86_PIIX))) += stub.o
