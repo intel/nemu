@@ -2314,12 +2314,11 @@ Aml *build_pci_host_bridge(Aml *table, AcpiPciBus *pci_host)
     return scope;
 }
 
-void acpi_dsdt_add_pci_bus(Aml *table, AcpiPciBus *pci_host)
+void acpi_dsdt_add_pci_bus(Aml *dsdt, AcpiPciBus *pci_host)
 {
-    Aml *dev, *sb_scope, *pci_scope;
+    Aml *dev, *pci_scope;
 
-    sb_scope = aml_scope("_SB");
-    dev = aml_device("PCI0");
+    dev = aml_device("\\_SB.PCI0");
     aml_append(dev, aml_name_decl("_HID", aml_eisaid("PNP0A08")));
     aml_append(dev, aml_name_decl("_CID", aml_eisaid("PNP0A03")));
     aml_append(dev, aml_name_decl("_ADR", aml_int(0)));
@@ -2327,11 +2326,10 @@ void acpi_dsdt_add_pci_bus(Aml *table, AcpiPciBus *pci_host)
     aml_append(dev, aml_name_decl("SUPP", aml_int(0)));
     aml_append(dev, aml_name_decl("CTRL", aml_int(0)));
     aml_append(dev, build_osc_method(0x1F));
-    aml_append(sb_scope, dev);
-    aml_append(table, sb_scope);
+    aml_append(dsdt, dev);
 
-    pci_scope = build_pci_host_bridge(table, pci_host);
-    aml_append(table, pci_scope);
+    pci_scope = build_pci_host_bridge(dsdt, pci_host);
+    aml_append(dsdt, pci_scope);
 }
 
 #define HOLE_640K_START  (640 * 1024)
