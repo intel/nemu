@@ -99,9 +99,9 @@ static void build_dsdt(MachineState *ms, GArray *table_data, BIOSLinker *linker,
     acpi_data_push(dsdt->buf, sizeof(AcpiTableHeader));
 
     scope = aml_scope("\\_SB");
+    acpi_dsdt_add_pci_bus(dsdt, pci_host);
     acpi_dsdt_add_memory_hotplug(ms, dsdt);
     acpi_dsdt_add_cpus(ms, dsdt, scope, smp_cpus, conf);
-    acpi_dsdt_add_pci_bus(scope, pci_host);
     acpi_dsdt_add_ged(scope, conf);
     acpi_dsdt_add_sleep_state(scope);
 
