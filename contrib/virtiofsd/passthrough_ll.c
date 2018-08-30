@@ -1091,6 +1091,12 @@ static void lo_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 	if (err)
 		goto out;
 
+	/* Promote O_WRONLY to O_RDWR. Otherwise later mmap(PROT_WRITE) fails */
+	if ((fi->flags & O_ACCMODE) == O_WRONLY) {
+		fi->flags &= ~O_ACCMODE;
+		fi->flags |= O_RDWR;
+	}
+
 	fd = openat(lo_fd(req, parent), name,
 		    (fi->flags | O_CREAT) & ~O_NOFOLLOW, mode);
 	err = fd == -1 ? errno : 0;
