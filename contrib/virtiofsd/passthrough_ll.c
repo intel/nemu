@@ -1265,9 +1265,13 @@ static void lo_setupmapping(fuse_req_t req, fuse_ino_t ino, uint64_t foffset,
                             uint64_t len, uint64_t moffset, uint64_t flags,
                             struct fuse_file_info *fi)
 {
-        int ret = 0;
+        int ret = 0, fd, res;
         VhostUserFSSlaveMsg msg = { 0 };
         uint64_t vhu_flags;
+	char *buf;
+
+	if (lo_debug(req))
+		fprintf(stderr, "lo_setupmapping(ino=%" PRIu64 ", fi=0x%p)\n", ino, (void *)fi);
 
         vhu_flags = VHOST_USER_FS_FLAG_MAP_R;
         if (flags & O_WRONLY) {
@@ -1279,12 +1283,32 @@ static void lo_setupmapping(fuse_req_t req, fuse_ino_t ino, uint64_t foffset,
 	msg.c_offset[0] = moffset;
 	msg.flags[0] = vhu_flags;
 
-        if (fuse_virtio_map(req, &msg, fi->fh)) {
-                fprintf(stderr, "%s: map over virtio failed (fd=%d)\n",
-                        __func__, (int)fi->fh);
+	if (fi)
+		fd = fi->fh;
+	else {
+		res = asprintf(&buf, "/proc/self/fd/%i", lo_fd(req, ino));
+		if (res == -1)
+			return (void) fuse_reply_err(req, errno);
+
+		/*
+		 * TODO: O_RDWR might not be allowed if file is read only or
+		 * write only. Fix it.
+		 */
+		fd = open(buf, O_RDWR);
+		free(buf);
+		if (fd == -1)
+			return (void) fuse_reply_err(req, errno);
+
+	}
+
+        if (fuse_virtio_map(req, &msg, fd)) {
+                fprintf(stderr, "%s: map over virtio failed (ino=%" PRId64 "fd=%d moffset=0x%" PRIx64 ")\n",
+                        __func__, ino, fi ? (int)fi->fh : lo_fd(req, ino), moffset);
                 ret = EINVAL;
         }
 
+	if (!fi)
+		close(fd);
 	fuse_reply_err(req, ret);
 }
 
