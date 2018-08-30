@@ -22,7 +22,7 @@ go get golang.org/x/crypto/ssh
 mkdir -p ~/workloads
 pushd ~/workloads
 
-CLEAR_VERSION=24550
+CLEAR_VERSION=24740
 wget https://download.clearlinux.org/releases/$CLEAR_VERSION/clear/clear-$CLEAR_VERSION-cloud.img.xz
 unxz clear-$CLEAR_VERSION-cloud.img.xz
 

@@ -45,7 +45,7 @@ func getSourceDiskImage(t *testing.T) string {
 		os.Exit(1)
 	}
 
-	return path.Join(u.HomeDir, "workloads", "clear-24550-cloud.img")
+	return path.Join(u.HomeDir, "workloads", "clear-24740-cloud.img")
 
 }
 
