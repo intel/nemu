@@ -448,3 +448,48 @@ func TestMemoryHotplug(t *testing.T) {
 		cancelFunc()
 	}
 }
+
+func TestCPUHotplug(t *testing.T) {
+	for _, m := range machines {
+		t.Logf("Testing machine: %s", m)
+
+		q := qemuTest{
+			machine: m,
+		}
+		ctx, cancelFunc := context.WithTimeout(context.Background(), 120*time.Second)
+		err := q.startQemu(ctx, t)
+		if err != nil {
+			cancelFunc()
+			<-q.doneCh
+			t.Fatalf("Error starting qemu: %v", err)
+		}
+
+		cpusOnlineBefore := strings.TrimSpace(runCommandBySSH("cat /sys/devices/system/cpu/online", t))
+		if cpusOnlineBefore != "0-1" {
+			t.Errorf("Unexpected online cpus: %s", cpusOnlineBefore)
+		}
+
+		err = q.qmp.ExecuteCPUDeviceAdd(ctx, "host-x86_64-cpu", "core2", "2", "0", "0")
+		if err != nil {
+			t.Errorf("Error hotplugging CPU: %v", err)
+		}
+
+		time.Sleep(time.Second * 15)
+		runCommandBySSH(`sudo sh -c "echo 1 > /sys/devices/system/cpu/cpu2/online"`, t)
+		time.Sleep(time.Second * 15)
+
+		cpusOnlineAfter := strings.TrimSpace(runCommandBySSH("cat /sys/devices/system/cpu/online", t))
+		if cpusOnlineAfter != "0-2" {
+			t.Errorf("Unexpected online cpus: %s", cpusOnlineAfter)
+		}
+
+		time.Sleep(time.Second * 15)
+		err = q.qmp.ExecuteQuit(ctx)
+		if err != nil {
+			t.Errorf("Error quiting via QMP: %v", err)
+		}
+
+		<-q.doneCh
+		cancelFunc()
+	}
+}
