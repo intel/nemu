@@ -10,6 +10,7 @@ import (
 	"os/user"
 	"path"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -386,6 +387,55 @@ func TestQMPQuit(t *testing.T) {
 			cancelFunc()
 			<-q.doneCh
 			t.Fatalf("Error starting qemu: %v", err)
+		}
+
+		time.Sleep(time.Second * 15)
+		err = q.qmp.ExecuteQuit(ctx)
+		if err != nil {
+			t.Errorf("Error quiting via QMP: %v", err)
+		}
+
+		<-q.doneCh
+		cancelFunc()
+	}
+}
+
+func getTotalMemory(t *testing.T) int {
+	m := runCommandBySSH(`cat /proc/meminfo  | grep MemTotal | sed "s/.*: *\([0-9]*\) kB/\1/"`, t)
+	mem, err := strconv.Atoi(strings.TrimSpace(m))
+	if err != nil {
+		t.Errorf("Error converting memory value to int: %v", err)
+	}
+	return mem
+}
+
+func TestMemoryHotplug(t *testing.T) {
+	for _, m := range machines {
+		t.Logf("Testing machine: %s", m)
+
+		q := qemuTest{
+			machine: m,
+		}
+		ctx, cancelFunc := context.WithTimeout(context.Background(), 120*time.Second)
+		err := q.startQemu(ctx, t)
+		if err != nil {
+			cancelFunc()
+			<-q.doneCh
+			t.Fatalf("Error starting qemu: %v", err)
+		}
+
+		addedMemoryMiB := 512
+		beforeMem := getTotalMemory(t)
+		err = q.qmp.ExecHotplugMemory(ctx, "memory-backend-ram", "memslot1", "", addedMemoryMiB)
+		if err != nil {
+			t.Errorf("Error adding memory to guest: %v", err)
+		}
+		afterMem := getTotalMemory(t)
+
+		expectedMemoryKiB := beforeMem + (addedMemoryMiB * 1024)
+		if afterMem != expectedMemoryKiB {
+			t.Errorf("Hotplugging memory did not result in expected values: before: %v after: %v expected: %v",
+				beforeMem, afterMem, expectedMemoryKiB)
 		}
 
 		time.Sleep(time.Second * 15)
