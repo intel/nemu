@@ -33,5 +33,6 @@ popd
 sudo chmod a+rw /dev/kvm
 
 pushd tools/CI/nats
-go test -v
+# Allow total test time to run for 20 minutes
+go test -v -timeout 20m
 popd
