@@ -1537,7 +1537,9 @@ if [ "$bsd_user" = "yes" ]; then
 fi
 
 for config in $mak_wilds; do
-    default_target_list="${default_target_list} $(basename "$config" .mak)"
+    if test "$target_list" = "x86_64_virt-softmmu" || test "$config" != "$source_path/default-configs/x86_64_virt-softmmu.mak"; then
+        default_target_list="${default_target_list} $(basename "$config" .mak)"
+    fi
 done
 
 # Enumerate public trace backends for --help output
