@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"os/exec"
 	"os/user"
@@ -104,7 +105,7 @@ func createPrimaryDiskImage(t *testing.T) string {
 	return primaryDiskImagePath
 }
 
-func runCommandBySSH(command string, t *testing.T) string {
+func (q *qemuTest) runCommandBySSH(command string, t *testing.T) string {
 	config := &ssh.ClientConfig{
 		User: "nemu",
 		Auth: []ssh.AuthMethod{
@@ -116,7 +117,7 @@ func runCommandBySSH(command string, t *testing.T) string {
 	var client *ssh.Client
 	var err error
 	for i := 1; i <= 3; i++ {
-		client, err = ssh.Dial("tcp", "127.0.0.1:2222", config)
+		client, err = ssh.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", q.sshPort), config)
 		if err != nil {
 			if i == 3 {
 				t.Errorf("Failed to dial: %v", err)
@@ -179,6 +180,13 @@ func (q *qemuTest) launchQemu(ctx context.Context, monitorSocketCh chan string, 
 	cloudInitImagePath := createCloudInitImage(t)
 	defer os.Remove(cloudInitImagePath)
 
+	for {
+		q.sshPort = rand.Uint32() & 0xffff
+		if q.sshPort >= 1024 {
+			break
+		}
+	}
+
 	q.params = []string{
 		"-machine", fmt.Sprintf("%s,accel=kvm,kernel_irqchip,nvdimm", q.machine),
 		"-bios", getBiosPath(t),
@@ -192,7 +200,7 @@ func (q *qemuTest) launchQemu(ctx context.Context, monitorSocketCh chan string, 
 		"-device", "virtio-blk-pci,scsi=off,drive=drive-virtio-disk0,id=virtio-disk0",
 		"-device", "virtio-blk-pci,drive=cloud",
 		"-drive", fmt.Sprintf("if=none,id=cloud,file=%s,format=raw", cloudInitImagePath),
-		"-netdev", "user,id=mynet0,hostfwd=tcp::2222-:22,hostname=nemuvm",
+		"-netdev", fmt.Sprintf("user,id=mynet0,hostfwd=tcp::%d-:22,hostname=nemuvm", q.sshPort),
 		"-device", "virtio-net-pci,netdev=mynet0",
 		"-device", "virtio-serial-pci,id=virtio-serial0",
 		"-device", "virtconsole,chardev=charconsole0,id=console0",
@@ -257,6 +265,7 @@ type qemuTest struct {
 	params  []string
 	doneCh  chan interface{}
 	machine string
+	sshPort uint32
 }
 
 func (q *qemuTest) startQemu(ctx context.Context, t *testing.T) error {
@@ -305,7 +314,7 @@ func TestShutdown(t *testing.T) {
 		}
 
 		time.Sleep(time.Second * 15)
-		runCommandBySSH("sudo shutdown -h now", t)
+		q.runCommandBySSH("sudo shutdown -h now", t)
 
 		<-q.doneCh
 		cancelFunc()
@@ -327,9 +336,9 @@ func TestReboot(t *testing.T) {
 		}
 
 		time.Sleep(time.Second * 15)
-		runCommandBySSH("sudo reboot", t)
+		q.runCommandBySSH("sudo reboot", t)
 		time.Sleep(time.Second * 15)
-		runCommandBySSH("sudo shutdown -h now", t)
+		q.runCommandBySSH("sudo shutdown -h now", t)
 
 		<-q.doneCh
 		cancelFunc()
@@ -356,7 +365,7 @@ func TestCheckAcpiTables(t *testing.T) {
 		}
 
 		time.Sleep(time.Second * 15)
-		dmesgOutput := runCommandBySSH("sudo dmesg", t)
+		dmesgOutput := q.runCommandBySSH("sudo dmesg", t)
 
 		r := regexp.MustCompile("ACPI:.*BOCHS.*")
 		matches := r.FindAllStringIndex(dmesgOutput, -1)
@@ -368,7 +377,7 @@ func TestCheckAcpiTables(t *testing.T) {
 		}
 
 		time.Sleep(time.Second * 15)
-		runCommandBySSH("sudo shutdown -h now", t)
+		q.runCommandBySSH("sudo shutdown -h now", t)
 
 		<-q.doneCh
 		cancelFunc()
@@ -400,8 +409,8 @@ func TestQMPQuit(t *testing.T) {
 	}
 }
 
-func getTotalMemory(t *testing.T) int {
-	m := runCommandBySSH(`cat /proc/meminfo  | grep MemTotal | sed "s/.*: *\([0-9]*\) kB/\1/"`, t)
+func (q *qemuTest) getTotalMemory(t *testing.T) int {
+	m := q.runCommandBySSH(`cat /proc/meminfo  | grep MemTotal | sed "s/.*: *\([0-9]*\) kB/\1/"`, t)
 	mem, err := strconv.Atoi(strings.TrimSpace(m))
 	if err != nil {
 		t.Errorf("Error converting memory value to int: %v", err)
@@ -425,12 +434,12 @@ func TestMemoryHotplug(t *testing.T) {
 		}
 
 		addedMemoryMiB := 512
-		beforeMem := getTotalMemory(t)
+		beforeMem := q.getTotalMemory(t)
 		err = q.qmp.ExecHotplugMemory(ctx, "memory-backend-ram", "memslot1", "", addedMemoryMiB)
 		if err != nil {
 			t.Errorf("Error adding memory to guest: %v", err)
 		}
-		afterMem := getTotalMemory(t)
+		afterMem := q.getTotalMemory(t)
 
 		expectedMemoryKiB := beforeMem + (addedMemoryMiB * 1024)
 		if afterMem != expectedMemoryKiB {
@@ -464,7 +473,7 @@ func TestCPUHotplug(t *testing.T) {
 			t.Fatalf("Error starting qemu: %v", err)
 		}
 
-		cpusOnlineBefore := strings.TrimSpace(runCommandBySSH("cat /sys/devices/system/cpu/online", t))
+		cpusOnlineBefore := strings.TrimSpace(q.runCommandBySSH("cat /sys/devices/system/cpu/online", t))
 		if cpusOnlineBefore != "0-1" {
 			t.Errorf("Unexpected online cpus: %s", cpusOnlineBefore)
 		}
@@ -475,10 +484,10 @@ func TestCPUHotplug(t *testing.T) {
 		}
 
 		time.Sleep(time.Second * 15)
-		runCommandBySSH(`sudo sh -c "echo 1 > /sys/devices/system/cpu/cpu2/online"`, t)
+		q.runCommandBySSH(`sudo sh -c "echo 1 > /sys/devices/system/cpu/cpu2/online"`, t)
 		time.Sleep(time.Second * 15)
 
-		cpusOnlineAfter := strings.TrimSpace(runCommandBySSH("cat /sys/devices/system/cpu/online", t))
+		cpusOnlineAfter := strings.TrimSpace(q.runCommandBySSH("cat /sys/devices/system/cpu/online", t))
 		if cpusOnlineAfter != "0-2" {
 			t.Errorf("Unexpected online cpus: %s", cpusOnlineAfter)
 		}
