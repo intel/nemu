@@ -2,11 +2,13 @@
 set -e
 set -x
 
-sudo sh -c 'echo "deb [arch=amd64] http://archive.ubuntu.com/ubuntu bionic main universe multiverse" > /etc/apt/sources.list'
-sudo sh -c 'echo "deb [arch=amd64] http://archive.ubuntu.com/ubuntu bionic-updates main universe multiverse" >> /etc/apt/sources.list'
-sudo sh -c 'echo "deb [arch=amd64] http://security.ubuntu.com/ubuntu bionic-security main universe multiverse" >> /etc/apt/sources.list'
+export HOST_OS_RELEASE=`lsb_release -c -s`
 
-sudo sh -c 'echo "deb-src http://archive.ubuntu.com/ubuntu bionic main universe multiverse" >> /etc/apt/sources.list'
+sudo -E sh -c 'echo "deb [arch=amd64] http://archive.ubuntu.com/ubuntu $HOST_OS_RELEASE main universe multiverse" > /etc/apt/sources.list'
+sudo -E sh -c 'echo "deb [arch=amd64] http://archive.ubuntu.com/ubuntu $HOST_OS_RELEASE-updates main universe multiverse" >> /etc/apt/sources.list'
+sudo -E sh -c 'echo "deb [arch=amd64] http://security.ubuntu.com/ubuntu $HOST_OS_RELEASE-security main universe multiverse" >> /etc/apt/sources.list'
+
+sudo -E sh -c 'echo "deb-src http://archive.ubuntu.com/ubuntu $HOST_OS_RELEASE main universe multiverse" >> /etc/apt/sources.list'
 
 sudo sh -c 'echo "APT::Install-Recommends \"0\";" >  /etc/apt/apt.conf.d/10local'
 sudo sh -c 'echo "APT::Install-Suggests \"0\";" >>  /etc/apt/apt.conf.d/10local'
