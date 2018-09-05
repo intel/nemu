@@ -175,6 +175,12 @@ func (q *qemuTest) launchQemu(ctx context.Context, monitorSocketCh chan string, 
 	}
 	defer os.Remove(serialOutputLogFile.Name())
 
+	virtConsoleLogFile, err := ioutil.TempFile("", "nemu-test")
+	if err != nil {
+		t.Fatalf("Error creating temporary for console output: %v", err)
+	}
+	defer os.Remove(virtConsoleLogFile.Name())
+
 	primaryDiskImagePath := createPrimaryDiskImage(t)
 	defer os.Remove(primaryDiskImagePath)
 	cloudInitImagePath := createCloudInitImage(t)
@@ -204,7 +210,7 @@ func (q *qemuTest) launchQemu(ctx context.Context, monitorSocketCh chan string, 
 		"-device", "virtio-net-pci,netdev=mynet0",
 		"-device", "virtio-serial-pci,id=virtio-serial0",
 		"-device", "virtconsole,chardev=charconsole0,id=console0",
-		"-chardev", "socket,id=charconsole0,path=console.sock,server,nowait",
+		"-chardev", fmt.Sprintf("file,id=charconsole0,path=%s,server,nowait", virtConsoleLogFile.Name()),
 		"-device", "virtio-rng-pci,rng=rng0",
 		"-object", "rng-random,filename=/dev/random,id=rng0",
 		"-device", "virtio-balloon-pci",
@@ -255,6 +261,13 @@ func (q *qemuTest) launchQemu(ctx context.Context, monitorSocketCh chan string, 
 		data, err = ioutil.ReadAll(serialOutputLogFile)
 		if err != nil {
 			t.Errorf("Error reading serial console output: %v", err)
+		}
+		fmt.Fprintln(os.Stderr, string(data))
+
+		fmt.Fprintf(os.Stderr, "\n\n==== virt console output: ===\n\n")
+		data, err = ioutil.ReadAll(virtConsoleLogFile)
+		if err != nil {
+			t.Errorf("Error reading virt console output: %v", err)
 		}
 		fmt.Fprintln(os.Stderr, string(data))
 	}
