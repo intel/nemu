@@ -10,6 +10,6 @@ node ('xenial') {
 		sh "SRCDIR=$WORKSPACE tools/build_x86_64.sh"
 	}
 	stage ('NATS') {
-		sh "tools/CI/run_nats.sh"
+		sh "SRCDIR=$WORKSPACE tools/CI/run_nats.sh"
 	}
 }
