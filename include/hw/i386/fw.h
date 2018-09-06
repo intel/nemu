@@ -17,4 +17,6 @@ FWCfgState *fw_cfg_init(MachineState *ms, uint16_t boot_cpus, const CPUArchIdLis
 void sysfw_firmware_init(MemoryRegion *rom_memory,
                              bool isapc_ram_fw);
 
+void fw_build_smbios(MachineState *ms, FWCfgState *fw_cfg);
+
 #endif

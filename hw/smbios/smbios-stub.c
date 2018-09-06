@@ -24,8 +24,13 @@
 #include "qapi/error.h"
 #include "qapi/qmp/qerror.h"
 #include "hw/smbios/smbios.h"
+#include "hw/i386/fw.h"
 
 void smbios_entry_add(QemuOpts *opts, Error **errp)
 {
     error_setg(errp, QERR_UNSUPPORTED);
+}
+
+void fw_build_smbios(MachineState *ms, FWCfgState *fw_cfg)
+{
 }
