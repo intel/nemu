@@ -23,6 +23,8 @@ import (
 var sshPort uint16 = 2222
 var sshPortMutex = sync.Mutex{}
 
+var cancelTimeout = 4 * time.Minute
+
 func getNemuPath(t *testing.T) string {
 	u, err := user.Current()
 	if err != nil {
@@ -321,7 +323,7 @@ func TestShutdown(t *testing.T) {
 		q := qemuTest{
 			machine: m,
 		}
-		ctx, cancelFunc := context.WithTimeout(context.Background(), 120*time.Second)
+		ctx, cancelFunc := context.WithTimeout(context.Background(), cancelTimeout)
 		err := q.startQemu(ctx, t)
 		if err != nil {
 			cancelFunc()
@@ -343,7 +345,7 @@ func TestReboot(t *testing.T) {
 		q := qemuTest{
 			machine: m,
 		}
-		ctx, cancelFunc := context.WithTimeout(context.Background(), 120*time.Second)
+		ctx, cancelFunc := context.WithTimeout(context.Background(), cancelTimeout)
 		err := q.startQemu(ctx, t)
 		if err != nil {
 			cancelFunc()
@@ -372,7 +374,7 @@ func TestCheckAcpiTables(t *testing.T) {
 		q := qemuTest{
 			machine: m,
 		}
-		ctx, cancelFunc := context.WithTimeout(context.Background(), 120*time.Second)
+		ctx, cancelFunc := context.WithTimeout(context.Background(), cancelTimeout)
 		err := q.startQemu(ctx, t)
 		if err != nil {
 			cancelFunc()
@@ -406,7 +408,7 @@ func TestQMPQuit(t *testing.T) {
 		q := qemuTest{
 			machine: m,
 		}
-		ctx, cancelFunc := context.WithTimeout(context.Background(), 120*time.Second)
+		ctx, cancelFunc := context.WithTimeout(context.Background(), cancelTimeout)
 		err := q.startQemu(ctx, t)
 		if err != nil {
 			cancelFunc()
@@ -441,7 +443,7 @@ func TestMemoryHotplug(t *testing.T) {
 		q := qemuTest{
 			machine: m,
 		}
-		ctx, cancelFunc := context.WithTimeout(context.Background(), 120*time.Second)
+		ctx, cancelFunc := context.WithTimeout(context.Background(), cancelTimeout)
 		err := q.startQemu(ctx, t)
 		if err != nil {
 			cancelFunc()
@@ -481,7 +483,7 @@ func TestCPUHotplug(t *testing.T) {
 		q := qemuTest{
 			machine: m,
 		}
-		ctx, cancelFunc := context.WithTimeout(context.Background(), 120*time.Second)
+		ctx, cancelFunc := context.WithTimeout(context.Background(), cancelTimeout)
 		err := q.startQemu(ctx, t)
 		if err != nil {
 			cancelFunc()
