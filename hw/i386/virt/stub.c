@@ -18,6 +18,7 @@
 #include "hw/bt.h"
 #include "sysemu/bt.h"
 #include "hw/audio/soundhw.h"
+#include "hw/scsi/scsi.h"
 
 DeviceState *isa_pic=NULL;
 
@@ -101,4 +102,14 @@ int select_watchdog(const char *p)
 
 void soundhw_init(void)
 {
+}
+
+int cdrom_read_toc(int nb_sectors, uint8_t *buf, int msf, int start_track)
+{
+    return -1;
+}
+
+int cdrom_read_toc_raw(int nb_sectors, uint8_t *buf, int msf, int session_num)
+{
+    return -1;
 }
