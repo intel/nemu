@@ -20,6 +20,7 @@
 #include "hw/audio/soundhw.h"
 #include "hw/scsi/scsi.h"
 #include "./../multiboot.h"
+#include "hw/timer/mc146818rtc.h"
 
 DeviceState *isa_pic=NULL;
 
@@ -124,4 +125,8 @@ int load_multiboot(FWCfgState *fw_cfg,
                    uint8_t *header)
 {
     return 0;
+}
+
+void qmp_rtc_reset_reinjection(Error **errp)
+{
 }
