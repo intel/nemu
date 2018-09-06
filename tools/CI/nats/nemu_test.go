@@ -318,6 +318,7 @@ func (q *qemuTest) startQemu(ctx context.Context, t *testing.T) error {
 var machines = []string{"pc", "q35", "virt"}
 
 func TestShutdown(t *testing.T) {
+	t.Parallel()
 	for _, m := range machines {
 		t.Logf("Testing machine: %s", m)
 		q := qemuTest{
@@ -340,6 +341,7 @@ func TestShutdown(t *testing.T) {
 }
 
 func TestReboot(t *testing.T) {
+	t.Parallel()
 	for _, m := range machines {
 		t.Logf("Testing machine: %s", m)
 		q := qemuTest{
@@ -364,6 +366,7 @@ func TestReboot(t *testing.T) {
 }
 
 func TestCheckAcpiTables(t *testing.T) {
+	t.Parallel()
 	tableCounts := map[string]int{
 		"pc":   8,
 		"q35":  9,
@@ -403,6 +406,7 @@ func TestCheckAcpiTables(t *testing.T) {
 }
 
 func TestQMPQuit(t *testing.T) {
+	t.Parallel()
 	for _, m := range machines {
 		t.Logf("Testing machine: %s", m)
 		q := qemuTest{
@@ -437,6 +441,7 @@ func (q *qemuTest) getTotalMemory(t *testing.T) int {
 }
 
 func TestMemoryHotplug(t *testing.T) {
+	t.Parallel()
 	for _, m := range machines {
 		t.Logf("Testing machine: %s", m)
 
@@ -477,6 +482,7 @@ func TestMemoryHotplug(t *testing.T) {
 }
 
 func TestCPUHotplug(t *testing.T) {
+	t.Parallel()
 	for _, m := range machines {
 		t.Logf("Testing machine: %s", m)
 
