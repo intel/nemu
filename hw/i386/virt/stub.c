@@ -19,6 +19,7 @@
 #include "sysemu/bt.h"
 #include "hw/audio/soundhw.h"
 #include "hw/scsi/scsi.h"
+#include "./../multiboot.h"
 
 DeviceState *isa_pic=NULL;
 
@@ -112,4 +113,15 @@ int cdrom_read_toc(int nb_sectors, uint8_t *buf, int msf, int start_track)
 int cdrom_read_toc_raw(int nb_sectors, uint8_t *buf, int msf, int session_num)
 {
     return -1;
+}
+
+int load_multiboot(FWCfgState *fw_cfg,
+                   FILE *f,
+                   const char *kernel_filename,
+                   const char *initrd_filename,
+                   const char *kernel_cmdline,
+                   int kernel_file_size,
+                   uint8_t *header)
+{
+    return 0;
 }
