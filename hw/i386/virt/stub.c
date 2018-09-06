@@ -17,6 +17,7 @@
 #include "hw/i386/apic_internal.h"
 #include "hw/bt.h"
 #include "sysemu/bt.h"
+#include "hw/audio/soundhw.h"
 
 DeviceState *isa_pic=NULL;
 
@@ -87,4 +88,17 @@ struct HCIInfo null_hci = {
 struct HCIInfo *bt_new_hci(struct bt_scatternet_s *net)
 {
     return NULL;
+}
+
+void select_soundhw(const char *optarg)
+{
+}
+
+int select_watchdog(const char *p)
+{
+    return 0;
+}
+
+void soundhw_init(void)
+{
 }
