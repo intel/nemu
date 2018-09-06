@@ -13,6 +13,7 @@
 #include "sysemu/watchdog.h"
 #include "hw/qdev-core.h"
 #include "hw/i386/pc.h"
+#include "./../../vfio/pci.h"
 
 DeviceState *isa_pic=NULL;
 
@@ -24,4 +25,17 @@ int select_watchdog_action(const char *p)
 int pic_get_output(DeviceState *d)
 {
     return false;
+}
+
+void vfio_display_finalize(VFIOPCIDevice *vdev)
+{
+}
+
+void vfio_display_reset(VFIOPCIDevice *vdev)
+{
+}
+
+int vfio_display_probe(VFIOPCIDevice *vdev, Error **errp)
+{
+    return 0;
 }
