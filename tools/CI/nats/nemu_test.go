@@ -147,22 +147,24 @@ func (q *qemuTest) runCommandBySSH(command string, t *testing.T) string {
 	return string(output)
 }
 
-type simpleLogger struct{}
+type simpleLogger struct {
+	t *testing.T
+}
 
 func (l simpleLogger) V(level int32) bool {
 	return false
 }
 
 func (l simpleLogger) Infof(format string, v ...interface{}) {
-	fmt.Fprintf(os.Stderr, format, v)
+	l.t.Logf(format, v)
 }
 
 func (l simpleLogger) Warningf(format string, v ...interface{}) {
-	fmt.Fprintf(os.Stderr, format, v)
+	l.t.Logf(format, v)
 }
 
 func (l simpleLogger) Errorf(format string, v ...interface{}) {
-	fmt.Fprintf(os.Stderr, format, v)
+	l.t.Logf(format, v)
 }
 
 func (q *qemuTest) launchQemu(ctx context.Context, monitorSocketCh chan string, t *testing.T) {
@@ -247,30 +249,30 @@ func (q *qemuTest) launchQemu(ctx context.Context, monitorSocketCh chan string, 
 
 	fds := []*os.File{}
 
-	_, err = qemu.LaunchCustomQemu(ctx, getNemuPath(t), q.params, fds, nil, simpleLogger{})
+	_, err = qemu.LaunchCustomQemu(ctx, getNemuPath(t), q.params, fds, nil, simpleLogger{t: t})
 	if err != nil {
 		t.Errorf("Error launching QEMU: %v", err)
 
-		fmt.Fprintf(os.Stderr, "\n\n==== sysbus (OVMF) debug output: ===\n\n")
+		t.Logf("\n\n==== sysbus (OVMF) debug output: ===\n\n")
 		data, err := ioutil.ReadAll(sysbusDebugLogFile)
 		if err != nil {
 			t.Errorf("Error reading sysbus debug output: %v", err)
 		}
-		fmt.Fprintln(os.Stderr, string(data))
+		t.Log(string(data))
 
-		fmt.Fprintf(os.Stderr, "\n\n==== serial console output: ===\n\n")
+		t.Logf("\n\n==== serial console output: ===\n\n")
 		data, err = ioutil.ReadAll(serialOutputLogFile)
 		if err != nil {
 			t.Errorf("Error reading serial console output: %v", err)
 		}
-		fmt.Fprintln(os.Stderr, string(data))
+		t.Log(string(data))
 
-		fmt.Fprintf(os.Stderr, "\n\n==== virt console output: ===\n\n")
+		t.Logf("\n\n==== virt console output: ===\n\n")
 		data, err = ioutil.ReadAll(virtConsoleLogFile)
 		if err != nil {
 			t.Errorf("Error reading virt console output: %v", err)
 		}
-		fmt.Fprintln(os.Stderr, string(data))
+		t.Log(string(data))
 	}
 }
 
@@ -293,11 +295,11 @@ func (q *qemuTest) startQemu(ctx context.Context, t *testing.T) error {
 
 	time.Sleep(time.Second * 5)
 	config := qemu.QMPConfig{
-		Logger: simpleLogger{},
+		Logger: simpleLogger{t: t},
 	}
 	disconnectedCh := make(chan struct{})
 	qmp, qmpVersion, err := qemu.QMPStart(ctx, <-monitorSocketCh, config, disconnectedCh)
-	fmt.Fprintf(os.Stderr, "\nQMP version: %v\n", *qmpVersion)
+	t.Logf("\nQMP version: %v\n", *qmpVersion)
 	if err != nil {
 		return err
 	}
@@ -386,8 +388,8 @@ func TestCheckAcpiTables(t *testing.T) {
 
 		if len(matches) != tableCounts[m] {
 			t.Errorf("Unexpected number of ACPI tables from QEMU: %v", len(matches))
-			fmt.Fprintf(os.Stderr, "\n\n==== dmesg output: ===\n\n")
-			fmt.Fprintln(os.Stderr, dmesgOutput)
+			t.Logf("\n\n==== dmesg output: ===\n\n")
+			t.Log(dmesgOutput)
 		}
 
 		time.Sleep(time.Second * 15)
