@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"math/rand"
 	"os"
 	"os/exec"
 	"os/user"
@@ -13,12 +12,16 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/intel/govmm/qemu"
 	"golang.org/x/crypto/ssh"
 )
+
+var sshPort uint16 = 2222
+var sshPortMutex = sync.Mutex{}
 
 func getNemuPath(t *testing.T) string {
 	u, err := user.Current()
@@ -186,12 +189,10 @@ func (q *qemuTest) launchQemu(ctx context.Context, monitorSocketCh chan string, 
 	cloudInitImagePath := createCloudInitImage(t)
 	defer os.Remove(cloudInitImagePath)
 
-	for {
-		q.sshPort = rand.Uint32() & 0xffff
-		if q.sshPort >= 1024 {
-			break
-		}
-	}
+	sshPortMutex.Lock()
+	q.sshPort = sshPort
+	sshPort++
+	sshPortMutex.Unlock()
 
 	q.params = []string{
 		"-machine", fmt.Sprintf("%s,accel=kvm,kernel_irqchip,nvdimm", q.machine),
@@ -278,7 +279,7 @@ type qemuTest struct {
 	params  []string
 	doneCh  chan interface{}
 	machine string
-	sshPort uint32
+	sshPort uint16
 }
 
 func (q *qemuTest) startQemu(ctx context.Context, t *testing.T) error {
