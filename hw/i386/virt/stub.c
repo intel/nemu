@@ -15,6 +15,8 @@
 #include "hw/i386/pc.h"
 #include "./../../vfio/pci.h"
 #include "hw/i386/apic_internal.h"
+#include "hw/bt.h"
+#include "sysemu/bt.h"
 
 DeviceState *isa_pic=NULL;
 
@@ -49,4 +51,40 @@ void vapic_report_tpr_access(DeviceState *dev, CPUState *cpu, target_ulong ip,
 int pic_read_irq(DeviceState *d)
 {
     return 0;
+}
+
+struct HCIInfo *hci_init(const char *str)
+{
+    return NULL;
+}
+
+struct bt_scatternet_s *qemu_find_bt_vlan(int id)
+{
+    return NULL;
+}
+
+struct bt_device_s *bt_keyboard_init(struct bt_scatternet_s *net)
+{
+    return NULL;
+}
+
+static void null_hci_send(struct HCIInfo *hci, const uint8_t *data, int len)
+{
+}
+
+static int null_hci_addr_set(struct HCIInfo *hci, const uint8_t *bd_addr)
+{
+    return -ENOTSUP;
+}
+
+struct HCIInfo null_hci = {
+    .cmd_send = null_hci_send,
+    .sco_send = null_hci_send,
+    .acl_send = null_hci_send,
+    .bdaddr_set = null_hci_addr_set,
+};
+
+struct HCIInfo *bt_new_hci(struct bt_scatternet_s *net)
+{
+    return NULL;
 }
