@@ -3,6 +3,12 @@
 
 #include "qemu-common.h"
 
+#define APIC_DEFAULT_ADDRESS 0xfee00000
+#define APIC_SPACE_SIZE      0x100000
+
+/* Default IOAPIC ID */
+#define ACPI_BUILD_IOAPIC_ID 0x0
+
 /* apic.c */
 void apic_deliver_irq(uint8_t dest, uint8_t dest_mode, uint8_t delivery_mode,
                       uint8_t vector_num, uint8_t trigger_mode);

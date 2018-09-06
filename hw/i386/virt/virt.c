@@ -757,7 +757,7 @@ static void virt_machine_class_init(MachineClass *mc)
     hc->unplug = virt_machine_device_unplug_cb;
 
     /* Firmware building handler */
-    mc->firmware_build_methods.acpi.madt = build_madt;
+    mc->firmware_build_methods.acpi.madt = acpi_build_madt;
     mc->firmware_build_methods.acpi.rsdp = build_rsdp;
     mc->firmware_build_methods.acpi.setup = acpi_reduced_setup;
     mc->firmware_build_methods.acpi.mcfg = acpi_build_mcfg;
