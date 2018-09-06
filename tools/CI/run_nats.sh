@@ -46,5 +46,5 @@ popd
 sudo chmod a+rw /dev/kvm
 
 pushd $SRCDIR/tools/CI/nats
-go test -v -timeout 20m
+go test -v -timeout 20m -parallel $((`nproc`/2))
 popd
