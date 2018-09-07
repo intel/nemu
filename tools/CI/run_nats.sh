@@ -4,6 +4,7 @@ set -x
 GO_VERSION="1.10.3"
 CLEAR_VERSION=24740
 CLEAR_IMAGE=clear-$CLEAR_VERSION-cloud.img
+UBUNTU_IMAGE=xenial-server-cloudimg-amd64-uefi1.img
 WORKLOADS_DIR="$HOME/workloads"
 OVMF="OVMF.fd"
 
@@ -36,6 +37,10 @@ pushd $WORKLOADS_DIR
 if [ ! -f "$WORKLOADS_DIR"/"$CLEAR_IMAGE" ]; then
     wget -nv https://download.clearlinux.org/releases/$CLEAR_VERSION/clear/clear-$CLEAR_VERSION-cloud.img.xz
     unxz clear-$CLEAR_VERSION-cloud.img.xz
+fi
+
+if [ ! -f "$WORKLOADS_DIR"/"$UBUNTU_IMAGE" ]; then
+   wget -nv https://cloud-images.ubuntu.com/xenial/current/xenial-server-cloudimg-amd64-uefi1.img
 fi
 
 rm -rf $OVMF
