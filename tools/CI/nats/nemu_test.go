@@ -82,7 +82,7 @@ func createCloudInitImage(t *testing.T) string {
 		t.Fatalf("Error creating fileystem for cloud init image: %v: %s", err, string(output))
 	}
 
-	cmd = exec.Command("mcopy", "-oi", cloudInitImagePath, "-s", fmt.Sprintf("%s/openstack", getCloudInitPath(t)), "::")
+	cmd = exec.Command("mcopy", "-oi", cloudInitImagePath, "-s", fmt.Sprintf("%s/clear/openstack", getCloudInitPath(t)), "::")
 	output, err = cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("Error copying files for cloud init image: %v: %s", err, string(output))
