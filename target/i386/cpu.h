@@ -1891,9 +1891,6 @@ const char *get_register_name_32(unsigned int reg);
 
 void enable_compat_apic_id_mode(void);
 
-#define APIC_DEFAULT_ADDRESS 0xfee00000
-#define APIC_SPACE_SIZE      0x100000
-
 void x86_cpu_dump_local_apic_state(CPUState *cs, FILE *f,
                                    fprintf_function cpu_fprintf, int flags);
 

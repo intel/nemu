@@ -1,3 +1,4 @@
+include hw-common.mak
 CONFIG_PCI=y
 CONFIG_VIRTIO_PCI=$(CONFIG_PCI)
 include virtio.mak

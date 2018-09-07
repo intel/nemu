@@ -3,6 +3,7 @@
 include pci.mak
 include sound.mak
 include usb.mak
+include hw-common.mak
 CONFIG_ESP=y
 CONFIG_SCSI=y
 CONFIG_VGA_ISA=y
@@ -36,3 +37,5 @@ CONFIG_EMPTY_SLOT=y
 CONFIG_MIPS_CPS=y
 CONFIG_MIPS_ITU=y
 CONFIG_I2C=y
+CONFIG_ACPI_X86_PIXX=y
+CONFIG_ACPI_PCI_HOTPLUG=y

@@ -2,6 +2,7 @@
 
 include pci.mak
 include usb.mak
+include hw-common.mak
 CONFIG_M48T59=y
 CONFIG_PTIMER=y
 CONFIG_SERIAL=y

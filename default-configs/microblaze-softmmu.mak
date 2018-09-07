@@ -1,5 +1,6 @@
 # Default configuration for microblaze-softmmu
 
+include hw-common.mak
 CONFIG_PTIMER=y
 CONFIG_PFLASH_CFI01=y
 CONFIG_SERIAL=y

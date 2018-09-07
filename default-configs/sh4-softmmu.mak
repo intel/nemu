@@ -2,6 +2,7 @@
 
 include pci.mak
 include usb.mak
+include hw-common.mak
 CONFIG_SERIAL=y
 CONFIG_SERIAL_ISA=y
 CONFIG_PTIMER=y

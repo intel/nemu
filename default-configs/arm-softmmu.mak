@@ -2,6 +2,7 @@
 
 include pci.mak
 include usb.mak
+include hw-common.mak
 CONFIG_VGA=y
 CONFIG_NAND=y
 CONFIG_ECC=y
@@ -152,3 +153,4 @@ CONFIG_PCI_DESIGNWARE=y
 CONFIG_STRONGARM=y
 CONFIG_HIGHBANK=y
 CONFIG_MUSICPAL=y
+CONFIG_ARM_CORE=y
