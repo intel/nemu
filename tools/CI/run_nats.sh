@@ -45,7 +45,7 @@ fi
 
 rm -rf $OVMF
 OVMF_URL=$(curl --silent https://api.github.com/repos/rbradford/edk2/releases/latest | grep -o https://.*OVMF.fd)
-wget $OVMF_URL
+wget -nv $OVMF_URL
 popd
 
 sudo chmod a+rw /dev/kvm
