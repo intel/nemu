@@ -13,8 +13,8 @@ go_install() {
     go version | grep $GO_VERSION
     if [ $? -ne 0 ]; then
 	pushd /tmp
-	wget -nv https://dl.google.com/go/go1.10.3.linux-amd64.tar.gz
-	sudo tar -C /usr/local -xzf go1.10.3.linux-amd64.tar.gz
+	wget -nv https://dl.google.com/go/go1.10.3.linux-amd64.tar.gz || exit $?
+	sudo tar -C /usr/local -xzf go1.10.3.linux-amd64.tar.gz || exit $?
 	popd
     fi
 
@@ -28,28 +28,28 @@ sudo apt-get install -y mtools dosfstools
 
 go_install
 
-go get -u github.com/intel/govmm/qemu
-go get -u golang.org/x/crypto/ssh
+go get -u github.com/intel/govmm/qemu || exit $?
+go get -u golang.org/x/crypto/ssh || exit $?
 
 mkdir -p $WORKLOADS_DIR
 pushd $WORKLOADS_DIR
 
 if [ ! -f "$WORKLOADS_DIR"/"$CLEAR_IMAGE" ]; then
-    wget -nv https://download.clearlinux.org/releases/$CLEAR_VERSION/clear/clear-$CLEAR_VERSION-cloud.img.xz
-    unxz clear-$CLEAR_VERSION-cloud.img.xz
+    wget -nv https://download.clearlinux.org/releases/$CLEAR_VERSION/clear/clear-$CLEAR_VERSION-cloud.img.xz || exit $?
+    unxz clear-$CLEAR_VERSION-cloud.img.xz || exit $?
 fi
 
 if [ ! -f "$WORKLOADS_DIR"/"$UBUNTU_IMAGE" ]; then
-   wget -nv https://cloud-images.ubuntu.com/xenial/current/xenial-server-cloudimg-amd64-uefi1.img
+   wget -nv https://cloud-images.ubuntu.com/xenial/current/xenial-server-cloudimg-amd64-uefi1.img || exit $?
 fi
 
 rm -rf $OVMF
 OVMF_URL=$(curl --silent https://api.github.com/repos/rbradford/edk2/releases/latest | grep -o https://.*OVMF.fd)
-wget -nv $OVMF_URL
+wget -nv $OVMF_URL || exit $?
 popd
 
 sudo chmod a+rw /dev/kvm
 
 pushd $SRCDIR/tools/CI/nats
-go test -v -timeout 20m -parallel $((`nproc`/2))
+go test -v -timeout 20m -parallel $((`nproc`/2)) || exit $?
 popd
