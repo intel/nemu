@@ -45,14 +45,18 @@ func getBiosPath(t *testing.T) string {
 	return path.Join(u.HomeDir, "workloads", "OVMF.fd")
 }
 
-func getSourceDiskImage(t *testing.T) string {
+func (q *qemuTest) getSourceDiskImage(t *testing.T) string {
 	u, err := user.Current()
 	if err != nil {
 		t.Errorf("Error getting current user: %v", err)
 		os.Exit(1)
 	}
 
-	return path.Join(u.HomeDir, "workloads", "clear-24740-cloud.img")
+	diskImage := q.diskImage
+	if diskImage == "" {
+		diskImage = clearDiskImage
+	}
+	return path.Join(u.HomeDir, "workloads", diskImage)
 
 }
 
@@ -67,7 +71,7 @@ func getCloudInitPath(t *testing.T) string {
 	return strings.Join(tmp, "/")
 }
 
-func createCloudInitImage(t *testing.T) string {
+func (q *qemuTest) createCloudInitImage(t *testing.T) string {
 	cloudInitImageFile, err := ioutil.TempFile("", "nemu-test")
 	if err != nil {
 		t.Fatalf("Error creating temporary file for cloud init image: %v", err)
@@ -76,29 +80,56 @@ func createCloudInitImage(t *testing.T) string {
 	cloudInitImageFile.Truncate(2 * 1024 * 1024) // 2 MiB
 	cloudInitImageFile.Close()
 
-	cmd := exec.Command("mkfs.vfat", "-n", "config-2", cloudInitImagePath)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		t.Fatalf("Error creating fileystem for cloud init image: %v: %s", err, string(output))
+	cloudInit := q.cloudInit
+	if cloudInit == "" {
+		cloudInit = cloudInitClear
 	}
 
-	cmd = exec.Command("mcopy", "-oi", cloudInitImagePath, "-s", fmt.Sprintf("%s/clear/openstack", getCloudInitPath(t)), "::")
-	output, err = cmd.CombinedOutput()
-	if err != nil {
-		t.Fatalf("Error copying files for cloud init image: %v: %s", err, string(output))
+	if cloudInit == cloudInitClear {
+		cmd := exec.Command("mkfs.vfat", "-n", "config-2", cloudInitImagePath)
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("Error creating filesystem for cloud init image: %v: %s", err, string(output))
+		}
+
+		cmd = exec.Command("mcopy", "-oi", cloudInitImagePath, "-s", fmt.Sprintf("%s/clear/openstack", getCloudInitPath(t)), "::")
+		output, err = cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("Error copying files for cloud init image: %v: %s", err, string(output))
+		}
+	} else if cloudInit == cloudInitUbuntu {
+		cmd := exec.Command("mkfs.vfat", "-n", "cidata", cloudInitImagePath)
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("Error creating filesystem for cloud init image: %v: %s", err, string(output))
+		}
+
+		cmd = exec.Command("mcopy", "-oi", cloudInitImagePath, fmt.Sprintf("%s/ubuntu/user-data", getCloudInitPath(t)), "::")
+		output, err = cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("Error copying files for cloud init image: %v: %s", err, string(output))
+		}
+
+		cmd = exec.Command("mcopy", "-oi", cloudInitImagePath, fmt.Sprintf("%s/ubuntu/meta-data", getCloudInitPath(t)), "::")
+		output, err = cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("Error copying files for cloud init image: %v: %s", err, string(output))
+		}
+	} else {
+		t.Fatal("Unexpected cloud-init type")
 	}
 
 	return cloudInitImagePath
 }
 
-func createPrimaryDiskImage(t *testing.T) string {
+func (q *qemuTest) createPrimaryDiskImage(t *testing.T) string {
 	primaryDiskImageFile, err := ioutil.TempFile("", "nemu-test")
 	if err != nil {
 		t.Fatalf("Error creating temporary file for primary disk image: %v", err)
 	}
 	primaryDiskImagePath := primaryDiskImageFile.Name()
 
-	f, err := os.Open(getSourceDiskImage(t))
+	f, err := os.Open(q.getSourceDiskImage(t))
 	if err != nil {
 		t.Fatalf("Error opening source disk image: %v", err)
 	}
@@ -188,9 +219,9 @@ func (q *qemuTest) launchQemu(ctx context.Context, monitorSocketCh chan string, 
 	}
 	defer os.Remove(virtConsoleLogFile.Name())
 
-	primaryDiskImagePath := createPrimaryDiskImage(t)
+	primaryDiskImagePath := q.createPrimaryDiskImage(t)
 	defer os.Remove(primaryDiskImagePath)
-	cloudInitImagePath := createCloudInitImage(t)
+	cloudInitImagePath := q.createCloudInitImage(t)
 	defer os.Remove(cloudInitImagePath)
 
 	sshPortMutex.Lock()
@@ -278,12 +309,26 @@ func (q *qemuTest) launchQemu(ctx context.Context, monitorSocketCh chan string, 
 	}
 }
 
+type cloudInitType string
+
+const (
+	cloudInitClear  cloudInitType = "clear"
+	cloudInitUbuntu cloudInitType = "ubuntu"
+)
+
+const (
+	clearDiskImage  = "clear-24740-cloud.img"
+	ubuntuDiskImage = "xenial-server-cloudimg-amd64-uefi1.img"
+)
+
 type qemuTest struct {
-	qmp     *qemu.QMP
-	params  []string
-	doneCh  chan interface{}
-	machine string
-	sshPort uint16
+	qmp       *qemu.QMP
+	params    []string
+	doneCh    chan interface{}
+	machine   string
+	sshPort   uint16
+	cloudInit cloudInitType
+	diskImage string
 }
 
 func (q *qemuTest) startQemu(ctx context.Context, t *testing.T) error {
@@ -317,26 +362,48 @@ func (q *qemuTest) startQemu(ctx context.Context, t *testing.T) error {
 
 var machines = []string{"pc", "q35", "virt"}
 
+type distro struct {
+	image     string
+	cloudInit cloudInitType
+}
+
+var distros = []distro{
+	{
+		image:     ubuntuDiskImage,
+		cloudInit: cloudInitUbuntu,
+	},
+	{
+		image:     clearDiskImage,
+		cloudInit: cloudInitClear,
+	},
+}
+
 func TestShutdown(t *testing.T) {
 	t.Parallel()
 	for _, m := range machines {
 		t.Logf("Testing machine: %s", m)
-		q := qemuTest{
-			machine: m,
-		}
-		ctx, cancelFunc := context.WithTimeout(context.Background(), cancelTimeout)
-		err := q.startQemu(ctx, t)
-		if err != nil {
-			cancelFunc()
+
+		for _, d := range distros {
+			t.Logf("Testing with disk image: %s", d.image)
+			q := qemuTest{
+				machine:   m,
+				diskImage: d.image,
+				cloudInit: d.cloudInit,
+			}
+			ctx, cancelFunc := context.WithTimeout(context.Background(), cancelTimeout)
+			err := q.startQemu(ctx, t)
+			if err != nil {
+				cancelFunc()
+				<-q.doneCh
+				t.Fatalf("Error starting qemu: %v", err)
+			}
+
+			time.Sleep(time.Second * 15)
+			q.runCommandBySSH("sudo shutdown -h now", t)
+
 			<-q.doneCh
-			t.Fatalf("Error starting qemu: %v", err)
+			cancelFunc()
 		}
-
-		time.Sleep(time.Second * 15)
-		q.runCommandBySSH("sudo shutdown -h now", t)
-
-		<-q.doneCh
-		cancelFunc()
 	}
 }
 
@@ -344,24 +411,29 @@ func TestReboot(t *testing.T) {
 	t.Parallel()
 	for _, m := range machines {
 		t.Logf("Testing machine: %s", m)
-		q := qemuTest{
-			machine: m,
-		}
-		ctx, cancelFunc := context.WithTimeout(context.Background(), cancelTimeout)
-		err := q.startQemu(ctx, t)
-		if err != nil {
-			cancelFunc()
+		for _, d := range distros {
+			t.Logf("Testing with disk image: %s", d.image)
+			q := qemuTest{
+				machine:   m,
+				diskImage: d.image,
+				cloudInit: d.cloudInit,
+			}
+			ctx, cancelFunc := context.WithTimeout(context.Background(), cancelTimeout)
+			err := q.startQemu(ctx, t)
+			if err != nil {
+				cancelFunc()
+				<-q.doneCh
+				t.Fatalf("Error starting qemu: %v", err)
+			}
+
+			time.Sleep(time.Second * 15)
+			q.runCommandBySSH("sudo reboot", t)
+			time.Sleep(time.Second * 15)
+			q.runCommandBySSH("sudo shutdown -h now", t)
+
 			<-q.doneCh
-			t.Fatalf("Error starting qemu: %v", err)
+			cancelFunc()
 		}
-
-		time.Sleep(time.Second * 15)
-		q.runCommandBySSH("sudo reboot", t)
-		time.Sleep(time.Second * 15)
-		q.runCommandBySSH("sudo shutdown -h now", t)
-
-		<-q.doneCh
-		cancelFunc()
 	}
 }
 
