@@ -3,7 +3,7 @@ set -x
 
 GO_VERSION="1.10.3"
 CLEAR_VERSION=24740
-CLEAR_IMAGE=clear-$CLEAR_VERSION-cloud.img.xz
+CLEAR_IMAGE=clear-$CLEAR_VERSION-cloud.img
 WORKLOADS_DIR="$HOME/workloads"
 OVMF="OVMF.fd"
 
