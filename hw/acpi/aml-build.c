@@ -2279,7 +2279,7 @@ Aml *build_pci_segment_bridge(Aml *table, AcpiPciBus *pci_host)
     CrsRangeSet crs_range_set;
     Range *pci_hole64 = NULL;
     PCIBus *bus = NULL;
-    int root_bus_limit = 0xFF;
+    int root_bus_limit = 0x0;
     int i;
 
     bus = pci_host->pci_bus;

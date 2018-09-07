@@ -51,25 +51,23 @@
     OBJECT_CHECK(PCIVirtHost, (obj), TYPE_PCI_VIRT_HOST)
 
 #define PCI_VIRT_NUM_IRQS       4            /* TODO: MSI only */
-/* 256GB for now. Ideally it should be after the hotplug
- * and cold plug memory areas
- */
-//#define PCI_VIRT_PCIEXBAR_BASE  (0x4000000000) 
+
 //TODO: Till we fix DMI place it below the current bar base
+//Longer term this has to be calculated dynamically based
+//on the location of the segment
 #define PCI_VIRT_PCIEXBAR_BASE    (0x60000000)
 
-/* Will the scan logic fail if it does not see the full 256MB */
-/* Right now setup full 256 MB */
-#define PCI_VIRT_PCIEXBAR_SIZE    (0x10000000) /* 256M for bus 0 */
+//OPEN: Will the scan logic fail if it does not see the full 256MB
+//Allocate just enough for the scan of bus 0 to complete
+#define PCI_VIRT_PCIEXBAR_SIZE    (32*8*4096)
 
-//TODO: We may not need it to be this large
-// we need just enough to hold one device worth of BARs
-// Can we just use the main hole?
-// TODO: Duplicated define. Refactor it
-//#define DEFAULT_PCI_HOLE64_SIZE (1ULL << 35) 
 //TODO: Place it right after the main PCI hole, pick a safe number
+//for now that does not conflict with segment 0
 #define PCI_VIRT_HOLE64_START_BASE 0x900000000ULL 
-#define DEFAULT_PCI_HOLE64_SIZE    (0x10000000) /* 256M for now */
+
+//Define this to be the upper bound of what is required for PCI devices
+//#define DEFAULT_PCI_HOLE64_SIZE (1ULL << 35) 
+#define DEFAULT_PCI_HOLE64_SIZE    (1ULL << 22)
 
 
 typedef struct PCIVirtHost {
@@ -287,7 +285,7 @@ static void pci_virt_host_class_init(ObjectClass *klass, void *data)
 
 static const TypeInfo pci_virt_host_info = {
     .name          = TYPE_PCI_VIRT_HOST,
-    .parent        = TYPE_PCIE_HOST_BRIDGE,
+    .parent        = TYPE_PCIE_HOST_BRIDGE, //TODO: Can we use something more generic
     .instance_size = sizeof(PCIVirtHost),
     .instance_init = pci_virt_initfn,
     .class_init    = pci_virt_host_class_init,
@@ -298,7 +296,9 @@ static void pci_virt_device_class_init(ObjectClass *klass, void *data)
     DeviceClass *dc = DEVICE_CLASS(klass);
     PCIDeviceClass *k = PCI_DEVICE_CLASS(klass);
 
-    k->class_id = PCI_CLASS_BRIDGE_HOST; //TODO: We do not want a bridge
+    //TODO: We do not want a bridge
+    //Will linux register a bus without seeing a bridge
+    k->class_id = PCI_CLASS_BRIDGE_HOST; 
     dc->desc = "Virt Host bridge"; 
 
     // TODO: Use different one to GPEX?
