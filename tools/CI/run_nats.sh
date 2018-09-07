@@ -41,6 +41,11 @@ fi
 
 if [ ! -f "$WORKLOADS_DIR"/"$UBUNTU_IMAGE" ]; then
    wget -nv https://cloud-images.ubuntu.com/xenial/current/xenial-server-cloudimg-amd64-uefi1.img || exit $?
+   sudo apt-get install -y libguestfs-tools
+   sudo mkdir -p /tmp/mnt
+   sudo guestmount -i -a  "$WORKLOADS_DIR"/"$UBUNTU_IMAGE" /tmp/mnt/
+   sudo sed -i "s/console=tty1 console=ttyS0/console=tty1 console=ttyS0 console=hvc0/" /tmp/mnt/boot/grub/grub.cfg
+   sudo umount /tmp/mnt
 fi
 
 rm -rf $OVMF
@@ -48,8 +53,11 @@ OVMF_URL=$(curl --silent https://api.github.com/repos/rbradford/edk2/releases/la
 wget -nv $OVMF_URL || exit $?
 popd
 
-sudo chmod a+rw /dev/kvm
-
+sudo adduser $USER kvm
 pushd $SRCDIR/tools/CI/nats
+newgrp kvm << EOF
 go test -v -timeout 20m -parallel $((`nproc`/2)) || exit $?
+EOF
+RES=$?
 popd
+exit $RES
