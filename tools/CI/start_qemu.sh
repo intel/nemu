@@ -33,7 +33,7 @@ SSH_PORT=2222
 VSOCK="true"
 VM_IMAGE_TYPE="raw"
 SIMPLE_LAUNCH='false'
-CINIT="$SCRIPT_DIR"/cloud-init
+CINIT="$SCRIPT_DIR"/cloud-init/clear
 PLATFORM='x86_64_pc'
 QEMU_PID="qemu.pid"
 
