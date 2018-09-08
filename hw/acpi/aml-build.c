@@ -2711,7 +2711,9 @@ void acpi_dsdt_add_pci_bus_segment(Aml *dsdt, AcpiPciBus *pci_host)
     aml_append(dev, aml_name_decl("_ADR", aml_int(0)));
     //TODO: Indicate the right segment number, hardcode for now
     aml_append(dev, aml_name_decl("_SEG", aml_int(1)));
-    aml_append(dev, aml_name_decl("_UID", aml_int(1)));
+    //TODO: This is supposed to be unique if multiple instances
+    //exist with the same HID/CID, match it to the segment
+    aml_append(dev, aml_name_decl("_UID", aml_int(2)));
     aml_append(dev, aml_name_decl("SUPP", aml_int(0)));
     aml_append(dev, aml_name_decl("CTRL", aml_int(0)));
     aml_append(dev, build_osc_method(0x1F));
