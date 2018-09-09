@@ -152,17 +152,17 @@ func (q *qemuTest) runCommandBySSH(command string, t *testing.T) string {
 
 	var client *ssh.Client
 	var err error
-	for i := 1; i <= 3; i++ {
+	for i := 1; i <= 5; i++ {
 		client, err = ssh.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", q.sshPort), config)
 		if err != nil {
-			if i == 3 {
+			if i == 5 {
 				t.Errorf("Failed to dial: %v", err)
 				return ""
 			}
 		} else {
 			break
 		}
-		time.Sleep(5 * time.Second)
+		time.Sleep(10 * time.Second)
 	}
 
 	session, err := client.NewSession()
