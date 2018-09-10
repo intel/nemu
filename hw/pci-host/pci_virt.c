@@ -247,8 +247,8 @@ PCIBus *pci_virt_init(MemoryRegion *address_space_mem,
     pc_pci_as_mapping_init(OBJECT(dev), address_space_mem, pci_address_space);
 
     //Directly place the network device on the bus???
-    //pci_create_simple(pci->bus, 0, TYPE_PCI_VIRT_DEVICE);
-    pci_create_simple(pci->bus, 0, TYPE_VIRTIO_NET_PCI);
+    pci_create_simple(pci->bus, 0, TYPE_PCI_VIRT_DEVICE);
+    //pci_create_simple(pci->bus, 0, TYPE_VIRTIO_NET_PCI);
     return pci->bus;
 }
 
