@@ -55,7 +55,7 @@ static void acpi_dsdt_add_memory_hotplug(MachineState *ms, Aml *dsdt)
 {
     uint32_t nr_mem = ms->ram_slots;
 
-    build_memory_hotplug_aml(dsdt, nr_mem, "\\_SB.PCI1", NULL);
+    build_memory_hotplug_aml(dsdt, nr_mem, "\\_SB", NULL);
 }
 
 static void acpi_dsdt_add_cpus(MachineState *ms, Aml *dsdt, Aml *scope, int smp_cpus, AcpiConfiguration *conf)
@@ -66,7 +66,7 @@ static void acpi_dsdt_add_cpus(MachineState *ms, Aml *dsdt, Aml *scope, int smp_
     };
 
     build_cpus_aml(dsdt, ms, opts, conf->cpu_hotplug_io_base,
-                   "\\_SB.PCI1", NULL);
+                   "\\_SB", NULL);
 }
 
 static void acpi_dsdt_add_ged(Aml *scope, AcpiConfiguration *conf)
