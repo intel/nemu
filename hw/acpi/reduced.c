@@ -101,7 +101,7 @@ static void build_dsdt(MachineState *ms, GArray *table_data, BIOSLinker *linker,
 
     //TODO: Assumes single PCI bus
     scope = aml_scope("\\_SB");
-    acpi_dsdt_add_pci_bus_segment(scope, pci_host_1);
+    acpi_dsdt_add_pci_bus_segment(dsdt, pci_host_1);
     acpi_dsdt_add_pci_bus(dsdt, pci_host);
     acpi_dsdt_add_memory_hotplug(ms, dsdt);
     acpi_dsdt_add_cpus(ms, dsdt, scope, smp_cpus, conf);
