@@ -2,6 +2,10 @@
 common-obj-$(CONFIG_USB_CORE) += core.o combined-packet.o bus.o libhw.o
 common-obj-$(CONFIG_USB) += desc.o desc-msos.o
 
+ifneq ($(CONFIG_USB_CORE),y)
+common-obj-y += stub.o
+endif
+
 # usb host adapters
 common-obj-$(CONFIG_USB_UHCI) += hcd-uhci.o
 common-obj-$(CONFIG_USB_OHCI) += hcd-ohci.o
