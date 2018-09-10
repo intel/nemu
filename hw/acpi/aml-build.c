@@ -2277,6 +2277,7 @@ Aml *build_pci_segment_bridge(Aml *table, AcpiPciBus *pci_host)
     CrsRangeEntry *entry;
     Aml *scope, *dev, *crs;
     CrsRangeSet crs_range_set;
+    Range *pci_hole = NULL;
     Range *pci_hole64 = NULL;
     PCIBus *bus = NULL;
     int root_bus_limit = 0x0;
@@ -2284,6 +2285,7 @@ Aml *build_pci_segment_bridge(Aml *table, AcpiPciBus *pci_host)
 
     bus = pci_host->pci_bus;
     assert(bus);
+    pci_hole = pci_host->pci_hole;
     pci_hole64 = pci_host->pci_hole64;
 
     crs_range_set_init(&crs_range_set);
@@ -2329,6 +2331,19 @@ Aml *build_pci_segment_bridge(Aml *table, AcpiPciBus *pci_host)
         aml_word_bus_number(AML_MIN_FIXED, AML_MAX_FIXED, AML_POS_DECODE,
                             0x0000, 0x0, root_bus_limit,
                             0x0000, root_bus_limit + 1));
+
+    /* set the mem region 1 in pci host bridge */
+    crs_replace_with_free_ranges(crs_range_set.mem_ranges,
+                                 range_lob(pci_hole),
+                                 range_upb(pci_hole));
+    for (i = 0; i < crs_range_set.mem_ranges->len; i++) {
+        entry = g_ptr_array_index(crs_range_set.mem_ranges, i);
+        aml_append(crs,
+            aml_dword_memory(AML_POS_DECODE, AML_MIN_FIXED, AML_MAX_FIXED,
+                             AML_NON_CACHEABLE, AML_READ_WRITE,
+                             0, entry->base, entry->limit,
+                             0, entry->limit - entry->base + 1));
+    }
     
     /* set the mem region 2 in pci host bridge */
     if (!range_is_empty(pci_hole64)) {

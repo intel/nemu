@@ -56,6 +56,7 @@
 //Longer term this has to be calculated dynamically based
 //on the location of the segment
 #define PCI_VIRT_PCIEXBAR_BASE    (0x60000000)
+#define PCI_VIRT_HOLE_START_BASE  (0x70000000)
 
 //OPEN: Will the scan logic fail if it does not see the full 256MB
 //Allocate just enough for the scan of bus 0 to complete
@@ -106,8 +107,13 @@ static void pci_virt_get_pci_hole_start(Object *obj, Visitor *v,
                                         const char *name, void *opaque,
                                         Error **errp)
 {
-    //TODO: We do not want to support any 32 bit BARs
-    uint32_t value = 0;
+    PCIVirtHost *s = PCI_VIRT_HOST(obj);
+    uint64_t val64;
+    uint32_t value;
+
+    val64 = range_is_empty(&s->pci_hole) ? 0 : range_lob(&s->pci_hole);
+    value = val64;
+    assert(value == val64);
     visit_type_uint32(v, name, &value, errp);
 }
 
@@ -115,8 +121,13 @@ static void pci_virt_get_pci_hole_end(Object *obj, Visitor *v,
                                       const char *name, void *opaque,
                                       Error **errp)
 {
-    //TODO: We do not want to support any 32 bit BARs
-    uint32_t value = 0;
+    PCIVirtHost *s = PCI_VIRT_HOST(obj);
+    uint64_t val64;
+    uint32_t value;
+
+    val64 = range_is_empty(&s->pci_hole) ? 0 : range_upb(&s->pci_hole) + 1;
+    value = val64;
+    assert(value == val64);
     visit_type_uint32(v, name, &value, errp);
 }
 
@@ -227,9 +238,10 @@ PCIBus *pci_virt_init(MemoryRegion *address_space_mem,
     object_property_add_child(qdev_get_machine(), "pcivirt", OBJECT(dev), NULL);
     qdev_init_nofail(dev);
 
-    //TODO: We do not have a hole in the lower 4GB
     pci_virt = PCI_VIRT_HOST(dev);
-    range_set_bounds(&pci_virt->pci_hole, 0, 0);
+    range_set_bounds(&pci_virt->pci_hole,
+                    PCI_VIRT_HOLE_START_BASE,
+                    PCI_VIRT_HOLE_START_BASE + PCI_VIRT_PCIEXBAR_SIZE);
 
     
     range_set_bounds(&pci_virt->pci_hole64, PCI_VIRT_HOLE64_START_BASE,
