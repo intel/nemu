@@ -359,6 +359,10 @@ static void virt_machine_init(void)
 }
 type_init(virt_machine_init);
 
+static void virt_3_0_instance_init(Object *obj)
+{
+}
+
 static void virt_2_12_instance_init(Object *obj)
 {
 }
@@ -765,9 +769,14 @@ static void virt_machine_class_init(MachineClass *mc)
     mc->firmware_build_methods.acpi.slit = build_slit;
 }
 
+static void virt_3_0_machine_class_init(MachineClass *mc)
+{
+    virt_machine_class_init(mc);
+}
+DEFINE_VIRT_MACHINE_AS_LATEST(3, 0)
+
 static void virt_2_12_machine_class_init(MachineClass *mc)
 {
     virt_machine_class_init(mc);
-    mc->alias = "virt";
 }
-DEFINE_VIRT_MACHINE_AS_LATEST(2, 12)
+DEFINE_VIRT_MACHINE(2, 12)
