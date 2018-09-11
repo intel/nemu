@@ -8,3 +8,5 @@ obj-$(CONFIG_VFIO_XGMAC) += calxeda-xgmac.o
 obj-$(CONFIG_VFIO_AMD_XGBE) += amd-xgbe.o
 obj-$(CONFIG_SOFTMMU) += spapr.o
 endif
+
+obj-$(call lnot,$(CONFIG_VFIO_VGA))  += stub.o
