@@ -769,9 +769,17 @@ static void virt_machine_class_init(MachineClass *mc)
     mc->firmware_build_methods.acpi.slit = build_slit;
 }
 
+#define VIRT_COMPAT_3_0 \
+    {\
+            .driver   = "apic-common",\
+            .property = "vapic",\
+            .value    = "off",\
+    },
+
 static void virt_3_0_machine_class_init(MachineClass *mc)
 {
     virt_machine_class_init(mc);
+    SET_MACHINE_COMPAT(mc, VIRT_COMPAT_3_0);
 }
 DEFINE_VIRT_MACHINE_AS_LATEST(3, 0)
 
