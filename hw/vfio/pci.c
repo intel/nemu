@@ -32,6 +32,7 @@
 #include "sysemu/kvm.h"
 #include "sysemu/sysemu.h"
 #include "pci.h"
+#include "quirks/pci.h"
 #include "trace.h"
 #include "qapi/error.h"
 
