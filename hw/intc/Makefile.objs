@@ -22,6 +22,10 @@ common-obj-$(CONFIG_ARM_GIC) += arm_gicv3_its_common.o
 common-obj-$(CONFIG_OPENPIC) += openpic.o
 common-obj-y += intc.o
 
+ifeq ($(CONFIG_APIC),y)
+common-obj-$(call lnot,$(CONFIG_I8259)) += stub.o
+endif
+
 obj-$(CONFIG_APIC) += apic.o apic_common.o
 obj-$(CONFIG_ARM_GIC_KVM) += arm_gic_kvm.o
 obj-$(call land,$(CONFIG_ARM_GIC_KVM),$(TARGET_AARCH64)) += arm_gicv3_kvm.o
