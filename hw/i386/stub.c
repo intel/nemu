@@ -10,6 +10,7 @@
 
 #include "qemu/osdep.h"
 #include "multiboot.h"
+#include "hw/i386/apic_internal.h"
 
 int load_multiboot(FWCfgState *fw_cfg,
                    FILE *f,
@@ -20,4 +21,9 @@ int load_multiboot(FWCfgState *fw_cfg,
                    uint8_t *header)
 {
     return 0;
+}
+
+void vapic_report_tpr_access(DeviceState *dev, CPUState *cs, target_ulong ip,
+                             TPRAccess access)
+{
 }
