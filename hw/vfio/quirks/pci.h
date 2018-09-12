@@ -14,6 +14,9 @@
 
 #include "hw/vfio/pci.h"
 
+bool vfio_pci_is(VFIOPCIDevice *vdev, uint32_t vendor, uint32_t device);
+bool vfio_is_vga(VFIOPCIDevice *vdev);
+VFIOQuirk *vfio_quirk_alloc(int nr_mem);
 bool vfio_blacklist_opt_rom(VFIOPCIDevice *vdev);
 void vfio_vga_quirk_setup(VFIOPCIDevice *vdev);
 void vfio_vga_quirk_exit(VFIOPCIDevice *vdev);
