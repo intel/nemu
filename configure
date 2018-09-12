@@ -478,6 +478,7 @@ vxhs=""
 libxml2=""
 docker="no"
 debug_mutex="no"
+wdt="yes"
 
 # cross compilers defaults, can be overridden with --cross-cc-ARCH
 cross_cc_aarch64="aarch64-linux-gnu-gcc"
@@ -1446,6 +1447,10 @@ for opt do
   --enable-debug-mutex) debug_mutex=yes
   ;;
   --disable-debug-mutex) debug_mutex=no
+  ;;
+  --enable-wdt) wdt=yes
+  ;;
+  --disable-wdt) wdt=no
   ;;
   *)
       echo "ERROR: unknown option $opt"
@@ -6035,6 +6040,7 @@ echo "replication support $replication"
 echo "VxHS block device $vxhs"
 echo "capstone          $capstone"
 echo "docker            $docker"
+echo "watchdog          $wdt"
 
 if test "$sdl_too_old" = "yes"; then
 echo "-> Your SDL version is too old - please upgrade to have SDL support"
@@ -7397,6 +7403,10 @@ fi
 
 if test "$ccache_cpp2" = "yes"; then
   echo "export CCACHE_CPP2=y" >> $config_host_mak
+fi
+
+if test "$wdt" = "yes"; then
+echo "CONFIG_WDT=y" >> $config_host_mak
 fi
 
 # build tree in object directory in case the source is not in the current directory
