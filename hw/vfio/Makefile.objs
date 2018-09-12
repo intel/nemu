@@ -1,6 +1,8 @@
 ifeq ($(CONFIG_LINUX), y)
+devices-dirs-$(CONFIG_SOFTMMU) += quirks/
+obj-y += quirks/
 obj-$(CONFIG_SOFTMMU) += common.o
-obj-$(CONFIG_PCI) += pci.o pci-quirks.o
+obj-$(CONFIG_PCI) += pci.o
 obj-$(CONFIG_VFIO_VGA) += display.o
 obj-$(CONFIG_VFIO_CCW) += ccw.o
 obj-$(CONFIG_SOFTMMU) += platform.o
