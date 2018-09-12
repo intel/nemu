@@ -175,24 +175,9 @@ void vfio_pci_write_config(PCIDevice *pdev,
 uint64_t vfio_vga_read(void *opaque, hwaddr addr, unsigned size);
 void vfio_vga_write(void *opaque, hwaddr addr, uint64_t data, unsigned size);
 
-bool vfio_blacklist_opt_rom(VFIOPCIDevice *vdev);
-void vfio_vga_quirk_setup(VFIOPCIDevice *vdev);
-void vfio_vga_quirk_exit(VFIOPCIDevice *vdev);
-void vfio_vga_quirk_finalize(VFIOPCIDevice *vdev);
-void vfio_bar_quirk_setup(VFIOPCIDevice *vdev, int nr);
-void vfio_bar_quirk_exit(VFIOPCIDevice *vdev, int nr);
-void vfio_bar_quirk_finalize(VFIOPCIDevice *vdev, int nr);
-void vfio_setup_resetfn_quirk(VFIOPCIDevice *vdev);
-int vfio_add_virt_caps(VFIOPCIDevice *vdev, Error **errp);
-void vfio_quirk_reset(VFIOPCIDevice *vdev);
-
 extern const PropertyInfo qdev_prop_nv_gpudirect_clique;
 
 int vfio_populate_vga(VFIOPCIDevice *vdev, Error **errp);
-
-int vfio_pci_igd_opregion_init(VFIOPCIDevice *vdev,
-                               struct vfio_region_info *info,
-                               Error **errp);
 
 void vfio_display_reset(VFIOPCIDevice *vdev);
 int vfio_display_probe(VFIOPCIDevice *vdev, Error **errp);
