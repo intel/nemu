@@ -294,7 +294,9 @@
 #
 # Since: 2.11
 ##
-{ 'command': 'watchdog-set-action', 'data' : {'action': 'WatchdogAction'} }
+{ 'command': 'watchdog-set-action',
+  'data' : {'action': 'WatchdogAction'},
+  'if': 'defined(CONFIG_WDT)' }
 
 ##
 # @GUEST_PANICKED:

@@ -487,6 +487,7 @@ docker="no"
 debug_mutex="no"
 libpmem=""
 libudev="no"
+wdt="yes"
 
 # cross compilers defaults, can be overridden with --cross-cc-ARCH
 cross_cc_aarch64="aarch64-linux-gnu-gcc"
@@ -1502,6 +1503,10 @@ for opt do
   --enable-libpmem) libpmem=yes
   ;;
   --disable-libpmem) libpmem=no
+  ;;
+  --enable-wdt) wdt=yes
+  ;;
+  --disable-wdt) wdt=no
   ;;
   *)
       echo "ERROR: unknown option $opt"
@@ -6135,6 +6140,7 @@ echo "capstone          $capstone"
 echo "docker            $docker"
 echo "libpmem support   $libpmem"
 echo "libudev           $libudev"
+echo "watchdog          $wdt"
 
 if test "$sdl_too_old" = "yes"; then
 echo "-> Your SDL version is too old - please upgrade to have SDL support"
@@ -7529,6 +7535,10 @@ fi
 
 if test "$ccache_cpp2" = "yes"; then
   echo "export CCACHE_CPP2=y" >> $config_host_mak
+fi
+
+if test "$wdt" = "yes"; then
+echo "CONFIG_WDT=y" >> $config_host_mak
 fi
 
 # If we're using a separate build tree, set it up now.
