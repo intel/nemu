@@ -17,3 +17,9 @@ obj-y += pci-nvidia.o
 else
 obj-y += pci-nvidia-stub.o
 endif
+
+ifeq ($(CONFIG_VFIO_PCI_QUIRKS_REALTEK), y)
+obj-y += pci-realtek.o
+else
+obj-y += pci-realtek-stub.o
+endif
