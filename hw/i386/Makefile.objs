@@ -13,4 +13,9 @@ obj-$(CONFIG_VMPORT) += vmport.o
 obj-$(CONFIG_VMMOUSE) += vmmouse.o
 
 obj-$(CONFIG_KVM_VAPIC) += kvmvapic.o
+
+ifeq ($(call lor,$(CONFIG_X86_PIIX),$(CONFIG_X86_Q35)),y)
 obj-y += acpi-build.o
+endif
+
+obj-y += acpi-build-common.o
