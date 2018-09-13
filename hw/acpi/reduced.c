@@ -75,7 +75,7 @@ static void acpi_dsdt_add_ged(Aml *scope, AcpiConfiguration *conf)
         return;
     }
 
-    build_ged_aml(scope, GED_DEVICE, conf->ged_events, conf->ged_events_size);
+    build_ged_aml(scope, "\\_SB."GED_DEVICE, conf->ged_events, conf->ged_events_size);
 }
 
 static void acpi_dsdt_add_sleep_state(Aml *scope)
@@ -102,7 +102,7 @@ static void build_dsdt(MachineState *ms, GArray *table_data, BIOSLinker *linker,
     acpi_dsdt_add_pci_bus(dsdt, pci_host);
     acpi_dsdt_add_memory_hotplug(ms, dsdt);
     acpi_dsdt_add_cpus(ms, dsdt, scope, smp_cpus, conf);
-    acpi_dsdt_add_ged(scope, conf);
+    acpi_dsdt_add_ged(dsdt, conf);
     acpi_dsdt_add_sleep_state(scope);
 
     aml_append(dsdt, scope);
@@ -349,7 +349,6 @@ void build_ged_aml(Aml *table, const char *name,
     Aml *zero = aml_int(0);
     Aml *one = aml_int(1);
     Aml *dev = aml_device("%s", name);
-    Aml *scope = aml_scope("_SB");
     Aml *has_irq = aml_local(0);
     Aml *while_ctx;
     uint8_t i;
@@ -447,7 +446,6 @@ void build_ged_aml(Aml *table, const char *name,
     aml_append(dev, aml_name_decl("_UID", zero));
     aml_append(dev, aml_name_decl("_CRS", crs));
     aml_append(dev, evt);
-    aml_append(scope, dev);
 
-    aml_append(table, scope);
+    aml_append(table, dev);
 }
