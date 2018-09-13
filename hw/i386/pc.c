@@ -88,6 +88,7 @@
 #else
 #define DPRINTF(fmt, ...)
 #endif
+extern qemu_irq ferr_irq;
 
 void gsi_handler(void *opaque, int n, int level)
 {
@@ -110,20 +111,6 @@ static uint64_t ioport80_read(void *opaque, hwaddr addr, unsigned size)
     return 0xffffffffffffffffULL;
 }
 
-/* MSDOS compatibility mode FPU exception support */
-static qemu_irq ferr_irq;
-
-void pc_register_ferr_irq(qemu_irq irq)
-{
-    ferr_irq = irq;
-}
-
-/* XXX: add IGNNE support */
-void cpu_set_ferr(CPUX86State *s)
-{
-    qemu_irq_raise(ferr_irq);
-}
-
 static void ioportF0_write(void *opaque, hwaddr addr, uint64_t data,
                            unsigned size)
 {
@@ -133,33 +120,6 @@ static void ioportF0_write(void *opaque, hwaddr addr, uint64_t data,
 static uint64_t ioportF0_read(void *opaque, hwaddr addr, unsigned size)
 {
     return 0xffffffffffffffffULL;
-}
-
-/* TSC handling */
-uint64_t cpu_get_tsc(CPUX86State *env)
-{
-    return cpu_get_ticks();
-}
-
-/* IRQ handling */
-int cpu_get_pic_interrupt(CPUX86State *env)
-{
-    X86CPU *cpu = x86_env_get_cpu(env);
-    int intno;
-
-    if (!kvm_irqchip_in_kernel()) {
-        intno = apic_get_interrupt(cpu->apic_state);
-        if (intno >= 0) {
-            return intno;
-        }
-        /* read the irq from the PIC */
-        if (!apic_accept_pic_intr(cpu->apic_state)) {
-            return -1;
-        }
-    }
-
-    intno = pic_read_irq(isa_pic);
-    return intno;
 }
 
 static void pic_irq_request(void *opaque, int irq, int level)
@@ -609,14 +569,6 @@ static void handle_a20_line_change(void *opaque, int irq, int level)
     x86_cpu_set_a20(cpu, level);
 }
 
-/* Enables contiguous-apic-ID mode, for compatibility */
-bool compat_apic_id_mode;
-
-void enable_compat_apic_id_mode(void)
-{
-    compat_apic_id_mode = true;
-}
-
 #define NE2000_NB_MAX 6
 
 static const int ne2000_io[NE2000_NB_MAX] = { 0x300, 0x320, 0x340, 0x360,
@@ -632,16 +584,6 @@ void pc_init_ne2k_isa(ISABus *bus, NICInfo *nd)
     isa_ne2000_init(bus, ne2000_io[nb_ne2k],
                     ne2000_irq[nb_ne2k], nd);
     nb_ne2k++;
-}
-
-DeviceState *cpu_get_current_apic(void)
-{
-    if (current_cpu) {
-        X86CPU *cpu = X86_CPU(current_cpu);
-        return cpu->apic_state;
-    } else {
-        return NULL;
-    }
 }
 
 void pc_acpi_smi_interrupt(void *opaque, int irq, int level)
@@ -764,15 +706,6 @@ void pc_guest_info_init(PCMachineState *pcms)
 
     pcms->machine_done.notify = pc_machine_done;
     qemu_add_machine_init_done_notifier(&pcms->machine_done);
-}
-
-/* setup pci memory address space mapping into system address space */
-void pc_pci_as_mapping_init(Object *owner, MemoryRegion *system_memory,
-                            MemoryRegion *pci_address_space)
-{
-    /* Set to lower priority than RAM */
-    memory_region_add_subregion_overlap(system_memory, 0x0,
-                                        pci_address_space, -1);
 }
 
 void pc_acpi_init(const char *default_dsdt)
@@ -1614,31 +1547,6 @@ static void pc_machine_set_vmport(Object *obj, Visitor *v, const char *name,
     PCMachineState *pcms = PC_MACHINE(obj);
 
     visit_type_OnOffAuto(v, name, &pcms->vmport, errp);
-}
-
-bool pc_machine_is_smm_enabled(PCMachineState *pcms)
-{
-    bool smm_available = false;
-
-    if (pcms->smm == ON_OFF_AUTO_OFF) {
-        return false;
-    }
-
-    if (tcg_enabled() || qtest_enabled()) {
-        smm_available = true;
-    } else if (kvm_enabled()) {
-        smm_available = kvm_has_smm();
-    }
-
-    if (smm_available) {
-        return true;
-    }
-
-    if (pcms->smm == ON_OFF_AUTO_ON) {
-        error_report("System Management Mode not supported by this hypervisor.");
-        exit(1);
-    }
-    return false;
 }
 
 static void pc_machine_get_smm(Object *obj, Visitor *v, const char *name,
