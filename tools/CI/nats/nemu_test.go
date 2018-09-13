@@ -309,18 +309,6 @@ func (q *qemuTest) launchQemu(ctx context.Context, monitorSocketCh chan string, 
 	}
 }
 
-type cloudInitType string
-
-const (
-	cloudInitClear  cloudInitType = "clear"
-	cloudInitUbuntu cloudInitType = "ubuntu"
-)
-
-const (
-	clearDiskImage  = "clear-24950-cloud.img"
-	ubuntuDiskImage = "xenial-server-cloudimg-amd64-uefi1.img"
-)
-
 type qemuTest struct {
 	qmp       *qemu.QMP
 	params    []string
@@ -360,146 +348,45 @@ func (q *qemuTest) startQemu(ctx context.Context, t *testing.T) error {
 	return nil
 }
 
-var machines = []string{"pc", "q35", "virt"}
-
-type distro struct {
-	image     string
-	cloudInit cloudInitType
+func testShutdown(ctx context.Context, q *qemuTest, t *testing.T) {
+	time.Sleep(time.Second * 15)
+	q.runCommandBySSH("sudo shutdown -h now", t)
 }
 
-var distros = []distro{
-	{
-		image:     ubuntuDiskImage,
-		cloudInit: cloudInitUbuntu,
-	},
-	{
-		image:     clearDiskImage,
-		cloudInit: cloudInitClear,
-	},
+func testReboot(ctx context.Context, q *qemuTest, t *testing.T) {
+	time.Sleep(time.Second * 15)
+	q.runCommandBySSH("sudo reboot", t)
+	time.Sleep(time.Second * 15)
+	q.runCommandBySSH("sudo shutdown -h now", t)
 }
 
-func TestShutdown(t *testing.T) {
-	t.Parallel()
-	for _, m := range machines {
-		t.Logf("Testing machine: %s", m)
-
-		for _, d := range distros {
-			t.Logf("Testing with disk image: %s", d.image)
-			q := qemuTest{
-				machine:   m,
-				diskImage: d.image,
-				cloudInit: d.cloudInit,
-			}
-			ctx, cancelFunc := context.WithTimeout(context.Background(), cancelTimeout)
-			err := q.startQemu(ctx, t)
-			if err != nil {
-				cancelFunc()
-				<-q.doneCh
-				t.Fatalf("Error starting qemu: %v", err)
-			}
-
-			time.Sleep(time.Second * 15)
-			q.runCommandBySSH("sudo shutdown -h now", t)
-
-			<-q.doneCh
-			cancelFunc()
-		}
-	}
-}
-
-func TestReboot(t *testing.T) {
-	t.Parallel()
-	for _, m := range machines {
-		t.Logf("Testing machine: %s", m)
-		for _, d := range distros {
-			t.Logf("Testing with disk image: %s", d.image)
-			q := qemuTest{
-				machine:   m,
-				diskImage: d.image,
-				cloudInit: d.cloudInit,
-			}
-			ctx, cancelFunc := context.WithTimeout(context.Background(), cancelTimeout)
-			err := q.startQemu(ctx, t)
-			if err != nil {
-				cancelFunc()
-				<-q.doneCh
-				t.Fatalf("Error starting qemu: %v", err)
-			}
-
-			time.Sleep(time.Second * 15)
-			q.runCommandBySSH("sudo reboot", t)
-			time.Sleep(time.Second * 15)
-			q.runCommandBySSH("sudo shutdown -h now", t)
-
-			<-q.doneCh
-			cancelFunc()
-		}
-	}
-}
-
-func TestCheckAcpiTables(t *testing.T) {
-	t.Parallel()
+func testCheckAcpiTables(ctx context.Context, q *qemuTest, t *testing.T) {
 	tableCounts := map[string]int{
 		"pc":   8,
 		"q35":  9,
 		"virt": 8,
 	}
-	for _, m := range machines {
-		t.Logf("Testing machine: %s", m)
-		q := qemuTest{
-			machine: m,
-		}
-		ctx, cancelFunc := context.WithTimeout(context.Background(), cancelTimeout)
-		err := q.startQemu(ctx, t)
-		if err != nil {
-			cancelFunc()
-			<-q.doneCh
-			t.Fatalf("Error starting qemu: %v", err)
-		}
+	time.Sleep(time.Second * 15)
+	dmesgOutput := q.runCommandBySSH("sudo dmesg", t)
 
-		time.Sleep(time.Second * 15)
-		dmesgOutput := q.runCommandBySSH("sudo dmesg", t)
+	r := regexp.MustCompile("ACPI:.*BOCHS.*")
+	matches := r.FindAllStringIndex(dmesgOutput, -1)
 
-		r := regexp.MustCompile("ACPI:.*BOCHS.*")
-		matches := r.FindAllStringIndex(dmesgOutput, -1)
-
-		if len(matches) != tableCounts[m] {
-			t.Errorf("Unexpected number of ACPI tables from QEMU: %v", len(matches))
-			t.Logf("\n\n==== dmesg output: ===\n\n")
-			t.Log(dmesgOutput)
-		}
-
-		time.Sleep(time.Second * 15)
-		q.runCommandBySSH("sudo shutdown -h now", t)
-
-		<-q.doneCh
-		cancelFunc()
+	if len(matches) != tableCounts[q.machine] {
+		t.Errorf("Unexpected number of ACPI tables from QEMU: %v", len(matches))
+		t.Logf("\n\n==== dmesg output: ===\n\n")
+		t.Log(dmesgOutput)
 	}
+
+	time.Sleep(time.Second * 15)
+	q.runCommandBySSH("sudo shutdown -h now", t)
 }
 
-func TestQMPQuit(t *testing.T) {
-	t.Parallel()
-	for _, m := range machines {
-		t.Logf("Testing machine: %s", m)
-		q := qemuTest{
-			machine: m,
-		}
-		ctx, cancelFunc := context.WithTimeout(context.Background(), cancelTimeout)
-		err := q.startQemu(ctx, t)
-		if err != nil {
-			cancelFunc()
-			<-q.doneCh
-			t.Fatalf("Error starting qemu: %v", err)
-		}
-
-		time.Sleep(time.Second * 15)
-		err = q.qmp.ExecuteQuit(ctx)
-		if err != nil {
-			t.Errorf("Error quiting via QMP: %v", err)
-		}
-
-		<-q.doneCh
-		cancelFunc()
+func testQMPQuit(ctx context.Context, q *qemuTest, t *testing.T) {
+	time.Sleep(time.Second * 15)
+	err := q.qmp.ExecuteQuit(ctx)
+	if err != nil {
+		t.Errorf("Error quiting via QMP: %v", err)
 	}
 }
 
@@ -512,89 +399,177 @@ func (q *qemuTest) getTotalMemory(t *testing.T) int {
 	return mem
 }
 
-func TestMemoryHotplug(t *testing.T) {
-	t.Parallel()
-	for _, m := range machines {
-		t.Logf("Testing machine: %s", m)
+func testMemoryHotplug(ctx context.Context, q *qemuTest, t *testing.T) {
+	addedMemoryMiB := 512
+	beforeMem := q.getTotalMemory(t)
+	err := q.qmp.ExecHotplugMemory(ctx, "memory-backend-ram", "memslot1", "", addedMemoryMiB)
+	if err != nil {
+		t.Errorf("Error adding memory to guest: %v", err)
+	}
+	afterMem := q.getTotalMemory(t)
 
-		q := qemuTest{
-			machine: m,
-		}
-		ctx, cancelFunc := context.WithTimeout(context.Background(), cancelTimeout)
-		err := q.startQemu(ctx, t)
-		if err != nil {
-			cancelFunc()
-			<-q.doneCh
-			t.Fatalf("Error starting qemu: %v", err)
-		}
+	expectedMemoryKiB := beforeMem + (addedMemoryMiB * 1024)
+	if afterMem != expectedMemoryKiB {
+		t.Errorf("Hotplugging memory did not result in expected values: before: %v after: %v expected: %v",
+			beforeMem, afterMem, expectedMemoryKiB)
+	}
 
-		addedMemoryMiB := 512
-		beforeMem := q.getTotalMemory(t)
-		err = q.qmp.ExecHotplugMemory(ctx, "memory-backend-ram", "memslot1", "", addedMemoryMiB)
-		if err != nil {
-			t.Errorf("Error adding memory to guest: %v", err)
-		}
-		afterMem := q.getTotalMemory(t)
+	time.Sleep(time.Second * 15)
+	err = q.qmp.ExecuteQuit(ctx)
+	if err != nil {
+		t.Errorf("Error quiting via QMP: %v", err)
+	}
 
-		expectedMemoryKiB := beforeMem + (addedMemoryMiB * 1024)
-		if afterMem != expectedMemoryKiB {
-			t.Errorf("Hotplugging memory did not result in expected values: before: %v after: %v expected: %v",
-				beforeMem, afterMem, expectedMemoryKiB)
-		}
+}
 
-		time.Sleep(time.Second * 15)
-		err = q.qmp.ExecuteQuit(ctx)
-		if err != nil {
-			t.Errorf("Error quiting via QMP: %v", err)
-		}
+func testCPUHotplug(ctx context.Context, q *qemuTest, t *testing.T) {
+	cpusOnlineBefore := strings.TrimSpace(q.runCommandBySSH("cat /sys/devices/system/cpu/online", t))
+	if cpusOnlineBefore != "0-1" {
+		t.Errorf("Unexpected online cpus: %s", cpusOnlineBefore)
+	}
 
-		<-q.doneCh
-		cancelFunc()
+	err := q.qmp.ExecuteCPUDeviceAdd(ctx, "host-x86_64-cpu", "core2", "2", "0", "0")
+	if err != nil {
+		t.Errorf("Error hotplugging CPU: %v", err)
+	}
+
+	time.Sleep(time.Second * 15)
+	q.runCommandBySSH(`sudo sh -c "echo 1 > /sys/devices/system/cpu/cpu2/online"`, t)
+	time.Sleep(time.Second * 15)
+
+	cpusOnlineAfter := strings.TrimSpace(q.runCommandBySSH("cat /sys/devices/system/cpu/online", t))
+	if cpusOnlineAfter != "0-2" {
+		t.Errorf("Unexpected online cpus: %s", cpusOnlineAfter)
+	}
+
+	time.Sleep(time.Second * 15)
+	err = q.qmp.ExecuteQuit(ctx)
+	if err != nil {
+		t.Errorf("Error quiting via QMP: %v", err)
 	}
 }
 
-func TestCPUHotplug(t *testing.T) {
-	t.Parallel()
-	for _, m := range machines {
-		t.Logf("Testing machine: %s", m)
+type testConfig struct {
+	name     string
+	testFunc func(ctx context.Context, q *qemuTest, t *testing.T)
+	distros  []distro
+	machines []string
+}
 
-		q := qemuTest{
-			machine: m,
-		}
-		ctx, cancelFunc := context.WithTimeout(context.Background(), cancelTimeout)
-		err := q.startQemu(ctx, t)
-		if err != nil {
-			cancelFunc()
-			<-q.doneCh
-			t.Fatalf("Error starting qemu: %v", err)
-		}
+var machines = []string{"pc", "q35", "virt"}
 
-		cpusOnlineBefore := strings.TrimSpace(q.runCommandBySSH("cat /sys/devices/system/cpu/online", t))
-		if cpusOnlineBefore != "0-1" {
-			t.Errorf("Unexpected online cpus: %s", cpusOnlineBefore)
-		}
+type cloudInitType string
 
-		err = q.qmp.ExecuteCPUDeviceAdd(ctx, "host-x86_64-cpu", "core2", "2", "0", "0")
-		if err != nil {
-			t.Errorf("Error hotplugging CPU: %v", err)
-		}
+const (
+	cloudInitClear  cloudInitType = "clear"
+	cloudInitUbuntu cloudInitType = "ubuntu"
+)
 
-		time.Sleep(time.Second * 15)
-		q.runCommandBySSH(`sudo sh -c "echo 1 > /sys/devices/system/cpu/cpu2/online"`, t)
-		time.Sleep(time.Second * 15)
+const (
+	clearDiskImage  = "clear-24950-cloud.img"
+	xenialDiskImage = "xenial-server-cloudimg-amd64-uefi1.img"
+)
 
-		cpusOnlineAfter := strings.TrimSpace(q.runCommandBySSH("cat /sys/devices/system/cpu/online", t))
-		if cpusOnlineAfter != "0-2" {
-			t.Errorf("Unexpected online cpus: %s", cpusOnlineAfter)
-		}
+type distro struct {
+	name      string
+	image     string
+	cloudInit cloudInitType
+}
 
-		time.Sleep(time.Second * 15)
-		err = q.qmp.ExecuteQuit(ctx)
-		if err != nil {
-			t.Errorf("Error quiting via QMP: %v", err)
-		}
+var allDistros = []distro{
+	{
+		name:      "xenial",
+		image:     xenialDiskImage,
+		cloudInit: cloudInitUbuntu,
+	},
+	{
+		name:      "clear",
+		image:     clearDiskImage,
+		cloudInit: cloudInitClear,
+	},
+}
 
-		<-q.doneCh
-		cancelFunc()
+var clearLinuxOnly = []distro{
+	{
+		name:      "clear",
+		image:     clearDiskImage,
+		cloudInit: cloudInitClear,
+	},
+}
+
+var allMachines = []string{"pc", "q35", "virt"}
+
+var tests = []testConfig{
+	{
+		name:     "Shutdown",
+		testFunc: testShutdown,
+		distros:  allDistros,
+		machines: allMachines,
+	},
+	{
+		name:     "Reboot",
+		testFunc: testReboot,
+		distros:  allDistros,
+		machines: allMachines,
+	},
+	{
+		name:     "CheckACPITables",
+		testFunc: testCheckAcpiTables,
+		distros:  allDistros,
+		machines: allMachines,
+	},
+	{
+		name:     "QMPQuit",
+		testFunc: testQMPQuit,
+		distros:  allDistros,
+		machines: allMachines,
+	},
+	{
+		name:     "CPUHotplug",
+		testFunc: testCPUHotplug,
+		distros:  clearLinuxOnly,
+		machines: allMachines,
+	},
+	{
+		name:     "MemoryHotplug",
+		testFunc: testMemoryHotplug,
+		distros:  clearLinuxOnly,
+		machines: allMachines,
+	},
+}
+
+func TestNemu(t *testing.T) {
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			for _, m := range test.machines {
+				t.Run(m, func(t *testing.T) {
+					t.Parallel()
+					for _, d := range test.distros {
+						t.Run(d.name, func(t *testing.T) {
+							t.Parallel()
+							q := qemuTest{
+								machine:   m,
+								diskImage: d.image,
+								cloudInit: d.cloudInit,
+							}
+
+							ctx, cancelFunc := context.WithTimeout(context.Background(), cancelTimeout)
+							err := q.startQemu(ctx, t)
+							if err != nil {
+								cancelFunc()
+								<-q.doneCh
+								t.Fatalf("Error starting qemu: %v", err)
+							}
+
+							test.testFunc(ctx, &q, t)
+
+							<-q.doneCh
+							cancelFunc()
+						})
+					}
+				})
+			}
+		})
 	}
 }
