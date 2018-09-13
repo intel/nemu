@@ -19,3 +19,5 @@ obj-y += pc.o
 endif
 
 obj-y += acpi-build-common.o
+
+obj-$(call lnot,$(CONFIG_MULTIBOOT)) += stub.o
