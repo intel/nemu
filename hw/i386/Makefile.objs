@@ -1,7 +1,6 @@
 obj-$(CONFIG_KVM) += kvm/
 obj-$(CONFIG_MULTIBOOT) += multiboot.o
-obj-y += cpu.o fw.o memory.o kernel-loader.o
-obj-$(CONFIG_X86_COMMON) += pc.o
+obj-y += cpu.o x86.o fw.o memory.o kernel-loader.o
 obj-$(CONFIG_X86_PIIX) += pc_piix.o
 obj-$(CONFIG_X86_Q35) += pc_q35.o
 obj-y += sysfw.o
@@ -16,6 +15,7 @@ obj-$(CONFIG_KVM_VAPIC) += kvmvapic.o
 
 ifeq ($(call lor,$(CONFIG_X86_PIIX),$(CONFIG_X86_Q35)),y)
 obj-y += acpi-build.o
+obj-y += pc.o
 endif
 
 obj-y += acpi-build-common.o
