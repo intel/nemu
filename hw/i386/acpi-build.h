@@ -4,6 +4,9 @@
 
 #include "hw/acpi/acpi.h"
 
+/* Default IOAPIC ID */
+#define ACPI_BUILD_IOAPIC_ID 0x0
+
 /* Build methods */
 GArray *build_madt(GArray *table_data, BIOSLinker *linker, MachineState *ms, AcpiConfiguration *conf);
 
