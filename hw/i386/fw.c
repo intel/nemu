@@ -34,6 +34,7 @@ struct hpet_fw_config hpet_cfg = {.count = UINT8_MAX};
 
 static void fw_build_smbios(MachineState *ms, FWCfgState *fw_cfg)
 {
+#if defined(CONFIG_SMBIOS)
     uint8_t *smbios_tables, *smbios_anchor;
     size_t smbios_tables_len, smbios_anchor_len;
     struct smbios_phys_mem_area *mem_array;
@@ -71,6 +72,7 @@ static void fw_build_smbios(MachineState *ms, FWCfgState *fw_cfg)
         fw_cfg_add_file(fw_cfg, "etc/smbios/smbios-anchor",
                         smbios_anchor, smbios_anchor_len);
     }
+#endif
 }
 
 static void fw_build_feature_control_file(MachineState *ms, FWCfgState *fw_cfg)
