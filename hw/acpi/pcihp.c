@@ -95,14 +95,16 @@ static void *acpi_set_bsel(PCIBus *bus, void *opaque)
 
 static void acpi_set_pci_info(AcpiPciHpState *s)
 {
-    static bool bsel_is_set;
+   // static bool bsel_is_set;
     unsigned bsel_alloc = ACPI_PCIHP_BSEL_DEFAULT;
 
-    if (bsel_is_set) {
+    //TODU: acpi_set_pci_info only uses for piix4 for one time previously,
+    //it doesn't need to set the flag?
+    /*if (bsel_is_set) {
         return;
     }
     bsel_is_set = true;
-
+*/
     if (s->root) {
         /* Scan all PCI buses. Set property to enable acpi based hotplug. */
         pci_for_each_bus_depth_first(s->root, acpi_set_bsel, NULL, &bsel_alloc);

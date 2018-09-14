@@ -237,7 +237,7 @@ static void virt_machine_state_init(MachineState *machine)
     virt_memory_init(vms);
     virt_pci_init(vms);
     virt_ioapic_init(vms);
-    vms->acpi = virt_acpi_init(vms->gsi, vms->pci_bus);
+    vms->acpi = virt_acpi_init(vms->gsi, vms->pci_bus, vms->pci_virt_bus);
 
     vms->apic_id_limit = cpus_init(machine, false);
 

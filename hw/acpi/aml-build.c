@@ -2717,7 +2717,7 @@ void acpi_dsdt_add_pci_bus(Aml *dsdt, AcpiPciBus *pci_host)
 
 void acpi_dsdt_add_pci_bus_segment(Aml *dsdt, AcpiPciBus *pci_host)
 {
-    Aml *dev, *pci_scope;//, *hp_scope;
+    Aml *dev, *pci_scope, *hp_scope;
 
     //TODO: Make this generic 
     dev = aml_device("\\_SB.PCI2");
@@ -2735,6 +2735,12 @@ void acpi_dsdt_add_pci_bus_segment(Aml *dsdt, AcpiPciBus *pci_host)
     aml_append(dsdt, dev);
 
     //TODO: Handle hotplug
+
+    /* PCIHP */
+    hp_scope =  aml_scope("\\_SB.PCI2");
+    build_acpi_pci_hotplug(hp_scope);
+    build_append_pci_bus_devices(hp_scope, pci_host->pci_bus, false);
+    aml_append(dsdt, hp_scope);
 
     pci_scope = build_pci_segment_bridge(dsdt, pci_host);
     aml_append(dsdt, pci_scope);

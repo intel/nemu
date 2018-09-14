@@ -88,6 +88,6 @@ typedef struct {
 
 MemoryRegion *virt_memory_init(VirtMachineState *vms);
 
-DeviceState *virt_acpi_init(qemu_irq *gsi, PCIBus *pci_bus);
+DeviceState *virt_acpi_init(qemu_irq *gsi, PCIBus *pci_bus, PCIBus *pci_virt_bus);
 
 #endif
