@@ -13,3 +13,11 @@ node ('xenial') {
 		sh "SRCDIR=$WORKSPACE tools/CI/run_nats.sh"
 	}
 }
+node ('xenial-arm') {
+	stage ('Checkout') {
+		checkout scm
+	}
+	stage ('Compile') {
+		sh "SRCDIR=$WORKSPACE tools/build_x86_64.sh"
+	}
+}
