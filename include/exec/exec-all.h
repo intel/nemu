@@ -418,7 +418,9 @@ void tb_invalidate_phys_range(target_ulong start, target_ulong end);
 #else
 void tb_invalidate_phys_addr(AddressSpace *as, hwaddr addr, MemTxAttrs attrs);
 #endif
+#if defined(CONFIG_TCG)
 void tb_flush(CPUState *cpu);
+#endif
 void tb_phys_invalidate(TranslationBlock *tb, tb_page_addr_t page_addr);
 TranslationBlock *tb_htable_lookup(CPUState *cpu, target_ulong pc,
                                    target_ulong cs_base, uint32_t flags,
@@ -487,7 +489,9 @@ static inline void mmap_unlock(void) {}
 tb_page_addr_t get_page_addr_code(CPUArchState *env1, target_ulong addr);
 
 void tlb_reset_dirty(CPUState *cpu, ram_addr_t start1, ram_addr_t length);
+#if defined(CONFIG_TCG)
 void tlb_set_dirty(CPUState *cpu, target_ulong vaddr);
+#endif
 
 /* exec.c */
 void tb_flush_jmp_cache(CPUState *cpu, target_ulong addr);
