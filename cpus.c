@@ -49,7 +49,7 @@
 #include "qemu/option.h"
 #include "qemu/bitmap.h"
 #include "qemu/seqlock.h"
-#include "tcg.h"
+#include "exec/tcg-wrapper.h"
 #include "hw/nmi.h"
 #include "sysemu/replay.h"
 #include "hw/boards.h"

@@ -30,6 +30,7 @@
 #include "chardev/char-fe.h"
 #include "sysemu/sysemu.h"
 #include "exec/gdbstub.h"
+#include "exec/tcg-wrapper.h"
 #endif
 
 #define MAX_PACKET_LENGTH 4096
