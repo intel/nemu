@@ -5,3 +5,9 @@ obj-y += pci-igd.o
 else
 obj-y += pci-igd-stub.o
 endif
+
+ifeq ($(CONFIG_VFIO_PCI_QUIRKS_ATI), y)
+obj-y += pci-ati.o
+else
+obj-y += pci-ati-stub.o
+endif
