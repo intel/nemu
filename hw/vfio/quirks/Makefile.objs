@@ -1,1 +1,7 @@
-obj-$(CONFIG_PCI) += pci.o pci-igd.o
+obj-$(CONFIG_PCI) += pci.o
+
+ifeq ($(CONFIG_VFIO_PCI_QUIRKS_IGD), y)
+obj-y += pci-igd.o
+else
+obj-y += pci-igd-stub.o
+endif
