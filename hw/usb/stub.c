@@ -33,3 +33,8 @@ void hmp_info_usb(Monitor *mon, const QDict *qdict)
 {
     monitor_printf(mon, "USB devices not supported\n");
 }
+
+USBDevice *usbdevice_create(const char *cmdline)
+{
+    return NULL;
+}
