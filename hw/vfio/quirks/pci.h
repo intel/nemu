@@ -68,6 +68,19 @@ extern const MemoryRegionOps vfio_generic_mirror_quirk;
 
 bool vfio_pci_is(VFIOPCIDevice *vdev, uint32_t vendor, uint32_t device);
 bool vfio_is_vga(VFIOPCIDevice *vdev);
+bool vfio_range_contained(uint64_t first1, uint64_t len1,
+                          uint64_t first2, uint64_t len2);
+uint64_t vfio_generic_quirk_mirror_read(void *opaque,
+                                        hwaddr addr, unsigned size);
+void vfio_generic_quirk_mirror_write(void *opaque, hwaddr addr,
+                                     uint64_t data, unsigned size);
+VFIOIOEventFD *vfio_ioeventfd_init(VFIOPCIDevice *vdev,
+                                   MemoryRegion *mr, hwaddr addr,
+                                   unsigned size, uint64_t data,
+                                   VFIORegion *region,
+                                   hwaddr region_addr, bool dynamic);
+void vfio_ioeventfd_exit(VFIOPCIDevice *vdev, VFIOIOEventFD *ioeventfd);
+void vfio_drop_dynamic_eventfds(VFIOPCIDevice *vdev, VFIOQuirk *quirk);
 VFIOQuirk *vfio_quirk_alloc(int nr_mem);
 bool vfio_blacklist_opt_rom(VFIOPCIDevice *vdev);
 void vfio_vga_quirk_setup(VFIOPCIDevice *vdev);
