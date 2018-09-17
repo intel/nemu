@@ -6342,7 +6342,8 @@ if test "$brlapi" = "yes" ; then
   echo "BRLAPI_LIBS=$brlapi_libs" >> $config_host_mak
 fi
 if test "$bluetooth" = "yes" ; then
-      echo "CONFIG_BT=y" >> $config_host_mak
+    echo "CONFIG_BT=y" >> $config_host_mak
+    echo "CONFIG_HID_DEV=y" >> $config_host_mak
       if test "$bluez" = "yes" ; then
 	  echo "CONFIG_BT_BLUEZ=y" >> $config_host_mak
 	  echo "BLUEZ_CFLAGS=$bluez_cflags" >> $config_host_mak
