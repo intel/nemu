@@ -1,3 +1,5 @@
-common-obj-y += core.o l2cap.o sdp.o hci.o hid.o
-common-obj-y += hci-csr.o host.o vhci.o
+common-obj-$(CONFIG_BT) += core.o l2cap.o sdp.o hci.o hid.o
+common-obj-$(CONFIG_BT) += hci-csr.o host.o vhci.o
 host.o-cflags := $(BLUEZ_CFLAGS)
+
+common-obj-$(call lnot,$(CONFIG_BT)) += stub.o
