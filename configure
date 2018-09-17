@@ -336,6 +336,7 @@ unset target_list
 # Distributions want to ensure that several features are compiled in, and it
 # is impossible without a --enable-foo that exits if a feature is not found.
 
+bluetooth="yes"
 bluez=""
 brlapi=""
 curl=""
@@ -1112,6 +1113,10 @@ for opt do
   ;;
   --enable-brlapi) brlapi="yes"
   ;;
+  --disable-bluetooth) bluetooth="no"
+  ;;
+  --enable-bluetooth) bluetooth="yes"
+  ;;
   --disable-bluez) bluez="no"
   ;;
   --enable-bluez) bluez="yes"
@@ -1663,6 +1668,7 @@ disabled with --disable-FEATURE, default is enabled if available:
   curl            curl connectivity
   membarrier      membarrier system call (for Linux 4.14+ or Windows)
   fdt             fdt device tree
+  bluetooth       Bluetooth emulation support
   bluez           bluez stack connectivity
   kvm             KVM acceleration support
   hax             HAX acceleration support
@@ -3436,22 +3442,24 @@ fi # test "$curl"
 
 ##########################################
 # bluez support probe
-if test "$bluez" != "no" ; then
-  cat > $TMPC << EOF
+if test "$bluetooth" = "yes" ; then
+    if test "$bluez" != "no" ; then
+	cat > $TMPC << EOF
 #include <bluetooth/bluetooth.h>
 int main(void) { return bt_error(0); }
 EOF
-  bluez_cflags=$($pkg_config --cflags bluez 2>/dev/null)
-  bluez_libs=$($pkg_config --libs bluez 2>/dev/null)
-  if compile_prog "$bluez_cflags" "$bluez_libs" ; then
-    bluez=yes
-    libs_softmmu="$bluez_libs $libs_softmmu"
-  else
-    if test "$bluez" = "yes" ; then
-      feature_not_found "bluez" "Install bluez-libs/libbluetooth devel"
+	bluez_cflags=$($pkg_config --cflags bluez 2>/dev/null)
+	bluez_libs=$($pkg_config --libs bluez 2>/dev/null)
+	if compile_prog "$bluez_cflags" "$bluez_libs" ; then
+	    bluez=yes
+	    libs_softmmu="$bluez_libs $libs_softmmu"
+	else
+	    if test "$bluez" = "yes" ; then
+		feature_not_found "bluez" "Install bluez-libs/libbluetooth devel"
+	    fi
+	    bluez="no"
+	fi
     fi
-    bluez="no"
-  fi
 fi
 
 ##########################################
@@ -5932,7 +5940,10 @@ if test "$xen" = "yes" ; then
   echo "pv dom build      $xen_pv_domain_build"
 fi
 echo "brlapi support    $brlapi"
-echo "bluez  support    $bluez"
+echo "bluetooth support $bluetooth"
+if test "$bluetooth" = "yes" ; then
+    echo "bluez  support    $bluetooth-bluez"
+fi
 echo "Documentation     $docs"
 echo "PIE               $pie"
 echo "vde support       $vde"
@@ -6330,9 +6341,12 @@ if test "$brlapi" = "yes" ; then
   echo "CONFIG_BRLAPI=y" >> $config_host_mak
   echo "BRLAPI_LIBS=$brlapi_libs" >> $config_host_mak
 fi
-if test "$bluez" = "yes" ; then
-  echo "CONFIG_BLUEZ=y" >> $config_host_mak
-  echo "BLUEZ_CFLAGS=$bluez_cflags" >> $config_host_mak
+if test "$bluetooth" = "yes" ; then
+      echo "CONFIG_BT=y" >> $config_host_mak
+      if test "$bluez" = "yes" ; then
+	  echo "CONFIG_BT_BLUEZ=y" >> $config_host_mak
+	  echo "BLUEZ_CFLAGS=$bluez_cflags" >> $config_host_mak
+      fi
 fi
 if test "$glib_subprocess" = "yes" ; then
   echo "CONFIG_HAS_GLIB_SUBPROCESS_TESTS=y" >> $config_host_mak
