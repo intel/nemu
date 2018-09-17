@@ -10,6 +10,7 @@ common-obj-$(CONFIG_ACPI_NVDIMM) += nvdimm.o
 common-obj-$(CONFIG_ACPI_VMGENID) += vmgenid.o
 common-obj-$(CONFIG_ACPI_HW_REDUCED) += reduced.o
 common-obj-$(call lnot,$(CONFIG_ACPI_X86)) += acpi-stub.o
+common-obj-$(call lnot,$(CONFIG_ACPI_NVDIMM)) += nvdimm-stub.o
 
 common-obj-y += acpi_interface.o
 common-obj-y += bios-linker-loader.o
