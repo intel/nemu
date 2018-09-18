@@ -20,7 +20,10 @@ parallel ('xenial': {
 			checkout scm
 		}
 		stage ('Compile: aarch64') {
-			sh "SRCDIR=$WORKSPACE tools/build_x86_64.sh"
+			sh "SRCDIR=$WORKSPACE tools/build_aarch64.sh"
+		}
+		stage ('NATS: aarch64') {
+			sh "SRCDIR=$WORKSPACE tools/CI/run_nats_aarch64.sh"
 		}
 	}
 })
