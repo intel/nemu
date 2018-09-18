@@ -172,15 +172,15 @@ func (l simpleLogger) V(level int32) bool {
 }
 
 func (l simpleLogger) Infof(format string, v ...interface{}) {
-	l.t.Logf(format, v)
+	l.t.Logf(format, v...)
 }
 
 func (l simpleLogger) Warningf(format string, v ...interface{}) {
-	l.t.Logf(format, v)
+	l.t.Logf(format, v...)
 }
 
 func (l simpleLogger) Errorf(format string, v ...interface{}) {
-	l.t.Logf(format, v)
+	l.t.Logf(format, v...)
 }
 
 type qemuTest struct {
