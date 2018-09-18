@@ -466,7 +466,7 @@ const (
 )
 
 const (
-	clearDiskImage  = "clear-24740-cloud.img"
+	clearDiskImage  = "clear-24950-cloud.img"
 	xenialDiskImage = "xenial-server-cloudimg-amd64-uefi1.img"
 )
 

@@ -2,7 +2,7 @@
 set -x
 
 GO_VERSION="1.10.3"
-CLEAR_VERSION=24740
+CLEAR_VERSION=24950
 CLEAR_IMAGE=clear-$CLEAR_VERSION-cloud.img
 UBUNTU_IMAGE=xenial-server-cloudimg-amd64-uefi1.img
 WORKLOADS_DIR="$HOME/workloads"
