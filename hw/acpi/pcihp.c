@@ -45,6 +45,7 @@
 # define ACPI_PCIHP_DPRINTF(format, ...)     do { } while (0)
 #endif
 
+#define ACPI_PCIHP_ADDR_SEG_1 0xaf00
 #define ACPI_PCIHP_ADDR 0xae00
 #define ACPI_PCIHP_SIZE 0x0014
 #define PCI_UP_BASE 0x0000
@@ -95,14 +96,16 @@ static void *acpi_set_bsel(PCIBus *bus, void *opaque)
 
 static void acpi_set_pci_info(AcpiPciHpState *s)
 {
-    static bool bsel_is_set;
+   // static bool bsel_is_set;
     unsigned bsel_alloc = ACPI_PCIHP_BSEL_DEFAULT;
 
-    if (bsel_is_set) {
+    //TODU: acpi_set_pci_info only uses for piix4 for one time previously,
+    //it doesn't need to set the flag?
+    /*if (bsel_is_set) {
         return;
     }
     bsel_is_set = true;
-
+*/
     if (s->root) {
         /* Scan all PCI buses. Set property to enable acpi based hotplug. */
         pci_for_each_bus_depth_first(s->root, acpi_set_bsel, NULL, &bsel_alloc);
@@ -343,6 +346,23 @@ void acpi_pcihp_init(Object *owner, AcpiPciHpState *s, PCIBus *root_bus,
                                    &error_abort);
     object_property_add_uint16_ptr(owner, ACPI_PCIHP_IO_LEN_PROP, &s->io_len,
                                    &error_abort);
+
+}
+
+void acpi_pcihp_segment_init(Object *owner, AcpiPciHpState *s, PCIBus *root_bus,
+                             MemoryRegion *address_space_io, bool bridges_enabled)
+{
+    s->io_len = ACPI_PCIHP_SIZE;
+    s->io_base = ACPI_PCIHP_ADDR_SEG_1;
+
+    s->root= root_bus;
+    s->legacy_piix = !bridges_enabled;
+
+    memory_region_init_io(&s->io, owner, &acpi_pcihp_io_ops, s,
+                          "acpi-pci-hotplug-segment", s->io_len);
+    memory_region_add_subregion(address_space_io, s->io_base, &s->io);
+
+    //Do not need ACPI_PCIHP_IO_BASE_PROP/ACPI_PCIHP_IO_LEN_PROP
 }
 
 const VMStateDescription vmstate_acpi_pcihp_pci_status = {

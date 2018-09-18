@@ -41,7 +41,10 @@
 #define PCI_HOST_BRIDGE_IO_0_MIN_ADDR      0x0000
 #define PCI_HOST_BRIDGE_IO_0_MAX_ADDR      0x0cf7
 #define PCI_HOST_BRIDGE_IO_1_MIN_ADDR      0x0d00
-#define PCI_HOST_BRIDGE_IO_1_MAX_ADDR      0xffff
+#define PCI_HOST_BRIDGE_IO_1_MAX_ADDR      0x9fff
+/* PCI segment one */
+#define SEG_1_PCI_HOST_BRIDGE_IO_1_MIN_ADDR      0xa000
+#define SEG_1_PCI_HOST_BRIDGE_IO_1_MAX_ADDR      0xffff
 #define PCI_VGA_MEM_BASE_ADDR              0x000a0000
 #define PCI_VGA_MEM_MAX_ADDR               0x000bffff
 #define IO_0_LEN                           0xcf8
@@ -2332,6 +2335,21 @@ Aml *build_pci_segment_bridge(Aml *table, AcpiPciBus *pci_host)
                             0x0000, 0x0, root_bus_limit,
                             0x0000, root_bus_limit + 1));
 
+    /* set the io region 0 in pci host bridge */
+    /* NOTE: Do not set legacy io port, no io region 0 */
+    /* set the io region 1 in pci host bridge */
+    crs_replace_with_free_ranges(crs_range_set.io_ranges,
+                                 SEG_1_PCI_HOST_BRIDGE_IO_1_MIN_ADDR,
+                                 SEG_1_PCI_HOST_BRIDGE_IO_1_MAX_ADDR);
+    for (i = 0; i < crs_range_set.io_ranges->len; i++) {
+        entry = g_ptr_array_index(crs_range_set.io_ranges, i);
+        aml_append(crs,
+            aml_word_io(AML_MIN_FIXED, AML_MAX_FIXED,
+                        AML_POS_DECODE, AML_ENTIRE_RANGE,
+                        0x0000, entry->base, entry->limit,
+                        0x0000, entry->limit - entry->base + 1));
+    }
+
     /* set the mem region 1 in pci host bridge */
     crs_replace_with_free_ranges(crs_range_set.mem_ranges,
                                  range_lob(pci_hole),
@@ -2717,7 +2735,7 @@ void acpi_dsdt_add_pci_bus(Aml *dsdt, AcpiPciBus *pci_host)
 
 void acpi_dsdt_add_pci_bus_segment(Aml *dsdt, AcpiPciBus *pci_host)
 {
-    Aml *dev, *pci_scope;//, *hp_scope;
+    Aml *dev, *pci_scope, *hp_scope;
 
     //TODO: Make this generic 
     dev = aml_device("\\_SB.PCI2");
@@ -2735,6 +2753,12 @@ void acpi_dsdt_add_pci_bus_segment(Aml *dsdt, AcpiPciBus *pci_host)
     aml_append(dsdt, dev);
 
     //TODO: Handle hotplug
+
+    /* PCIHP */
+    hp_scope =  aml_scope("\\_SB.PCI2");
+    build_acpi_pci_hotplug(hp_scope);
+    build_append_pci_bus_devices(hp_scope, pci_host->pci_bus, false);
+    aml_append(dsdt, hp_scope);
 
     pci_scope = build_pci_segment_bridge(dsdt, pci_host);
     aml_append(dsdt, pci_scope);

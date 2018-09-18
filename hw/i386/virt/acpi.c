@@ -48,6 +48,9 @@ typedef struct VirtAcpiState {
     AcpiPciHpState pcihp_state;
     PCIBus *pci_bus;
 
+    AcpiPciHpState pcihp_state_1;
+    PCIBus *pci_virt_bus;
+
     MemoryRegion sleep_iomem;
     MemoryRegion reset_iomem;
 } VirtAcpiState;
@@ -199,7 +202,7 @@ static void virt_device_realize(DeviceState *dev, Error **errp)
     sysbus_add_io(sys, ACPI_REDUCED_RESET_IOPORT, &s->reset_iomem);
 }
 
-DeviceState *virt_acpi_init(qemu_irq *gsi, PCIBus *pci_bus)
+DeviceState *virt_acpi_init(qemu_irq *gsi, PCIBus *pci_bus, PCIBus *pci_virt_bus)
 {
     DeviceState *dev;
     VirtAcpiState *s;
@@ -209,6 +212,7 @@ DeviceState *virt_acpi_init(qemu_irq *gsi, PCIBus *pci_bus)
     s = VIRT_ACPI(dev);
     s->gsi = gsi;
     s->pci_bus = pci_bus;
+    s->pci_virt_bus = pci_virt_bus;
 
     if (pci_bus) {
         /* Initialize PCI hotplug */
@@ -217,6 +221,14 @@ DeviceState *virt_acpi_init(qemu_irq *gsi, PCIBus *pci_bus)
         acpi_pcihp_init(OBJECT(s), &s->pcihp_state, s->pci_bus,
                         get_system_io(), true);
         acpi_pcihp_reset(&s->pcihp_state);
+    }
+    if (pci_virt_bus) {
+        qbus_set_hotplug_handler(BUS(pci_virt_bus), dev, NULL);
+        //NOTE: acpi_pcihp_init needs refactor because OBJECT(s) could not
+        //be duplicate assigned ACPI_PCIHP_IO_BASE_PROP/ACPI_PCIHP_IO_LEN_PROP twice.
+        acpi_pcihp_segment_init(OBJECT(s), &s->pcihp_state_1, s->pci_virt_bus,
+                                get_system_io(), true);
+        acpi_pcihp_reset(&s->pcihp_state_1);
     }
 
     return dev;
