@@ -45,6 +45,14 @@ func getBiosPath(t *testing.T) string {
 	return path.Join(u.HomeDir, "workloads", "OVMF.fd")
 }
 
+func allocateSSHPort() uint16 {
+	sshPortMutex.Lock()
+	res := sshPort
+	sshPort++
+	sshPortMutex.Unlock()
+	return res
+}
+
 func (q *qemuTest) getSourceDiskImage(t *testing.T) string {
 	u, err := user.Current()
 	if err != nil {
@@ -224,10 +232,7 @@ func (q *qemuTest) launchQemu(ctx context.Context, monitorSocketCh chan string, 
 	cloudInitImagePath := q.createCloudInitImage(t)
 	defer os.Remove(cloudInitImagePath)
 
-	sshPortMutex.Lock()
-	q.sshPort = sshPort
-	sshPort++
-	sshPortMutex.Unlock()
+	q.sshPort = allocateSSHPort()
 
 	q.params = []string{
 		"-machine", fmt.Sprintf("%s,accel=kvm,kernel_irqchip,nvdimm", q.machine),
