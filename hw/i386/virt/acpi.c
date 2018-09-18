@@ -212,8 +212,8 @@ DeviceState *virt_acpi_init(qemu_irq *gsi, PCIBus *pci_bus, PCIBus *pci_virt_bus
     s = VIRT_ACPI(dev);
     s->gsi = gsi;
     s->pci_bus = pci_bus;
-
     s->pci_virt_bus = pci_virt_bus;
+
     if (pci_bus) {
         /* Initialize PCI hotplug */
         qbus_set_hotplug_handler(BUS(pci_bus), dev, NULL);
@@ -222,12 +222,14 @@ DeviceState *virt_acpi_init(qemu_irq *gsi, PCIBus *pci_bus, PCIBus *pci_virt_bus
                         get_system_io(), true);
         acpi_pcihp_reset(&s->pcihp_state);
     }
-    qbus_set_hotplug_handler(BUS(pci_virt_bus), dev, NULL);
-    //NOTE: acpi_pcihp_init needs refactor because OBJECT(s) could not
-    //be duplicate assigned ACPI_PCIHP_IO_BASE_PROP/ACPI_PCIHP_IO_LEN_PROP twice.
-    acpi_pcihp_init(OBJECT(s), &s->pcihp_state_1, s->pci_virt_bus,
-                    get_system_io(), true);
-    acpi_pcihp_reset(&s->pcihp_state_1);
+    if (pci_virt_bus) {
+        qbus_set_hotplug_handler(BUS(pci_virt_bus), dev, NULL);
+        //NOTE: acpi_pcihp_init needs refactor because OBJECT(s) could not
+        //be duplicate assigned ACPI_PCIHP_IO_BASE_PROP/ACPI_PCIHP_IO_LEN_PROP twice.
+        acpi_pcihp_segment_init(OBJECT(s), &s->pcihp_state_1, s->pci_virt_bus,
+                                get_system_io(), true);
+        acpi_pcihp_reset(&s->pcihp_state_1);
+    }
 
     return dev;
 }
