@@ -208,11 +208,11 @@ func (q *qemuTest) startQemu(ctx context.Context, t *testing.T) error {
 	}
 	disconnectedCh := make(chan struct{})
 	qmp, qmpVersion, err := qemu.QMPStart(ctx, <-monitorSocketCh, config, disconnectedCh)
-	t.Logf("\nQMP version: %v\n", *qmpVersion)
 	if err != nil {
 		return err
 	}
 	q.qmp = qmp
+	t.Logf("\nQMP version: %v\n", *qmpVersion)
 
 	err = q.qmp.ExecuteQMPCapabilities(ctx)
 	if err != nil {
