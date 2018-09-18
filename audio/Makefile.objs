@@ -1,4 +1,6 @@
-common-obj-y = audio.o noaudio.o wavaudio.o mixeng.o
+ifeq ($(CONFIG_AUDIO), y)
+
+common-obj-$(CONFIG_AUDIO) = audio.o noaudio.o wavaudio.o mixeng.o
 common-obj-$(CONFIG_SPICE) += spiceaudio.o
 common-obj-$(CONFIG_AUDIO_COREAUDIO) += coreaudio.o
 common-obj-$(CONFIG_AUDIO_DSOUND) += dsoundaudio.o
@@ -29,3 +31,9 @@ common-obj-$(CONFIG_AUDIO_SDL) += sdl.mo
 sdl.mo-objs = sdlaudio.o
 sdl.mo-cflags := $(SDL_CFLAGS)
 sdl.mo-libs := $(SDL_LIBS)
+
+else
+
+common-obj-y = stub.o
+
+endif
