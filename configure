@@ -281,6 +281,7 @@ iasl="iasl"
 interp_prefix="/usr/gnemul/qemu-%M"
 static="no"
 cross_prefix=""
+audio="yes"
 audio_drv_list=""
 block_drv_rw_whitelist=""
 block_drv_ro_whitelist=""
@@ -1045,6 +1046,10 @@ for opt do
   ;;
   --enable-vnc) vnc="yes"
   ;;
+  --disable-audio) audio="no"
+  ;;
+  --enable-audio) audio="yes"
+  ;;
   --oss-lib=*) oss_lib="$optarg"
   ;;
   --audio-drv-list=*) audio_drv_list="$optarg"
@@ -1171,7 +1176,9 @@ for opt do
   ;;
   --enable-cocoa)
       cocoa="yes" ;
-      audio_drv_list="coreaudio $(echo $audio_drv_list | sed s,coreaudio,,g)"
+      if test "$audio" = "yes"; then
+	  audio_drv_list="coreaudio $(echo $audio_drv_list | sed s,coreaudio,,g)"
+      fi
   ;;
   --disable-system) softmmu="no"
   ;;
@@ -3296,53 +3303,58 @@ EOF
     fi
 }
 
-audio_drv_list=$(echo "$audio_drv_list" | sed -e 's/,/ /g')
-for drv in $audio_drv_list; do
-    case $drv in
-    alsa)
-    audio_drv_probe $drv alsa/asoundlib.h -lasound \
-        "return snd_pcm_close((snd_pcm_t *)0);"
-    alsa_libs="-lasound"
-    ;;
 
-    pa)
-    audio_drv_probe $drv pulse/pulseaudio.h "-lpulse" \
-        "pa_context_set_source_output_volume(NULL, 0, NULL, NULL, NULL); return 0;"
-    pulse_libs="-lpulse"
-    audio_pt_int="yes"
-    ;;
+if test "$audio" = "yes"; then
+    audio_drv_list=$(echo "$audio_drv_list" | sed -e 's/,/ /g')
+    for drv in $audio_drv_list; do
+	case $drv in
+	    alsa)
+		audio_drv_probe $drv alsa/asoundlib.h -lasound \
+				"return snd_pcm_close((snd_pcm_t *)0);"
+		alsa_libs="-lasound"
+		;;
 
-    sdl)
-    if test "$sdl" = "no"; then
-        error_exit "sdl not found or disabled, can not use sdl audio driver"
-    fi
-    ;;
+	    pa)
+		audio_drv_probe $drv pulse/pulseaudio.h "-lpulse" \
+				"pa_context_set_source_output_volume(NULL, 0, NULL, NULL, NULL); return 0;"
+		pulse_libs="-lpulse"
+		audio_pt_int="yes"
+		;;
 
-    coreaudio)
-      coreaudio_libs="-framework CoreAudio"
-    ;;
+	    sdl)
+		if test "$sdl" = "no"; then
+		    error_exit "sdl not found or disabled, can not use sdl audio driver"
+		fi
+		;;
 
-    dsound)
-      dsound_libs="-lole32 -ldxguid"
-      audio_win_int="yes"
-    ;;
+	    coreaudio)
+		coreaudio_libs="-framework CoreAudio"
+		;;
 
-    oss)
-      oss_libs="$oss_lib"
-    ;;
+	    dsound)
+		dsound_libs="-lole32 -ldxguid"
+		audio_win_int="yes"
+		;;
 
-    wav)
-    # XXX: Probes for CoreAudio, DirectSound
-    ;;
+	    oss)
+		oss_libs="$oss_lib"
+		;;
 
-    *)
-    echo "$audio_possible_drivers" | grep -q "\<$drv\>" || {
-        error_exit "Unknown driver '$drv' selected" \
-            "Possible drivers are: $audio_possible_drivers"
-    }
-    ;;
-    esac
-done
+	    wav)
+		# XXX: Probes for CoreAudio, DirectSound
+		;;
+
+	    *)
+		echo "$audio_possible_drivers" | grep -q "\<$drv\>" || {
+		    error_exit "Unknown driver '$drv' selected" \
+			       "Possible drivers are: $audio_possible_drivers"
+		}
+		;;
+	esac
+    done
+else
+    audio_drv_list=""
+fi
 
 ##########################################
 # BrlAPI probe
@@ -6173,16 +6185,19 @@ fi
 if test "$cap_ng" = "yes" ; then
   echo "CONFIG_LIBCAP=y" >> $config_host_mak
 fi
-echo "CONFIG_AUDIO_DRIVERS=$audio_drv_list" >> $config_host_mak
-for drv in $audio_drv_list; do
-    def=CONFIG_AUDIO_$(echo $drv | LC_ALL=C tr '[a-z]' '[A-Z]')
-    case "$drv" in
-	alsa | oss | pa | sdl)
-	    echo "$def=m" >> $config_host_mak ;;
-	*)
-	    echo "$def=y" >> $config_host_mak ;;
-    esac
-done
+if test "$audio" = "yes"; then
+    echo "CONFIG_AUDIO=y" >> $config_host_mak
+    echo "CONFIG_AUDIO_DRIVERS=$audio_drv_list" >> $config_host_mak
+    for drv in $audio_drv_list; do
+	def=CONFIG_AUDIO_$(echo $drv | LC_ALL=C tr '[a-z]' '[A-Z]')
+	case "$drv" in
+	    alsa | oss | pa | sdl)
+		echo "$def=m" >> $config_host_mak ;;
+	    *)
+		echo "$def=y" >> $config_host_mak ;;
+	esac
+    done
+fi
 echo "ALSA_LIBS=$alsa_libs" >> $config_host_mak
 echo "PULSE_LIBS=$pulse_libs" >> $config_host_mak
 echo "COREAUDIO_LIBS=$coreaudio_libs" >> $config_host_mak
