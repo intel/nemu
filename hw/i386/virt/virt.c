@@ -745,6 +745,7 @@ static void virt_machine_class_init(MachineClass *mc)
     mc->max_cpus = 288;
     mc->has_hotpluggable_cpus = true;
     mc->auto_enable_numa_with_memhp = true;
+    mc->default_cpu_type = X86_CPU_TYPE_NAME ("host");
 
     /* Machine class handlers */
     mc->cpu_index_to_instance_props = cpu_index_to_props;
