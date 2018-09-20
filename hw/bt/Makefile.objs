@@ -1,3 +1,3 @@
 common-obj-y += core.o l2cap.o sdp.o hci.o hid.o
-common-obj-y += hci-csr.o
-
+common-obj-y += hci-csr.o host.o vhci.o
+host.o-cflags := $(BLUEZ_CFLAGS)
