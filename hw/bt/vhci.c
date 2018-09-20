@@ -93,22 +93,6 @@ static void vhci_host_send(void *opaque,
                 int type, const uint8_t *data, int len)
 {
     struct bt_vhci_s *s = (struct bt_vhci_s *) opaque;
-#if 0
-    uint8_t pkt = type;
-    struct iovec iv[2];
-
-    iv[0].iov_base = &pkt;
-    iv[0].iov_len  = 1;
-    iv[1].iov_base = (void *) data;
-    iv[1].iov_len  = len;
-
-    while (writev(s->fd, iv, 2) < 0)
-        if (errno != EAGAIN && errno != EINTR) {
-            fprintf(stderr, "qemu: error %i writing bluetooth packet.\n",
-                            errno);
-            return;
-        }
-#else
     /* Apparently VHCI wants us to write everything in one chunk :-(  */
     static uint8_t buf[4096];
 
@@ -121,7 +105,6 @@ static void vhci_host_send(void *opaque,
                             errno);
             return;
         }
-#endif
 }
 
 static void vhci_out_hci_packet_event(void *opaque,
