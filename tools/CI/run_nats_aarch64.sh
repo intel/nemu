@@ -25,5 +25,5 @@ if [ ! -f "$WORKLOADS_DIR"/"$UBUNTU_IMAGE" ]; then
 fi
 
 pushd $SRCDIR/tools/CI/nats
-go test -v -timeout 20m -parallel $((`nproc`/2)) || exit $?
+go test -v -timeout 20m -parallel $((`nproc`/2)) $@ || exit $?
 popd

@@ -56,7 +56,7 @@ popd
 sudo adduser $USER kvm
 pushd $SRCDIR/tools/CI/nats
 newgrp kvm << EOF
-go test -v -timeout 20m -parallel \$((`nproc`/2)) || exit \$?
+go test -v -timeout 20m -parallel \$((`nproc`/2)) $@ || exit \$?
 EOF
 RES=$?
 popd
