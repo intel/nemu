@@ -26,5 +26,21 @@ parallel ('xenial': {
 			sh "SRCDIR=$WORKSPACE tools/CI/run_nats_aarch64.sh"
 		}
 	}
+}, 'xenial-virt': {
+	node ('xenial') {
+		stage ('Checkout: x86-64 (virt only)') {
+			checkout scm
+		}
+		stage ('Prepare: x86-64 (virt only)') {
+			sh "sudo apt-get update"
+			sh "sudo apt-get build-dep -y qemu"
+		}
+		stage ('Compile: x86-64 (virt only)') {
+			sh "SRCDIR=$WORKSPACE tools/build_x86_64_virt.sh"
+		}
+		stage ('NATS: x86-64 (virt only)') {
+			sh "SRCDIR=$WORKSPACE tools/CI/run_nats.sh -run '.*/.*/virt/.*'"
+		}
+	}
 })
 
