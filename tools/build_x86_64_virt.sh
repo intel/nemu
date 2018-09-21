@@ -41,6 +41,7 @@ $SRCDIR/configure \
  --disable-sdl \
  --disable-rdma \
  --disable-vxhs \
+ --disable-vvfat \
  --enable-attr \
  --enable-cap-ng \
  --enable-kvm \
