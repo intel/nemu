@@ -450,6 +450,7 @@ debug_stack_usage="no"
 crypto_afalg="no"
 seccomp=""
 vvfat="yes"
+parallels="yes"
 glusterfs=""
 glusterfs_xlator_opt="no"
 glusterfs_discard="no"
@@ -1346,6 +1347,10 @@ for opt do
   ;;
   --enable-vvfat) vvfat="yes"
   ;;
+  --disable-parallels) parallels="no"
+  ;;
+  --enable-parallels) parallels="yes"
+  ;;
   --disable-glusterfs) glusterfs="no"
   ;;
   --enable-glusterfs) glusterfs="yes"
@@ -1717,6 +1722,7 @@ disabled with --disable-FEATURE, default is enabled if available:
   seccomp         seccomp support
   coroutine-pool  coroutine freelist (better performance)
   vvfat           Virtual VFAT backend
+  parallels       Parallels block backend
   glusterfs       GlusterFS backend
   tpm             TPM support
   libssh2         ssh block device support
@@ -6026,6 +6032,7 @@ echo "debug stack usage $debug_stack_usage"
 echo "mutex debugging   $debug_mutex"
 echo "crypto afalg      $crypto_afalg"
 echo "VVFAT support     $vvfat"
+echo "Parallels support $parallels"
 echo "GlusterFS support $glusterfs"
 echo "gcov              $gcov_tool"
 echo "gcov enabled      $gcov"
@@ -6669,6 +6676,10 @@ fi
 
 if test "$vvfat" = "yes" ; then
     echo "CONFIG_BLOCK_VVFAT=y" >> $config_host_mak
+fi
+
+if test "$parallels" = "yes" ; then
+    echo "CONFIG_BLOCK_PARALLELS=y" >> $config_host_mak
 fi
 
 if test "$glusterfs" = "yes" ; then
