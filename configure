@@ -449,6 +449,7 @@ coroutine_pool=""
 debug_stack_usage="no"
 crypto_afalg="no"
 seccomp=""
+vvfat="yes"
 glusterfs=""
 glusterfs_xlator_opt="no"
 glusterfs_discard="no"
@@ -1341,6 +1342,10 @@ for opt do
   ;;
   --disable-seccomp) seccomp="no"
   ;;
+  --disable-vvfat) vvfat="no"
+  ;;
+  --enable-vvfat) vvfat="yes"
+  ;;
   --disable-glusterfs) glusterfs="no"
   ;;
   --enable-glusterfs) glusterfs="yes"
@@ -1711,6 +1716,7 @@ disabled with --disable-FEATURE, default is enabled if available:
                   (for reading bzip2-compressed dmg images)
   seccomp         seccomp support
   coroutine-pool  coroutine freelist (better performance)
+  vvfat           Virtual VFAT backend
   glusterfs       GlusterFS backend
   tpm             TPM support
   libssh2         ssh block device support
@@ -6019,6 +6025,7 @@ echo "coroutine pool    $coroutine_pool"
 echo "debug stack usage $debug_stack_usage"
 echo "mutex debugging   $debug_mutex"
 echo "crypto afalg      $crypto_afalg"
+echo "VVFAT support     $vvfat"
 echo "GlusterFS support $glusterfs"
 echo "gcov              $gcov_tool"
 echo "gcov enabled      $gcov"
@@ -6658,6 +6665,10 @@ fi
 
 if test "$getauxval" = "yes" ; then
   echo "CONFIG_GETAUXVAL=y" >> $config_host_mak
+fi
+
+if test "$vvfat" = "yes" ; then
+    echo "CONFIG_BLOCK_VVFAT=y" >> $config_host_mak
 fi
 
 if test "$glusterfs" = "yes" ; then
