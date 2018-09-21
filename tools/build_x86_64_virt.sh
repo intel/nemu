@@ -43,6 +43,7 @@ $SRCDIR/configure \
  --disable-vxhs \
  --disable-vvfat \
  --disable-parallels \
+ --disable-dmg \
  --enable-attr \
  --enable-cap-ng \
  --enable-kvm \
