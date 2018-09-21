@@ -44,10 +44,10 @@ func createFlashImages(t *testing.T) (string, string) {
 	return flashZeroPath, flashOnePath
 }
 
-func getNemuPath(t *testing.T) string {
+func getNemuPath() string {
 	u, err := user.Current()
 	if err != nil {
-		t.Errorf("Error getting current user: %v", err)
+		fmt.Fprintf(os.Stderr, "Error getting current user: %v", err)
 		os.Exit(1)
 	}
 
@@ -106,7 +106,7 @@ func (q *qemuTest) launchQemu(ctx context.Context, monitorSocketCh chan string, 
 
 	fds := []*os.File{}
 
-	_, err = qemu.LaunchCustomQemu(ctx, getNemuPath(t), q.params, fds, nil, simpleLogger{t: t})
+	_, err = qemu.LaunchCustomQemu(ctx, *nemuBinaryPath, q.params, fds, nil, simpleLogger{t: t})
 	if err != nil {
 		t.Errorf("Error launching QEMU: %v", err)
 

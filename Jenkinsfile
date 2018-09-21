@@ -39,7 +39,7 @@ parallel ('xenial': {
 			sh "SRCDIR=$WORKSPACE tools/build_x86_64_virt.sh"
 		}
 		stage ('NATS: x86-64 (virt only)') {
-			sh "SRCDIR=$WORKSPACE tools/CI/run_nats.sh -run '.*/.*/virt/.*'"
+			sh "SRCDIR=$WORKSPACE tools/CI/run_nats.sh -run '.*/.*/virt/.*' -args -nemu-binary-path=$HOME/build-x86_64/x86_64_virt-softmmu/qemu-system-x86_64_virt"
 		}
 	}
 })

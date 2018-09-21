@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -22,6 +23,8 @@ var sshPort uint16 = 2222
 var sshPortMutex = sync.Mutex{}
 
 var cancelTimeout = 4 * time.Minute
+
+var nemuBinaryPath = flag.String("nemu-binary-path", getNemuPath(), "path to nemu binary")
 
 func allocateSSHPort() uint16 {
 	sshPortMutex.Lock()
