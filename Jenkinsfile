@@ -15,7 +15,7 @@ parallel ('xenial': {
 		}
 	}
 }, 'xenial-arm': {
-		node ('xenial-arm') {
+	node ('xenial-arm') {
 		stage ('Checkout: aarch64') {
 			checkout scm
 		}
@@ -42,5 +42,15 @@ parallel ('xenial': {
 			sh "SRCDIR=$WORKSPACE tools/CI/run_nats.sh -run '.*/.*/virt/.*' -args -nemu-binary-path=$HOME/build-x86_64/x86_64_virt-softmmu/qemu-system-x86_64_virt"
 		}
 	}
-})
+}, 'coderemoval': {
+		node ('xenial') {
+			stage ('Checkout: coderemoval') {
+				checkout scm
+			}
+			stage ('Removal: coderemoval') {
+				sh "SRCDIR=$WORKSPACE tools/CI/coderemoval.sh"
+			}
+		}
+}
+)
 
