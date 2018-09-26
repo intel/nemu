@@ -37,6 +37,10 @@
 #include "qapi/qmp/qnum.h"
 #include "hw/acpi/pcihp.h"
 
+/* TODO: These defines should come from the platform definition
+ * and should be used as parameters in all functions.
+ * Right now they are just manifest constants
+ */
 #define PCI_HOST_BRIDGE_CONFIG_ADDR        0xcf8
 #define PCI_HOST_BRIDGE_IO_0_MIN_ADDR      0x0000
 #define PCI_HOST_BRIDGE_IO_0_MAX_ADDR      0x0cf7
@@ -2335,6 +2339,11 @@ Aml *build_pci_segment_bridge(Aml *table, AcpiPciBus *pci_host)
                             0x0000, 0x0, root_bus_limit,
                             0x0000, root_bus_limit + 1));
 
+#if 0
+    /* Do we need this IO Region. Eliminate it as virtio devices 
+     * work fine without it
+     */
+
     /* set the io region 0 in pci host bridge */
     /* NOTE: Do not set legacy io port, no io region 0 */
     /* set the io region 1 in pci host bridge */
@@ -2349,6 +2358,7 @@ Aml *build_pci_segment_bridge(Aml *table, AcpiPciBus *pci_host)
                         0x0000, entry->base, entry->limit,
                         0x0000, entry->limit - entry->base + 1));
     }
+#endif
 
     /* set the mem region 1 in pci host bridge */
     crs_replace_with_free_ranges(crs_range_set.mem_ranges,
@@ -2515,6 +2525,49 @@ Aml *build_pci_host_bridge(Aml *table, AcpiPciBus *pci_host)
     return scope;
 }
 
+void build_acpi_pci_hotplug_generic(Aml *scope, uint16_t base_addr)
+{
+    Aml *field;
+    Aml *method;
+
+    aml_append(scope,
+        aml_operation_region("PCST", AML_SYSTEM_IO, aml_int(base_addr), 0x08));
+    field = aml_field("PCST", AML_DWORD_ACC, AML_NOLOCK, AML_WRITE_AS_ZEROS);
+    aml_append(field, aml_named_field("PCIU", 32));
+    aml_append(field, aml_named_field("PCID", 32));
+    aml_append(scope, field);
+
+    aml_append(scope,
+        aml_operation_region("SEJ", AML_SYSTEM_IO, aml_int(base_addr+0x08), 0x04));
+    field = aml_field("SEJ", AML_DWORD_ACC, AML_NOLOCK, AML_WRITE_AS_ZEROS);
+    aml_append(field, aml_named_field("B0EJ", 32));
+    aml_append(scope, field);
+
+    aml_append(scope,
+        aml_operation_region("BNMR", AML_SYSTEM_IO, aml_int(base_addr+0x10), 0x04));
+    field = aml_field("BNMR", AML_DWORD_ACC, AML_NOLOCK, AML_WRITE_AS_ZEROS);
+    aml_append(field, aml_named_field("BNUM", 32));
+    aml_append(scope, field);
+
+    aml_append(scope, aml_mutex("BLCK", 0));
+
+    method = aml_method("PCEJ", 2, AML_NOTSERIALIZED);
+    aml_append(method, aml_acquire(aml_name("BLCK"), 0xFFFF));
+    aml_append(method, aml_store(aml_arg(0), aml_name("BNUM")));
+    aml_append(method,
+        aml_store(aml_shiftleft(aml_int(1), aml_arg(1)), aml_name("B0EJ")));
+    aml_append(method, aml_release(aml_name("BLCK")));
+    aml_append(method, aml_return(aml_int(0)));
+    aml_append(scope, method);
+}
+
+void build_acpi_pci_hotplug(Aml *scope)
+{
+    build_acpi_pci_hotplug_generic(scope, 0xae00);
+}
+
+#if 0
+
 void build_acpi_pci_hotplug(Aml *scope)
 {
     Aml *field;
@@ -2550,6 +2603,8 @@ void build_acpi_pci_hotplug(Aml *scope)
     aml_append(method, aml_return(aml_int(0)));
     aml_append(scope, method);
 }
+
+#endif
 
 static void build_append_pcihp_notify_entry(Aml *method, int slot)
 {
@@ -2724,7 +2779,7 @@ void acpi_dsdt_add_pci_bus(Aml *dsdt, AcpiPciBus *pci_host)
 
     /* PCIHP */
     hp_scope =  aml_scope("\\_SB.PCI0");
-    build_acpi_pci_hotplug(hp_scope);
+    build_acpi_pci_hotplug_generic(hp_scope, 0xae00);
     build_append_pci_bus_devices(hp_scope, pci_host->pci_bus, false);
     aml_append(dsdt, hp_scope);
 
@@ -2756,7 +2811,7 @@ void acpi_dsdt_add_pci_bus_segment(Aml *dsdt, AcpiPciBus *pci_host)
 
     /* PCIHP */
     hp_scope =  aml_scope("\\_SB.PCI2");
-    build_acpi_pci_hotplug(hp_scope);
+    build_acpi_pci_hotplug_generic(hp_scope, 0xaf00);
     build_append_pci_bus_devices(hp_scope, pci_host->pci_bus, false);
     aml_append(dsdt, hp_scope);
 

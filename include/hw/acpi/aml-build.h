@@ -425,6 +425,7 @@ void acpi_build_mcfg(GArray *table_data, BIOSLinker *linker, AcpiMcfgInfo *info)
 Aml *build_gsi_link_dev(const char *name, uint8_t uid, uint8_t gsi);
 Aml *build_prt(bool is_pci0_prt);
 void build_acpi_pci_hotplug(Aml *scope);
+void build_acpi_pci_hotplug_generic(Aml *scope, uint16_t base_addr);
 void build_append_pci_bus_devices(Aml *parent_scope, PCIBus *bus,
                                   bool pcihp_bridge_en);
 void acpi_dsdt_add_pci_bus(Aml *dsdt, AcpiPciBus *pci_host);
