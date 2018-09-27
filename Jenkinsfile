@@ -1,6 +1,6 @@
 stage ("Builds") {
 	parallel ('xenial': {
-		if (env.BRANCH_NAME!="experiment/automatic-removal") {
+		if (!env.BRANCH_NAME.contains("experiment/automatic-removal")) {
 			node ('xenial') {
 				stage ('Checkout: x86-64') {
 					checkout scm
@@ -23,7 +23,7 @@ stage ("Builds") {
 				checkout scm
 			}
 			stage ('Used files: aarch64') {
-				if (env.BRANCH_NAME=="topic/virt-x86") {
+				if (env.BRANCH_NAME.contains("topic/virt-x86")) {
 					sh "SRCDIR=$WORKSPACE $WORKSPACE/tools/used_files.sh $WORKSPACE/tools/build_aarch64.sh > $WORKSPACE/used-aarch64.txt"
 					azureUpload storageCredentialId: 'nemu-jenkins-storage-account', 
 						filesPath: 'used-aarch64.txt',
@@ -48,7 +48,7 @@ stage ("Builds") {
 				sh "sudo apt-get build-dep -y qemu"
 			}
 			stage ('Used files: x86-64 (virt only)') {
-				if (env.BRANCH_NAME=="topic/virt-x86") {
+				if (env.BRANCH_NAME.contains("topic/virt-x86")) {
 					sh "SRCDIR=$WORKSPACE $WORKSPACE/tools/used_files.sh $WORKSPACE/tools/build_x86_64_virt.sh > $WORKSPACE/used-x86-64.txt"
 					azureUpload storageCredentialId: 'nemu-jenkins-storage-account', 
 						filesPath: 'used-x86-64.txt',
@@ -67,7 +67,7 @@ stage ("Builds") {
 }
 
 stage ("Analyse") {
-	if (env.BRANCH_NAME=="topic/virt-x86") { 
+	if (env.BRANCH_NAME.contains("topic/virt-x86")) { 
 		node ('master'){
 			stage ('Checkout: analyse') {
 					checkout scm
@@ -86,7 +86,7 @@ stage ("Analyse") {
 				sh 'cat $WORKSPACE/unused-files.txt | grep -v ^linux-headers | xargs -I {} -n 1 sh -c "git rm {} || true"'
 				sh 'git commit -m "TEMPORARY MESSAGE" -a'
 				writeFile file:'commit-message', text:"Automatic code removal\n\n"
-				sh 'tools/cloc-change.sh `git rev-parse remotes/origin/topic/virt-x86` >> $WORKSPACE/commit-message'
+				sh "tools/cloc-change.sh `git rev-parse remotes/origin/${env.BRANCH_NAME}` >> $WORKSPACE/commit-message"
 				sh 'git commit --amend --file $WORKSPACE/commit-message'
 				writeFile file:'git-helper.sh', text:"#!/bin/bash\necho username=\$GIT_USERNAME\necho password=\$GIT_PASSWORD"
 				sh "chmod +x $WORKSPACE/git-helper.sh"
@@ -98,7 +98,8 @@ stage ("Analyse") {
 					usernameVariable: 'GIT_USERNAME',
 					passwordVariable: 'GIT_PASSWORD'
 				]]) {
-					sh "git push origin -f tmp-branch:experiment/automatic-removal"
+					String branch_suffix = env.BRANCH_NAME.replaceAll("topic/virt-x86","")
+					sh "git push origin -f tmp-branch:experiment/automatic-removal${branch_suffix}"
 				}
 			}
 		}
