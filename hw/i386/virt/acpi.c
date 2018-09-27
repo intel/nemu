@@ -69,7 +69,8 @@ static void virt_device_plug_cb(HotplugHandler *hotplug_dev,
                                 DeviceState *dev, Error **errp)
 {
     VirtAcpiState *s = VIRT_ACPI(hotplug_dev);
-    BusState *qbus;
+//    BusState *qbus;
+    PCIDevice *pci_dev;
 
     if (object_dynamic_cast(OBJECT(dev), TYPE_CPU)) {
         acpi_cpu_plug_cb(hotplug_dev, &s->cpuhp_state, dev, errp);
@@ -83,7 +84,6 @@ static void virt_device_plug_cb(HotplugHandler *hotplug_dev,
     } else if (object_dynamic_cast(OBJECT(dev), TYPE_PCI_DEVICE)) {
 	/* We need a better way to figure out the bus
 	 * for now use the name 
-	 */
         qbus = qdev_get_parent_bus(DEVICE(dev));
 	if (strcmp("pcie.0",qbus->name) == 0) {
             acpi_pcihp_device_plug_cb(hotplug_dev, &s->pcihp_state, dev, errp);
@@ -91,6 +91,21 @@ static void virt_device_plug_cb(HotplugHandler *hotplug_dev,
 	if (strcmp("1.pcie.0",qbus->name) == 0) {
             acpi_pcihp_device_plug_cb(hotplug_dev, &s->pcihp_state_1, dev, errp);
 	}
+	 */
+        /* Try to use domain property to identify */
+        /* TODO: s->pcihp_state needs to be a link list,
+         * so only use an index @i to separate the case */
+        pci_dev = PCI_DEVICE(dev);
+        switch (pci_dev->domain) {
+        case 0:
+            acpi_pcihp_device_plug_cb(hotplug_dev, &s->pcihp_state, dev, errp);
+            break;
+        case 1:
+            acpi_pcihp_device_plug_cb(hotplug_dev, &s->pcihp_state_1, dev, errp);
+            break;
+        default:
+            break;
+        }
     } else {
         error_setg(errp, "virt: device plug request for unsupported device"
                    " type: %s", object_get_typename(OBJECT(dev)));
