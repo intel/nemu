@@ -281,6 +281,9 @@ struct PCIDevice {
     /* Used to allocate config space for capabilities. */
     uint8_t *used;
 
+    /* Specify the domain it belongs to */
+    uint16_t domain;
+
     /* the following fields are read only */
     int32_t devfn;
     /* Cached device to fetch requester ID from, to avoid the PCI
