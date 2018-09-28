@@ -31,6 +31,8 @@
 #include "hw/hw.h"
 
 
+#define TYPE_PCI_LITE_HOST      "pci-lite-host"
+
 PCIBus *pci_lite_init(MemoryRegion *address_space_mem,
                       MemoryRegion *address_space_io,
                       MemoryRegion *pci_address_space);

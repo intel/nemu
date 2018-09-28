@@ -44,7 +44,6 @@
 #include "hw/i386/virt.h"
 #include "hw/virtio/virtio-pci.h"
 
-#define TYPE_PCI_VIRT_HOST      "pci-virt-host"
 #define TYPE_PCI_VIRT_DEVICE    "pci-virt-device"
 
 #define PCI_VIRT_HOST(obj) \

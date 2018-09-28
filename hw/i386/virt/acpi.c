@@ -35,6 +35,8 @@
 #include "hw/acpi/pc-hotplug.h"
 #include "hw/acpi/reduced.h"
 #include "hw/acpi/pcihp.h"
+#include "hw/pci-host/pci-virt.h"
+#include "hw/pci-host/pci-lite.h"
 
 typedef struct VirtAcpiState {
     SysBusDevice parent_obj;
@@ -69,8 +71,7 @@ static void virt_device_plug_cb(HotplugHandler *hotplug_dev,
                                 DeviceState *dev, Error **errp)
 {
     VirtAcpiState *s = VIRT_ACPI(hotplug_dev);
-//    BusState *qbus;
-    PCIDevice *pci_dev;
+    BusState *qbus;
 
     if (object_dynamic_cast(OBJECT(dev), TYPE_CPU)) {
         acpi_cpu_plug_cb(hotplug_dev, &s->cpuhp_state, dev, errp);
@@ -92,19 +93,11 @@ static void virt_device_plug_cb(HotplugHandler *hotplug_dev,
             acpi_pcihp_device_plug_cb(hotplug_dev, &s->pcihp_state_1, dev, errp);
 	}
 	 */
-        /* Try to use domain property to identify */
-        /* TODO: s->pcihp_state needs to be a link list,
-         * so only use an index @i to separate the case */
-        pci_dev = PCI_DEVICE(dev);
-        switch (pci_dev->domain) {
-        case 0:
+        qbus = qdev_get_parent_bus(DEVICE(dev));
+        if (object_dynamic_cast(OBJECT(qbus->parent), TYPE_PCI_LITE_HOST)) {
             acpi_pcihp_device_plug_cb(hotplug_dev, &s->pcihp_state, dev, errp);
-            break;
-        case 1:
+        } else if (object_dynamic_cast(OBJECT(qbus->parent), TYPE_PCI_VIRT_HOST)) {
             acpi_pcihp_device_plug_cb(hotplug_dev, &s->pcihp_state_1, dev, errp);
-            break;
-        default:
-            break;
         }
     } else {
         error_setg(errp, "virt: device plug request for unsupported device"

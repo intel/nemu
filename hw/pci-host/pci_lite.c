@@ -43,7 +43,6 @@
 #include "qemu/error-report.h"
 #include "hw/i386/virt.h"
 
-#define TYPE_PCI_LITE_HOST      "pci-lite-host"
 #define TYPE_PCI_LITE_DEVICE    "pci-lite-device"
 
 #define PCI_LITE_HOST(obj) \

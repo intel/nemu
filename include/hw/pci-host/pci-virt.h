@@ -30,6 +30,7 @@
 
 #include "hw/hw.h"
 
+#define TYPE_PCI_VIRT_HOST      "pci-virt-host"
 
 PCIBus *pci_virt_init(MemoryRegion *address_space_mem,
                       MemoryRegion *address_space_io, /* We do not need this */
