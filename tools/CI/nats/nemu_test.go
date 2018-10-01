@@ -246,37 +246,34 @@ const (
 )
 
 func TestNemu(t *testing.T) {
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-			for _, m := range test.machines {
-				t.Run(m, func(t *testing.T) {
+	for testIndex := range tests {
+		test := &tests[testIndex]
+		for machineIndex := range test.machines {
+			m := &test.machines[machineIndex]
+			for distroIndex := range test.distros {
+				d := &test.distros[distroIndex]
+				t.Run(fmt.Sprintf("%s/%s/%s", test.name, *m, d.name), func(t *testing.T) {
 					t.Parallel()
-					for _, d := range test.distros {
-						t.Run(d.name, func(t *testing.T) {
-							t.Parallel()
-							q := qemuTest{
-								machine:   m,
-								diskImage: d.image,
-								cloudInit: d.cloudInit,
-							}
-
-							ctx, cancelFunc := context.WithTimeout(context.Background(), cancelTimeout)
-							err := q.startQemu(ctx, t)
-							if err != nil {
-								cancelFunc()
-								<-q.doneCh
-								t.Fatalf("Error starting qemu: %v", err)
-							}
-
-							test.testFunc(ctx, &q, t)
-
-							<-q.doneCh
-							cancelFunc()
-						})
+					q := qemuTest{
+						machine:   *m,
+						diskImage: d.image,
+						cloudInit: d.cloudInit,
 					}
+
+					ctx, cancelFunc := context.WithTimeout(context.Background(), cancelTimeout)
+					err := q.startQemu(ctx, t)
+					if err != nil {
+						cancelFunc()
+						<-q.doneCh
+						t.Fatalf("Error starting qemu: %v", err)
+					}
+
+					test.testFunc(ctx, &q, t)
+
+					<-q.doneCh
+					cancelFunc()
 				})
 			}
-		})
+		}
 	}
 }
