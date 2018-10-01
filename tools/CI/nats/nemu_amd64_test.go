@@ -77,9 +77,6 @@ func (q *qemuTest) launchQemu(ctx context.Context, monitorSocketCh chan string, 
 		"-drive", fmt.Sprintf("if=none,id=cloud,file=%s,format=raw", cloudInitImagePath),
 		"-netdev", fmt.Sprintf("user,id=mynet0,hostfwd=tcp::%d-:22,hostname=nemuvm", q.sshPort),
 		"-device", "virtio-net-pci,netdev=mynet0",
-		"-device", "virtio-serial-pci,id=virtio-serial0",
-		"-device", "virtconsole,chardev=charconsole0,id=console0",
-		"-chardev", fmt.Sprintf("file,id=charconsole0,path=%s,server,nowait", virtConsoleLogFile.Name()),
 		"-device", "virtio-rng-pci,rng=rng0",
 		"-object", "rng-random,filename=/dev/random,id=rng0",
 		"-device", "virtio-balloon-pci",
@@ -90,9 +87,7 @@ func (q *qemuTest) launchQemu(ctx context.Context, monitorSocketCh chan string, 
 	if q.machine == "virt" {
 		q.params = append(q.params,
 			"-device", "sysbus-debugcon,iobase=0x402,chardev=debugcon",
-			"-chardev", fmt.Sprintf("file,path=%s,id=debugcon", sysbusDebugLogFile.Name()),
-			"-device", "sysbus-debugcon,iobase=0x3f8,chardev=serialcon",
-			"-chardev", fmt.Sprintf("file,path=%s,id=serialcon", serialOutputLogFile.Name()))
+			"-chardev", fmt.Sprintf("file,path=%s,id=debugcon", sysbusDebugLogFile.Name()))
 	} else {
 		q.params = append(q.params,
 			"-device", "isa-debugcon,iobase=0x402,chardev=debugcon",
