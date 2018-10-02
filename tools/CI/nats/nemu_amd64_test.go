@@ -251,6 +251,14 @@ var clearLinuxOnly = []distro{
 	},
 }
 
+var ubuntuOnly = []distro{
+	{
+		name:      "xenial",
+		image:     xenialDiskImage,
+		cloudInit: cloudInitUbuntu,
+	},
+}
+
 var allMachines = []string{"pc", "q35", "virt"}
 
 var tests = []testConfig{
@@ -263,7 +271,7 @@ var tests = []testConfig{
 	{
 		name:     "Reboot",
 		testFunc: testReboot,
-		distros:  allDistros,
+		distros:  ubuntuOnly,
 		machines: allMachines,
 	},
 	{
