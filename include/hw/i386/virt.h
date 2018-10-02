@@ -37,15 +37,8 @@ typedef struct {
 
     Notifier machine_done;
 
-    /* NUMA information: */
-    uint64_t numa_nodes;
-    uint64_t *node_mem;
-
     /* ACPI configuration */
-    AcpiConfiguration *acpi_configuration;
-
-    /* Devices and objects */
-    FWCfgState *fw_cfg;
+    AcpiConfiguration acpi_conf;
 
     /* number of CPUs */
     uint16_t boot_cpus;
@@ -54,15 +47,7 @@ typedef struct {
     qemu_irq *gsi;
 
     PCIBus *pci_bus;
-
-    /* ACPI device for hotplug and PM */
-    HotplugHandler *acpi_dev;
-
-    AcpiNVDIMMState acpi_nvdimm_state;
-
-    /* RAM size */
     ram_addr_t above_4g_mem_size;
-    ram_addr_t below_4g_mem_size;
 
     DeviceState *acpi;
 } VirtMachineState;
