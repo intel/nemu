@@ -19,6 +19,16 @@
 #include "hw/mem/nvdimm.h"
 #include "hw/acpi/acpi_dev_interface.h"
 
+/* fw_cfg machine ids */
+enum {
+    X86_I440FX = 1,
+    X86_Q35,
+    X86_ISAPC,
+    X86_XENFV,
+    X86_XENPV,
+    X86_VIRT,
+};
+
 #define HPET_INTCAP "hpet-intcap"
 
 /**
