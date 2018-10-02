@@ -85,25 +85,13 @@ static void acpi_conf_virt_init(MachineState *machine)
     AcpiConfiguration *conf;
     uint8_t events_size;
 
-    if (!vms->acpi_configuration) {
-        vms->acpi_configuration = g_malloc0(sizeof(AcpiConfiguration));
-    }
-
-    conf = vms->acpi_configuration;
+    conf = &vms->acpi_conf;
     conf->legacy_acpi_table_size = 0;
     conf->legacy_cpu_hotplug = false;
     conf->rsdp_in_ram = true;
     conf->apic_xrupt_override = kvm_allows_irq0_override();
 
-    /* TODO: lowmem, acpi_dev, acpi_nvdimm */
-    conf->fw_cfg = vms->fw_cfg;
-    conf->numa_nodes = vms->numa_nodes;
-    conf->node_mem = vms->node_mem;
-    conf->apic_id_limit = vms->apic_id_limit;
-    conf->below_4g_mem_size = vms->below_4g_mem_size;
-    conf->acpi_dev = vms->acpi_dev;
     conf->cpu_hotplug_io_base = VIRT_CPU_HOTPLUG_IO_BASE;
-    conf->acpi_nvdimm_state = vms->acpi_nvdimm_state;
 
     /* GED events */
     GedEvent events[] = {
@@ -139,7 +127,7 @@ static void virt_machine_done(Notifier *notifier, void *data)
     MachineState *ms = MACHINE(vms);
     MachineClass *mc = MACHINE_GET_CLASS(ms);
 
-    mc->firmware_build_methods.acpi.setup(ms, vms->acpi_configuration);
+    mc->firmware_build_methods.acpi.setup(ms, &vms->acpi_conf);
 }
 
 static void virt_gsi_handler(void *opaque, int n, int level)
@@ -198,11 +186,11 @@ static void virt_machine_state_init(MachineState *machine)
     bool linux_boot = (machine->kernel_filename != NULL);
 
     /* NUMA stuff */
-    vms->numa_nodes = nb_numa_nodes;
-    vms->node_mem = g_malloc0(nb_numa_nodes *
-                              sizeof *vms->node_mem);
+    vms->acpi_conf.numa_nodes = nb_numa_nodes;
+    vms->acpi_conf.node_mem = g_malloc0(nb_numa_nodes *
+                              sizeof *vms->acpi_conf.node_mem);
     for (i = 0; i < nb_numa_nodes; i++) {
-        vms->node_mem[i] = numa_info[i].node_mem;
+        vms->acpi_conf.node_mem[i] = numa_info[i].node_mem;
     }
 
     vms->machine_done.notify = virt_machine_done;
@@ -220,7 +208,7 @@ static void virt_machine_state_init(MachineState *machine)
 
     object_property_add_link(OBJECT(machine), "acpi-device",
                              TYPE_HOTPLUG_HANDLER,
-                             (Object **)&vms->acpi_dev,
+                             (Object **)&vms->acpi_conf.acpi_dev,
                              object_property_allow_set_link,
                              OBJ_PROP_LINK_STRONG, &error_abort);
     object_property_set_link(OBJECT(machine), OBJECT(vms->acpi),
@@ -240,16 +228,16 @@ static void virt_machine_state_init(MachineState *machine)
                         val, sizeof(*val));
     }
 
-    if (vms->acpi_nvdimm_state.is_enabled) {
-        nvdimm_init_acpi_state(&vms->acpi_nvdimm_state, get_system_io(),
+    if (vms->acpi_conf.acpi_nvdimm_state.is_enabled) {
+        nvdimm_init_acpi_state(&vms->acpi_conf.acpi_nvdimm_state, get_system_io(),
                                fw_cfg, OBJECT(vms));
     }
     
-    vms->fw_cfg = fw_cfg;
+    vms->acpi_conf.fw_cfg = fw_cfg;
     acpi_conf_virt_init(machine);
 
     if (linux_boot) {
-        load_linux(MACHINE(vms), vms->acpi_configuration, fw_cfg);
+        load_linux(MACHINE(vms), &vms->acpi_conf, fw_cfg);
     }
 }
 
@@ -257,14 +245,14 @@ static bool virt_machine_get_nvdimm(Object *obj, Error **errp)
 {
     VirtMachineState *vms = VIRT_MACHINE(obj);
 
-    return vms->acpi_nvdimm_state.is_enabled;
+    return vms->acpi_conf.acpi_nvdimm_state.is_enabled;
 }
 
 static void virt_machine_set_nvdimm(Object *obj, bool value, Error **errp)
 {
     VirtMachineState *vms = VIRT_MACHINE(obj);
 
-    vms->acpi_nvdimm_state.is_enabled = value;
+    vms->acpi_conf.acpi_nvdimm_state.is_enabled = value;
 }
 
 static void
@@ -283,7 +271,7 @@ static void virt_machine_instance_init(Object *obj)
     VirtMachineState *vms = VIRT_MACHINE(obj);
 
     /* Disable NVDIMM by default */
-    vms->acpi_nvdimm_state.is_enabled = false;
+    vms->acpi_conf.acpi_nvdimm_state.is_enabled = false;
 }
 
 static void virt_machine_reset(void)
@@ -390,8 +378,8 @@ static void virt_cpu_plug(HotplugHandler *hotplug_dev,
     /* Increment the number of CPUs */
     vms->boot_cpus++;
 
-    if (vms->fw_cfg) {
-        fw_cfg_modify_i16(vms->fw_cfg, FW_CFG_NB_CPUS, vms->boot_cpus);
+    if (vms->acpi_conf.fw_cfg) {
+        fw_cfg_modify_i16(vms->acpi_conf.fw_cfg, FW_CFG_NB_CPUS, vms->boot_cpus);
     }
 
     found_cpu = cpu_find_slot(ms, cpu->apic_id, NULL);
@@ -557,8 +545,8 @@ static void virt_cpu_unplug_cb(HotplugHandler *hotplug_dev,
     /* decrement the number of CPUs */
     vms->boot_cpus--;
 
-    if (vms->fw_cfg) {
-        fw_cfg_modify_i16(vms->fw_cfg, FW_CFG_NB_CPUS, vms->boot_cpus);
+    if (vms->acpi_conf.fw_cfg) {
+        fw_cfg_modify_i16(vms->acpi_conf.fw_cfg, FW_CFG_NB_CPUS, vms->boot_cpus);
     }
 
 out:
@@ -592,7 +580,7 @@ static void virt_dimm_plug(HotplugHandler *hotplug_dev,
         align = memory_region_get_alignment(mr);
     }
 
-    if (is_nvdimm && !vms->acpi_nvdimm_state.is_enabled) {
+    if (is_nvdimm && !vms->acpi_conf.acpi_nvdimm_state.is_enabled) {
         error_setg(&local_err,
                    "nvdimm is not enabled: missing 'nvdimm' in '-M'");
         goto out;
@@ -619,7 +607,7 @@ static void virt_dimm_plug(HotplugHandler *hotplug_dev,
     }
 
     if (is_nvdimm) {
-        nvdimm_plug(&vms->acpi_nvdimm_state);
+        nvdimm_plug(&vms->acpi_conf.acpi_nvdimm_state);
     }
 
     hhc = HOTPLUG_HANDLER_GET_CLASS(vms->acpi);
