@@ -42,6 +42,7 @@ $SRCDIR/configure \
  --disable-vvfat \
  --disable-parallels \
  --disable-dmg \
+ --disable-tcg \
  --enable-attr \
  --enable-cap-ng \
  --enable-fdt \
