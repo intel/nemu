@@ -2264,6 +2264,7 @@ Aml *build_pci_host_bridge(Aml *table, AcpiPciBus *pci_host)
     CrsRangeSet crs_range_set;
     Range *pci_hole = NULL;
     Range *pci_hole64 = NULL;
+    uint16_t pci_segment = 0;
     PCIBus *bus = NULL;
     int root_bus_limit = 0xFF;
     int i;
@@ -2272,6 +2273,7 @@ Aml *build_pci_host_bridge(Aml *table, AcpiPciBus *pci_host)
     assert(bus);
     pci_hole = pci_host->pci_hole;
     pci_hole64 = pci_host->pci_hole64;
+    pci_segment = pci_host->pci_segment;
 
     crs_range_set_init(&crs_range_set);
     QLIST_FOREACH(bus, &bus->child, sibling) {
@@ -2307,8 +2309,8 @@ Aml *build_pci_host_bridge(Aml *table, AcpiPciBus *pci_host)
         aml_append(scope, dev);
         aml_append(table, scope);
     }
-    scope = aml_scope("\\_SB.PCI0");
-    /* build PCI0._CRS */
+    scope = aml_scope("\\_SB.PCI%X", pci_segment);
+    /* build PCI<N>._CRS */
     crs = aml_resource_template();
     /* set the pcie bus num */
     aml_append(crs,
@@ -2579,19 +2581,21 @@ void build_append_pci_bus_devices(Aml *parent_scope, PCIBus *bus,
 void acpi_dsdt_add_pci_bus(Aml *dsdt, AcpiPciBus *pci_host)
 {
     Aml *dev, *pci_scope, *hp_scope;
+    uint16_t pci_segment = pci_host->pci_segment;
 
-    dev = aml_device("\\_SB.PCI0");
+    dev = aml_device("\\_SB.PCI%x", pci_segment);
     aml_append(dev, aml_name_decl("_HID", aml_eisaid("PNP0A08")));
     aml_append(dev, aml_name_decl("_CID", aml_eisaid("PNP0A03")));
     aml_append(dev, aml_name_decl("_ADR", aml_int(0)));
-    aml_append(dev, aml_name_decl("_UID", aml_int(1)));
+    aml_append(dev, aml_name_decl("_SEG", aml_int(pci_segment)));
+    aml_append(dev, aml_name_decl("_UID", aml_int(pci_segment)));
     aml_append(dev, aml_name_decl("SUPP", aml_int(0)));
     aml_append(dev, aml_name_decl("CTRL", aml_int(0)));
     aml_append(dev, build_osc_method(0x1F));
     aml_append(dsdt, dev);
 
     /* PCIHP */
-    hp_scope =  aml_scope("\\_SB.PCI0");
+    hp_scope =  aml_scope("\\_SB.PCI%x", pci_segment);
     build_acpi_pci_hotplug(hp_scope);
     build_append_pci_bus_devices(hp_scope, pci_host->pci_bus, false);
     aml_append(dsdt, hp_scope);
