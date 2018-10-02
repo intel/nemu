@@ -235,6 +235,8 @@ typedef struct AcpiPciBus {
     PCIBus *pci_bus;
     Range *pci_hole;
     Range *pci_hole64;
+    uint16_t pci_segment; /* PCI Segment Group number */
+    uint16_t acpi_iobase_addr;
 }AcpiPciBus;
 
 typedef struct CrsRangeEntry {
