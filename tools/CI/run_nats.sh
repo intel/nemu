@@ -43,9 +43,6 @@ if [ ! -f "$WORKLOADS_DIR"/"$UBUNTU_IMAGE" ]; then
    wget -nv https://cloud-images.ubuntu.com/xenial/current/xenial-server-cloudimg-amd64-uefi1.img || exit $?
    sudo apt-get install -y libguestfs-tools
    sudo mkdir -p /tmp/mnt
-   sudo guestmount -i -a  "$WORKLOADS_DIR"/"$UBUNTU_IMAGE" /tmp/mnt/
-   sudo sed -i "s/console=tty1 console=ttyS0/console=tty1 console=ttyS0 console=hvc0/" /tmp/mnt/boot/grub/grub.cfg
-   sudo umount /tmp/mnt
 fi
 
 rm -rf $OVMF
