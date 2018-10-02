@@ -1535,6 +1535,7 @@ void acpi_build(AcpiBuildTables *tables, MachineState *machine, AcpiConfiguratio
         .pci_bus    = PC_MACHINE(machine)->bus,
         .pci_hole   = &pci_hole,
         .pci_hole64 = &pci_hole64,
+        .pci_segment = 0,
     };
     /*
      * FACS is pointed to by FADT.
