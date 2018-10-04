@@ -593,8 +593,8 @@ static void virt_dimm_plug(HotplugHandler *hotplug_dev,
         align = LINUX_SPARSE_MEMORY_ALIGNMENT;
     }
 
-    free_addr = memory_device_get_free_addr(machine, &machine->device_memory->base,
-                                            align, memory_region_size(mr), &local_err);
+    free_addr = memory_device_get_free_addr(machine, NULL, align,
+                                            memory_region_size(mr), &local_err);
     if (local_err) {
         goto out;
     }
