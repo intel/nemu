@@ -21,3 +21,7 @@ int select_watchdog(const char *p)
 {
     return 0;
 }
+
+void watchdog_perform_action(void)
+{
+}
