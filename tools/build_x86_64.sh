@@ -24,6 +24,25 @@ $SRCDIR/configure \
  --disable-tools \
  --disable-tpm \
  --disable-virtfs \
+ --disable-tcg \
+ --disable-capstone \
+ --disable-xen \
+ --disable-xen-pci-passthrough \
+ --disable-wdt \
+ --disable-bluetooth \
+ --disable-usb-redir \
+ --disable-spice \
+ --disable-vnc \
+ --disable-whpx \
+ --disable-hvf \
+ --disable-gtk \
+ --disable-vte \
+ --disable-sdl \
+ --disable-rdma \
+ --disable-vxhs \
+ --disable-vvfat \
+ --disable-parallels \
+ --disable-dmg \
  --enable-attr \
  --enable-cap-ng \
  --enable-kvm \
