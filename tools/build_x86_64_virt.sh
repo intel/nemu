@@ -5,8 +5,8 @@ if [[ "$EXTRA_CFLAGS" == "" ]]; then
     EXTRA_CFLAGS=" -O3 -fno-semantic-interposition -falign-functions=32 -D_FORTIFY_SOURCE=2 -fPIE"
 fi
 
-mkdir -p $HOME/build-x86_64
-pushd $HOME/build-x86_64
+mkdir -p $HOME/build-x86_64_virt
+pushd $HOME/build-x86_64_virt
 make distclean || true
 $SRCDIR/configure \
  --disable-fdt \
