@@ -35,6 +35,7 @@ mkdir -p $WORKLOADS_DIR
 pushd $WORKLOADS_DIR
 
 if [ ! -f "$WORKLOADS_DIR"/"$CLEAR_IMAGE" ]; then
+    wget -nv https://nemujenkinsstorage.blob.core.windows.net/images/clear-$CLEAR_VERSION-cloud.img.xz ||
     wget -nv https://download.clearlinux.org/releases/$CLEAR_VERSION/clear/clear-$CLEAR_VERSION-cloud.img.xz || exit $?
     unxz clear-$CLEAR_VERSION-cloud.img.xz || exit $?
 fi
