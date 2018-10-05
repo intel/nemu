@@ -1,12 +1,18 @@
 #!/bin/bash
 set -x
 
+# Set to a specific git revision and repo to test, if empty or unset then will
+# download latest tagged binary
+#OVMF_GIT_REV="2f16693ce32cbe0956ce2dcaa571a32966413855"
+#OVMF_GIT_REPO="https://github.com/rbradford/edk2"
+
 GO_VERSION="1.10.3"
 CLEAR_VERSION=24740
 CLEAR_IMAGE=clear-$CLEAR_VERSION-cloud.img
 UBUNTU_IMAGE=xenial-server-cloudimg-amd64-uefi1.img
 WORKLOADS_DIR="$HOME/workloads"
 OVMF="OVMF.fd"
+
 
 go_install() {
     export PATH=/usr/local/go/bin:$PATH
@@ -49,9 +55,23 @@ if [ ! -f "$WORKLOADS_DIR"/"$UBUNTU_IMAGE" ]; then
    sudo umount /tmp/mnt
 fi
 
+
 rm -rf $OVMF
-OVMF_URL=$(curl --silent https://api.github.com/repos/rbradford/edk2/releases/latest | grep -o https://.*OVMF.fd)
-wget -nv $OVMF_URL || exit $?
+if [[ -z "$OVMF_GIT_REV" || -z "$OVMF_GIT_REPO" ]]; then
+   OVMF_URL=$(curl --silent https://api.github.com/repos/rbradford/edk2/releases/latest | grep -o https://.*OVMF.fd)
+   wget -nv $OVMF_URL || exit $?
+else
+   sudo apt-get install -y build-essential uuid-dev iasl git gcc-5 nasm
+   git clone $OVMF_GIT_REPO || exit $?
+   pushd edk2
+   git checkout $OVMF_GIT_REV || exit $?
+   make -C BaseTools || exit $?
+   bash -c "export WORKSPACE=$PWD; . edksetup.sh; build"
+   cp Build/OvmfX64/DEBUG_GCC5/FV/OVMF.fd "$WORKLOADS_DIR"/"$OVMF" || exit $?
+   popd
+   rm -rf edk2
+fi
+
 popd
 
 sudo adduser $USER kvm
