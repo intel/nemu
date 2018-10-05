@@ -25,7 +25,6 @@
 #include "hw/sysbus.h"
 
 #include "hw/i386/virt.h"
-#include "hw/i386/pc.h"
 
 #include "hw/acpi/acpi.h"
 #include "hw/acpi/cpu.h"
@@ -35,6 +34,8 @@
 #include "hw/acpi/pc-hotplug.h"
 #include "hw/acpi/reduced.h"
 #include "hw/acpi/pcihp.h"
+
+#include "hw/pci/pci.h"
 
 typedef struct VirtAcpiState {
     SysBusDevice parent_obj;

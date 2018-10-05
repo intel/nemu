@@ -40,7 +40,7 @@
 #include "hw/i386/topology.h"
 #include "hw/i386/amd_iommu.h"
 #include "hw/i386/intel_iommu.h"
-#include "hw/i386/pc.h"
+
 #include "hw/mem/pc-dimm.h"
 #include "hw/mem/memory-device.h"
 
