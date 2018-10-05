@@ -30,7 +30,7 @@
 #include "hw/pci/pci_bus.h"
 #include "qemu/range.h"
 #include "hw/pci/pci_bridge.h"
-#include "hw/i386/pc.h"
+#include "hw/pci/pci_host.h"
 #include "sysemu/tpm.h"
 #include "hw/acpi/tpm.h"
 #include "qom/qom-qobject.h"
