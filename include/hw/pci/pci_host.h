@@ -38,6 +38,12 @@
 #define PCI_HOST_BRIDGE_GET_CLASS(obj) \
      OBJECT_GET_CLASS(PCIHostBridgeClass, (obj), TYPE_PCI_HOST_BRIDGE)
 
+#define PCI_HOST_PROP_PCI_HOLE_START   "pci-hole-start"
+#define PCI_HOST_PROP_PCI_HOLE_END     "pci-hole-end"
+#define PCI_HOST_PROP_PCI_HOLE64_START "pci-hole64-start"
+#define PCI_HOST_PROP_PCI_HOLE64_END   "pci-hole64-end"
+#define PCI_HOST_PROP_PCI_HOLE64_SIZE  "pci-hole64-size"
+
 struct PCIHostState {
     SysBusDevice busdev;
 
