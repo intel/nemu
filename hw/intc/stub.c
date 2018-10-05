@@ -10,7 +10,7 @@
 
 #include "qemu/osdep.h"
 #include "hw/qdev-core.h"
-#include "hw/i386/pc.h"
+#include "hw/i386/apic.h"
 
 DeviceState *isa_pic=NULL;
 
