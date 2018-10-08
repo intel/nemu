@@ -20,6 +20,9 @@
 #ifndef HW_IOAPIC_H
 #define HW_IOAPIC_H
 
+#include "hw/irq.h"
+#include "hw/isa/isa.h"
+
 #define IOAPIC_NUM_PINS 24
 #define IO_APIC_DEFAULT_ADDRESS 0xfec00000
 
@@ -27,5 +30,13 @@
 #define TYPE_IOAPIC "ioapic"
 
 void ioapic_eoi_broadcast(int vector);
+
+/* Global System Interrupts */
+#define GSI_NUM_PINS IOAPIC_NUM_PINS
+
+typedef struct GSIState {
+    qemu_irq i8259_irq[ISA_NUM_IRQS];
+    qemu_irq ioapic_irq[IOAPIC_NUM_PINS];
+} GSIState;
 
 #endif /* HW_IOAPIC_H */
