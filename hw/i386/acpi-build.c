@@ -976,7 +976,7 @@ static void build_piix4_pci_hotplug(Aml *table)
 
     scope = aml_scope("_SB.PCI0");
 
-    build_acpi_pci_hotplug(scope);
+    build_acpi_pci_hotplug(scope, PIIX_ACPI_PCI_HOTPLUG_IO_BASE);
     aml_append(table, scope);
 }
 
@@ -1488,6 +1488,7 @@ void acpi_build(AcpiBuildTables *tables, MachineState *machine, AcpiConfiguratio
         .pci_bus    = PC_MACHINE(machine)->bus,
         .pci_hole   = &pci_hole,
         .pci_hole64 = &pci_hole64,
+        .pci_segment = 0,
     };
     /*
      * FACS is pointed to by FADT.

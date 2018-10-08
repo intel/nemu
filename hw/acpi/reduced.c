@@ -160,6 +160,8 @@ static void acpi_reduced_build(MachineState *ms, AcpiBuildTables *tables, AcpiCo
         .pci_bus    = VIRT_MACHINE(ms)->pci_bus,
         .pci_hole   = &pci_hole,
         .pci_hole64 = &pci_hole64,
+        .pci_segment = 0,
+        .acpi_iobase_addr = VIRT_ACPI_PCI_HOTPLUG_IO_BASE,
     };
 
     /* DSDT is pointed to by FADT */
