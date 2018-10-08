@@ -12,6 +12,8 @@
 #define FW_CFG_E820_TABLE (FW_CFG_ARCH_LOCAL + 3)
 #define FW_CFG_HPET (FW_CFG_ARCH_LOCAL + 4)
 
+#define FW_CFG_IO_BASE 0x510
+
 /* fw_cfg machine ids */
 enum {
     X86_I440FX = 1,
@@ -21,7 +23,6 @@ enum {
     X86_XENPV,
     X86_VIRT,
 };
-
 
 FWCfgState *fw_cfg_init(MachineState *ms, uint16_t boot_cpus, const CPUArchIdList *cpus, unsigned apic_id_limit);
 

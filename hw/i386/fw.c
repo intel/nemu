@@ -26,7 +26,6 @@
 
 #include "hw/i386/fw.h"
 #include "hw/i386/memory.h"
-#include "hw/i386/pc.h"
 
 #include "kvm_i386.h"
 
