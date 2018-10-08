@@ -5,6 +5,8 @@
 
 #include "hw/irq.h"
 
+extern bool compat_apic_id_mode;
+
 /* apic.c */
 void apic_deliver_irq(uint8_t dest, uint8_t dest_mode, uint8_t delivery_mode,
                       uint8_t vector_num, uint8_t trigger_mode);

@@ -25,7 +25,7 @@
 #include "sysemu/sysemu.h"
 
 #include "hw/i386/cpu-internal.h"
-#include "hw/i386/pc.h"
+#include "hw/i386/apic.h"
 #include "hw/i386/topology.h"
 
 #include "hw/acpi/pc-hotplug.h"
