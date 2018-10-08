@@ -180,7 +180,6 @@ void vmmouse_set_data(const uint32_t *data);
 
 /* pc.c */
 extern int fd_bootchk;
-extern bool compat_apic_id_mode;
 
 void pc_acpi_smi_interrupt(void *opaque, int irq, int level);
 
