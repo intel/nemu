@@ -31,6 +31,7 @@
 #include "hw/i386/pc.h"
 #include "hw/i386/apic.h"
 #include "hw/i386/smm.h"
+#include "hw/i386/timer.h"
 #include "hw/display/ramfb.h"
 #include "hw/firmware/smbios.h"
 #include "hw/pci/pci.h"
