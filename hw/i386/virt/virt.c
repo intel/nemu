@@ -50,6 +50,7 @@
 #include "kvm_i386.h"
 
 #include "../acpi-build.h"
+#include "hw/smbios/smbios.h"
 
 #define DEFINE_VIRT_MACHINE_LATEST(major, minor, latest) \
     static void virt_##major##_##minor##_object_class_init(ObjectClass *oc, \
@@ -196,6 +197,9 @@ static void virt_machine_state_init(MachineState *machine)
     vms->machine_done.notify = virt_machine_done;
     qemu_add_machine_init_done_notifier(&vms->machine_done);
 
+    /* If enable DMI, then we need set this */
+    smbios_set_defaults("QEMU","VIRTUAL MACHINE (virt)", mc->name,
+                        false, true, SMBIOS_ENTRY_POINT_21);
     /* TODO Add the ram pointer to the QOM */
     virt_memory_init(vms);
     virt_pci_init(vms);
