@@ -78,21 +78,27 @@ static void fw_build_smbios(MachineState *ms, FWCfgState *fw_cfg)
 static void fw_build_feature_control_file(MachineState *ms, FWCfgState *fw_cfg)
 {
     X86CPU *cpu = X86_CPU(ms->possible_cpus->cpus[0].cpu);
+#if 0 //HACK
     CPUX86State *env = &cpu->env;
+#endif
     uint32_t unused, ecx, edx;
     uint64_t feature_control_bits = 0;
     uint64_t *val;
 
+#if 0 //HACK
     cpu_x86_cpuid(env, 1, 0, &unused, &unused, &ecx, &edx);
     if (ecx & CPUID_EXT_VMX) {
         feature_control_bits |= FEATURE_CONTROL_VMXON_ENABLED_OUTSIDE_SMX;
     }
+#endif
 
+#if 0
     if ((edx & (CPUID_EXT2_MCE | CPUID_EXT2_MCA)) ==
         (CPUID_EXT2_MCE | CPUID_EXT2_MCA) &&
         (env->mcg_cap & MCG_LMCE_P)) {
         feature_control_bits |= FEATURE_CONTROL_LMCE;
     }
+#endif
 
     if (!feature_control_bits) {
         return;
