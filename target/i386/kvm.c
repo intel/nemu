@@ -33,7 +33,7 @@
 #include "qemu/host-utils.h"
 #include "qemu/config-file.h"
 #include "qemu/error-report.h"
-#include "hw/i386/pc.h"
+#include "hw/boards.h"
 #include "hw/i386/apic.h"
 #include "hw/i386/apic_internal.h"
 #include "hw/i386/apic-msidef.h"
@@ -1608,11 +1608,15 @@ int kvm_arch_init(MachineState *ms, KVMState *s)
         }
     }
 
-    if (kvm_check_extension(s, KVM_CAP_X86_SMM) &&
-        object_dynamic_cast(OBJECT(ms), TYPE_PC_MACHINE) &&
-        is_smm_enabled(PC_MACHINE(ms)->smm)) {
-        smram_machine_done.notify = register_smram_listener;
-        qemu_add_machine_init_done_notifier(&smram_machine_done);
+    if (kvm_check_extension(s, KVM_CAP_X86_SMM)) {
+        Error *prop_err = NULL;
+        OnOffAuto smm;
+
+        smm = object_property_get_uint(qdev_get_machine(), MACHINE_SMM, &prop_err);
+        if (!prop_err && is_smm_enabled(smm)) {
+                smram_machine_done.notify = register_smram_listener;
+                qemu_add_machine_init_done_notifier(&smram_machine_done);
+        }
     }
 
     if (enable_cpu_pm) {
