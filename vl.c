@@ -1975,7 +1975,7 @@ static void main_loop(void)
 
 static void version(void)
 {
-    printf("QEMU emulator version " QEMU_FULL_VERSION "\n"
+    printf("NEMU (like QEMU) version " QEMU_FULL_VERSION "\n"
            QEMU_COPYRIGHT "\n");
 }
 
