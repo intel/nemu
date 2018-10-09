@@ -24,6 +24,7 @@
 #include "hw/hotplug.h"
 #include "hw/sysbus.h"
 
+#include "hw/i386/acpi.h"
 #include "hw/i386/virt.h"
 
 #include "hw/acpi/acpi.h"
@@ -221,44 +222,6 @@ DeviceState *virt_acpi_init(qemu_irq *gsi, PCIBus *pci_bus)
 static Property virt_acpi_properties[] = {
     DEFINE_PROP_END_OF_LIST(),
 };
-
-static void madt_cpu_entry(AcpiDeviceIf *adev, int uid,
-                           const CPUArchIdList *apic_ids, GArray *entry)
-{
-    uint32_t apic_id = apic_ids->cpus[uid].arch_id;
-
-    /* ACPI spec says that LAPIC entry for non present
-     * CPU may be omitted from MADT or it must be marked
-     * as disabled. However omitting non present CPU from
-     * MADT breaks hotplug on linux. So possible CPUs
-     * should be put in MADT but kept disabled.
-     */
-    if (apic_id < 255) {
-        AcpiMadtProcessorApic *apic = acpi_data_push(entry, sizeof *apic);
-
-        apic->type = ACPI_APIC_PROCESSOR;
-        apic->length = sizeof(*apic);
-        apic->processor_id = uid;
-        apic->local_apic_id = apic_id;
-        if (apic_ids->cpus[uid].cpu != NULL) {
-            apic->flags = cpu_to_le32(1);
-        } else {
-            apic->flags = cpu_to_le32(0);
-        }
-    } else {
-        AcpiMadtProcessorX2Apic *apic = acpi_data_push(entry, sizeof *apic);
-
-        apic->type = ACPI_APIC_LOCAL_X2APIC;
-        apic->length = sizeof(*apic);
-        apic->uid = cpu_to_le32(uid);
-        apic->x2apic_id = cpu_to_le32(apic_id);
-        if (apic_ids->cpus[uid].cpu != NULL) {
-            apic->flags = cpu_to_le32(1);
-        } else {
-            apic->flags = cpu_to_le32(0);
-        }
-    }
-}
 
 static void virt_acpi_class_init(ObjectClass *class, void *data)
 {
