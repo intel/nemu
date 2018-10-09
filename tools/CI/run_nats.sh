@@ -3,8 +3,8 @@ set -x
 
 # Set to a specific git revision and repo to test, if empty or unset then will
 # download latest tagged binary
-#OVMF_GIT_REV="2f16693ce32cbe0956ce2dcaa571a32966413855"
-#OVMF_GIT_REPO="https://github.com/rbradford/edk2"
+OVMF_GIT_REV="0debdc0694084d2ca3bd4b153cb3391a94740765"
+OVMF_GIT_REPO="https://github.com/mcastelino/edk2"
 
 GO_VERSION="1.10.3"
 CLEAR_VERSION=24740
