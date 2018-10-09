@@ -17,7 +17,6 @@
 #include "hw/compat.h"
 #include "hw/mem/pc-dimm.h"
 #include "hw/mem/nvdimm.h"
-#include "hw/acpi/acpi_dev_interface.h"
 
 #define HPET_INTCAP "hpet-intcap"
 
@@ -243,10 +242,6 @@ PCIBus *i440fx_init(const char *host_type, const char *pci_type,
 /* piix4.c */
 extern PCIDevice *piix4_dev;
 int piix4_init(PCIBus *bus, ISABus **isa_bus, int devfn);
-
-/* acpi-build.c */
-void pc_madt_cpu_entry(AcpiDeviceIf *adev, int uid,
-                       const CPUArchIdList *apic_ids, GArray *entry);
 
 #define PC_COMPAT_3_0 \
     HW_COMPAT_3_0 \
