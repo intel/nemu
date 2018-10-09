@@ -35,6 +35,7 @@
 #include "qemu/range.h"
 #include "hw/isa/isa.h"
 #include "hw/sysbus.h"
+#include "hw/i386/acpi.h"
 #include "hw/i386/pc.h"
 #include "hw/isa/apm.h"
 #include "hw/i386/ioapic.h"
@@ -811,7 +812,7 @@ static void ich9_lpc_class_init(ObjectClass *klass, void *data)
     hc->unplug = ich9_pm_device_unplug_cb;
     adevc->ospm_status = ich9_pm_ospm_status;
     adevc->send_event = ich9_send_gpe;
-    adevc->madt_cpu = pc_madt_cpu_entry;
+    adevc->madt_cpu = madt_cpu_entry;
 }
 
 static const TypeInfo ich9_lpc_info = {
