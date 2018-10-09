@@ -18,6 +18,8 @@
 #ifndef QEMU_I386_TIMER_H
 #define QEMU_I386_TIMER_H
 
+#define MACHINE_SAVE_TSC "save-tsc"
+
 /* hpet.c */
 extern int no_hpet;
 
