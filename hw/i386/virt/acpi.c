@@ -39,13 +39,16 @@
 typedef struct VirtAcpiState {
     SysBusDevice parent_obj;
 
+//#ifdef VIRT_HOTPLUG
     AcpiCpuHotplug cpuhp;
     CPUHotplugState cpuhp_state;
+
 
     MemHotplugState memhp_state;
     qemu_irq *gsi;
 
     AcpiPciHpState pcihp_state;
+//#endif
     PCIBus *pci_bus;
 
     MemoryRegion sleep_iomem;
@@ -211,12 +214,14 @@ DeviceState *virt_acpi_init(qemu_irq *gsi, PCIBus *pci_bus)
     s->pci_bus = pci_bus;
 
     if (pci_bus) {
+#ifdef VIRT_HOTPLUG
         /* Initialize PCI hotplug */
         qbus_set_hotplug_handler(BUS(pci_bus), dev, NULL);
 
         acpi_pcihp_init(OBJECT(s), &s->pcihp_state, s->pci_bus,
                         get_system_io(), true, VIRT_ACPI_PCI_HOTPLUG_IO_BASE);
         acpi_pcihp_reset(&s->pcihp_state);
+#endif
     }
 
     return dev;
@@ -268,7 +273,9 @@ static void virt_acpi_class_init(ObjectClass *class, void *data)
 {
     DeviceClass *dc = DEVICE_CLASS(class);
     SysBusDeviceClass *sbc = SYS_BUS_DEVICE_CLASS(class);
+#ifdef VIRT_HOTPLUG
     HotplugHandlerClass *hc = HOTPLUG_HANDLER_CLASS(class);
+#endif
     AcpiDeviceIfClass *adevc = ACPI_DEVICE_IF_CLASS(class);
 
     dc->desc = "ACPI";
@@ -278,12 +285,16 @@ static void virt_acpi_class_init(ObjectClass *class, void *data)
 
     sbc->init = virt_device_sysbus_init;
 
+#ifdef VIRT_HOTPLUG
     hc->plug = virt_device_plug_cb;
     hc->unplug_request = virt_device_unplug_request_cb;
     hc->unplug = virt_device_unplug_cb;
+#endif
 
     adevc->ospm_status = virt_ospm_status;
+#ifdef VIRT_HOTPLUG
     adevc->send_event = virt_send_ged;
+#endif
     adevc->madt_cpu = madt_cpu_entry;
 }
 

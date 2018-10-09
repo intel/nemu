@@ -91,6 +91,7 @@ static void acpi_conf_virt_init(MachineState *machine)
     conf->rsdp_in_ram = true;
     conf->apic_xrupt_override = kvm_allows_irq0_override();
 
+#ifdef VIRT_HOTPLUG
     conf->cpu_hotplug_io_base = VIRT_CPU_HOTPLUG_IO_BASE;
 
     /* GED events */
@@ -118,6 +119,7 @@ static void acpi_conf_virt_init(MachineState *machine)
     conf->ged_events = g_malloc0(events_size * sizeof(GedEvent));
     memcpy(conf->ged_events, events, events_size * sizeof(GedEvent));
     conf->ged_events_size = events_size;
+#endif
 }
 
 static void virt_machine_done(Notifier *notifier, void *data)
@@ -228,10 +230,12 @@ static void virt_machine_state_init(MachineState *machine)
                         val, sizeof(*val));
     }
 
+#ifdef VIRT_HOTPLUG
     if (vms->acpi_conf.acpi_nvdimm_state.is_enabled) {
         nvdimm_init_acpi_state(&vms->acpi_conf.acpi_nvdimm_state, get_system_io(),
                                fw_cfg, OBJECT(vms));
     }
+#endif
     
     vms->acpi_conf.fw_cfg = fw_cfg;
     acpi_conf_virt_init(machine);
@@ -270,8 +274,10 @@ static void virt_machine_instance_init(Object *obj)
 {
     VirtMachineState *vms = VIRT_MACHINE(obj);
 
+#ifdef VIRT_HOTPLUG
     /* Disable NVDIMM by default */
     vms->acpi_conf.acpi_nvdimm_state.is_enabled = false;
+#endif
 }
 
 static void virt_machine_reset(void)
@@ -315,6 +321,7 @@ static void virt_class_init(ObjectClass *oc, void *data)
     /* NMI handler */
     nc->nmi_monitor_handler = x86_nmi;
 
+#ifdef VIRT_HOTPLUG
     /* NVDIMM property */
     object_class_property_add_bool(oc, VIRT_MACHINE_NVDIMM,
                                    virt_machine_get_nvdimm,
@@ -324,6 +331,7 @@ static void virt_class_init(ObjectClass *oc, void *data)
     object_class_property_add(oc, PC_MACHINE_DEVMEM_REGION_SIZE, "int",
                               virt_machine_get_device_memory_region_size, NULL,
                               NULL, NULL, &error_abort);
+#endif
 }
 
 static const TypeInfo virt_machine_info = {
@@ -336,7 +344,9 @@ static const TypeInfo virt_machine_info = {
     .class_init    = virt_class_init,
     .interfaces = (InterfaceInfo[]) {
          { TYPE_NMI },
+#ifdef VIRT_HOTPLUG
          { TYPE_HOTPLUG_HANDLER },
+#endif
          { }
     },
 };
@@ -716,10 +726,12 @@ static HotplugHandler *virt_get_hotplug_handler(MachineState *machine,
 static void virt_machine_class_init(MachineClass *mc)
 {
     VirtMachineClass *vmc = VIRT_MACHINE_CLASS(mc);
+#ifdef VIRT_HOTPLUG
     HotplugHandlerClass *hc = HOTPLUG_HANDLER_CLASS(mc);
 
     /* save original hotplug handler */
     vmc->orig_hotplug_handler = mc->get_hotplug_handler;
+#endif
 
     mc->init = virt_machine_state_init;
 
@@ -731,8 +743,10 @@ static void virt_machine_class_init(MachineClass *mc)
     machine_class_allow_dynamic_sysbus_dev(mc, TYPE_INTEL_IOMMU_DEVICE);
     machine_class_allow_dynamic_sysbus_dev(mc, "sysbus-debugcon");
     mc->max_cpus = 288;
+#ifdef VIRT_HOTPLUG
     mc->has_hotpluggable_cpus = true;
     mc->auto_enable_numa_with_memhp = true;
+#endif
     mc->default_cpu_type = X86_CPU_TYPE_NAME ("host");
 
     /* Machine class handlers */
@@ -741,6 +755,7 @@ static void virt_machine_class_init(MachineClass *mc)
     mc->possible_cpu_arch_ids = cpu_possible_cpu_arch_ids;;
     mc->reset = virt_machine_reset;
     mc->hot_add_cpu = cpu_hot_add;
+#ifdef VIRT_HOTPLUG
     mc->get_hotplug_handler = virt_get_hotplug_handler;
 
     /* Hotplug handlers */
@@ -748,6 +763,7 @@ static void virt_machine_class_init(MachineClass *mc)
     hc->plug = virt_machine_device_plug_cb;
     hc->unplug_request = virt_machine_device_unplug_request_cb;
     hc->unplug = virt_machine_device_unplug_cb;
+#endif
 
     /* Firmware building handler */
     mc->firmware_build_methods.acpi.madt = build_madt;

@@ -100,9 +100,11 @@ static void build_dsdt(MachineState *ms, GArray *table_data, BIOSLinker *linker,
 
     scope = aml_scope("\\_SB");
     acpi_dsdt_add_pci_bus(dsdt, pci_host);
+#ifdef VIRT_HOTPLUG
     acpi_dsdt_add_memory_hotplug(ms, dsdt);
     acpi_dsdt_add_cpus(ms, dsdt, scope, smp_cpus, conf);
     acpi_dsdt_add_ged(dsdt, conf);
+#endif
     acpi_dsdt_add_sleep_state(scope);
 
     aml_append(dsdt, scope);
@@ -189,10 +191,12 @@ static void acpi_reduced_build(MachineState *ms, AcpiBuildTables *tables, AcpiCo
         acpi_add_table(table_offsets, tables_blob);
         mc->firmware_build_methods.acpi.mcfg(tables_blob, tables->linker, &mcfg);
     }
+#ifdef VIRT_HOTPLUG
     if (conf->acpi_nvdimm_state.is_enabled) {
         nvdimm_build_acpi(table_offsets, tables_blob, tables->linker,
                           &conf->acpi_nvdimm_state, ms->ram_slots);
     }
+#endif
 
     /* RSDT is pointed to by RSDP */
     xsdt = tables_blob->len;

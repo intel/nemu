@@ -2,7 +2,7 @@
 set -e
 
 if [[ "$EXTRA_CFLAGS" == "" ]]; then
-    EXTRA_CFLAGS=" -O3 -fno-semantic-interposition -falign-functions=32 -D_FORTIFY_SOURCE=2 -fPIE"
+    EXTRA_CFLAGS=" -O3 -fno-semantic-interposition -falign-functions=32 -D_FORTIFY_SOURCE=2 -fPIE -Wno-unused-variable -Wno-unused-function"
 fi
 
 mkdir -p $HOME/build-x86_64

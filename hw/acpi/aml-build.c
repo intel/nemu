@@ -2527,11 +2527,13 @@ void acpi_dsdt_add_pci_bus(Aml *dsdt, AcpiPciBus *pci_host)
     aml_append(dev, build_osc_method(0x1F));
     aml_append(dsdt, dev);
 
+#ifdef VIRT_HOTPLUG
     /* PCIHP */
     hp_scope =  aml_scope("\\_SB.PCI%x", pci_segment);
     build_acpi_pci_hotplug(hp_scope, acpi_iobase_addr);
     build_append_pci_bus_devices(hp_scope, pci_host->pci_bus, false);
     aml_append(dsdt, hp_scope);
+#endif
 
     pci_scope = build_pci_host_bridge(dsdt, pci_host);
     aml_append(dsdt, pci_scope);
