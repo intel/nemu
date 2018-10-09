@@ -17,7 +17,6 @@
 #include "hw/pci/pci.h"
 #include "hw/mem/pc-dimm.h"
 #include "hw/mem/nvdimm.h"
-#include "hw/acpi/acpi_dev_interface.h"
 
 #define HPET_INTCAP "hpet-intcap"
 
@@ -246,10 +245,6 @@ int piix4_init(PCIBus *bus, ISABus **isa_bus, int devfn);
 /* pc_sysfw.c */
 void pc_system_flash_create(PCMachineState *pcms);
 void pc_system_firmware_init(PCMachineState *pcms, MemoryRegion *rom_memory);
-
-/* acpi-build.c */
-void pc_madt_cpu_entry(AcpiDeviceIf *adev, int uid,
-                       const CPUArchIdList *apic_ids, GArray *entry);
 
 
 extern GlobalProperty pc_compat_3_1[];
