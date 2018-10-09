@@ -20,6 +20,9 @@
 
 #include "qapi/qapi-types-common.h"
 
+/* Machine property */
+#define MACHINE_SMM "smm"
+
 bool is_smm_enabled(OnOffAuto smm);
 
 #endif
