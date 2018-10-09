@@ -41,6 +41,7 @@
 #include "hw/i386/memory.h"
 #include "hw/i386/x86-iommu.h"
 #include "hw/i386/smm.h"
+#include "hw/i386/timer.h"
 
 #include "hw/pci/pci.h"
 #include "hw/pci/msi.h"
