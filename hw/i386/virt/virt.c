@@ -690,8 +690,6 @@ static void virt_machine_class_init(MachineClass *mc)
     mc->desc = "Virtual i386 machine";
     mc->units_per_default_bus = 1;
     mc->no_floppy = 1;
-    machine_class_allow_dynamic_sysbus_dev(mc, TYPE_AMD_IOMMU_DEVICE);
-    machine_class_allow_dynamic_sysbus_dev(mc, TYPE_INTEL_IOMMU_DEVICE);
     machine_class_allow_dynamic_sysbus_dev(mc, "sysbus-debugcon");
     mc->max_cpus = 288;
     mc->has_hotpluggable_cpus = true;
