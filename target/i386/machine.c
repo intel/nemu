@@ -4,7 +4,7 @@
 #include "exec/exec-all.h"
 #include "hw/hw.h"
 #include "hw/boards.h"
-#include "hw/i386/pc.h"
+#include "hw/i386/timer.h"
 #include "hw/isa/isa.h"
 #include "migration/cpu.h"
 #include "hyperv.h"
@@ -835,9 +835,12 @@ static bool tsc_khz_needed(void *opaque)
 {
     X86CPU *cpu = opaque;
     CPUX86State *env = &cpu->env;
-    MachineClass *mc = MACHINE_GET_CLASS(qdev_get_machine());
-    PCMachineClass *pcmc = PC_MACHINE_CLASS(mc);
-    return env->tsc_khz && pcmc->save_tsc_khz;
+    bool save_tsc_khz = false;
+    Error *prop_err = NULL;
+
+    save_tsc_khz = object_property_get_bool(qdev_get_machine(), MACHINE_SAVE_TSC, &prop_err);
+
+    return env->tsc_khz && save_tsc_khz;
 }
 
 static const VMStateDescription vmstate_tsc_khz = {
