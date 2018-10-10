@@ -3858,6 +3858,7 @@ int kvm_device_msix_deassign(KVMState *s, uint32_t dev_id)
 int kvm_arch_fixup_msi_route(struct kvm_irq_routing_entry *route,
                              uint64_t address, uint32_t data, PCIDevice *dev)
 {
+#if defined(CONFIG_VTD) || defined(CONFIG_AMD_IOMMU)
     X86IOMMUState *iommu = x86_iommu_get_default();
 
     if (iommu) {
@@ -3886,7 +3887,7 @@ int kvm_arch_fixup_msi_route(struct kvm_irq_routing_entry *route,
         route->u.msi.address_lo = dst.address & VTD_MSI_ADDR_LO_MASK;
         route->u.msi.data = dst.data;
     }
-
+#endif
     return 0;
 }
 
@@ -3903,6 +3904,7 @@ struct MSIRouteEntry {
 static QLIST_HEAD(, MSIRouteEntry) msi_route_list = \
     QLIST_HEAD_INITIALIZER(msi_route_list);
 
+#if defined(CONFIG_VTD) || defined(CONFIG_AMD_IOMMU)
 static void kvm_update_msi_routes_all(void *private, bool global,
                                       uint32_t index, uint32_t mask)
 {
@@ -3932,6 +3934,7 @@ static void kvm_update_msi_routes_all(void *private, bool global,
     kvm_irqchip_commit_routes(kvm_state);
     trace_kvm_x86_update_msi_routes(cnt);
 }
+#endif
 
 int kvm_arch_add_msi_route_post(struct kvm_irq_routing_entry *route,
                                 int vector, PCIDevice *dev)
@@ -3955,6 +3958,7 @@ int kvm_arch_add_msi_route_post(struct kvm_irq_routing_entry *route,
     trace_kvm_x86_add_msi_route(route->gsi);
 
     if (!notify_list_inited) {
+#if defined(CONFIG_VTD) || defined(CONFIG_AMD_IOMMU)
         /* For the first time we do add route, add ourselves into
          * IOMMU's IEC notify list if needed. */
         X86IOMMUState *iommu = x86_iommu_get_default();
@@ -3963,6 +3967,7 @@ int kvm_arch_add_msi_route_post(struct kvm_irq_routing_entry *route,
                                             kvm_update_msi_routes_all,
                                             NULL);
         }
+#endif
         notify_list_inited = true;
     }
     return 0;
