@@ -198,6 +198,7 @@ static void ioapic_update_kvm_routes(IOAPICCommonState *s)
 }
 
 #ifdef CONFIG_KVM
+#if (defined(CONFIG_VTD) || defined(CONFIG_AMD_IOMMU))
 static void ioapic_iec_notifier(void *private, bool global,
                                 uint32_t index, uint32_t mask)
 {
@@ -205,6 +206,7 @@ static void ioapic_iec_notifier(void *private, bool global,
     /* For simplicity, we just update all the routes */
     ioapic_update_kvm_routes(s);
 }
+#endif
 #endif
 
 void ioapic_eoi_broadcast(int vector)
@@ -371,9 +373,9 @@ static const MemoryRegionOps ioapic_io_ops = {
 static void ioapic_machine_done_notify(Notifier *notifier, void *data)
 {
 #ifdef CONFIG_KVM
+#if defined(CONFIG_VTD) || defined(CONFIG_AMD_IOMMU)
     IOAPICCommonState *s = container_of(notifier, IOAPICCommonState,
                                         machine_done);
-
     if (kvm_irqchip_is_split()) {
         X86IOMMUState *iommu = x86_iommu_get_default();
         if (iommu) {
@@ -383,6 +385,7 @@ static void ioapic_machine_done_notify(Notifier *notifier, void *data)
             x86_iommu_iec_register_notifier(iommu, ioapic_iec_notifier, s);
         }
     }
+#endif
 #endif
 }
 
