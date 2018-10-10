@@ -15,6 +15,7 @@ $SRCDIR/configure \
  --disable-libssh2 \
  --disable-linux-aio \
  --disable-lzo \
+ --disable-bzip2 \
  --disable-modules \
  --disable-netmap \
  --disable-qom-cast-debug \
