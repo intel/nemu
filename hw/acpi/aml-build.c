@@ -2037,7 +2037,8 @@ build_mcfg(GArray *table_data, BIOSLinker *linker, AcpiMcfgInfo *info, AcpiConfi
     } else {
         sig = "MCFG";
     }
-    build_header(linker, table_data, (void *)mcfg, sig, len, 1, NULL, NULL);
+    build_header(linker, table_data, (void *)mcfg, sig, len, 1,
+                 conf ? conf->oem_id : NULL, conf ? conf->oem_table_id : NULL);
 }
 
 Aml *build_gsi_link_dev(const char *name, uint8_t uid, uint8_t gsi)
