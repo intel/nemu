@@ -419,7 +419,7 @@ void acpi_add_table(GArray *table_offsets, GArray *table_data);
 void acpi_build_tables_init(AcpiBuildTables *tables);
 void acpi_build_tables_cleanup(AcpiBuildTables *tables, bool mfre);
 Aml *build_osc_method(uint32_t value);
-void build_mcfg(GArray *table_data, BIOSLinker *linker, AcpiMcfgInfo *info);
+void build_mcfg(GArray *table_data, BIOSLinker *linker, AcpiMcfgInfo *info, AcpiConfiguration *conf);
 Aml *build_gsi_link_dev(const char *name, uint8_t uid, uint8_t gsi);
 Aml *build_prt(bool is_pci0_prt);
 void build_acpi_pci_hotplug(Aml *scope, uint16_t acpi_iobase_addr);

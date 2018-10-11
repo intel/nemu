@@ -2012,7 +2012,7 @@ Aml *build_osc_method(uint32_t value)
 }
 
 void
-build_mcfg(GArray *table_data, BIOSLinker *linker, AcpiMcfgInfo *info)
+build_mcfg(GArray *table_data, BIOSLinker *linker, AcpiMcfgInfo *info, AcpiConfiguration *conf)
 {
     AcpiTableMcfg *mcfg;
     const char *sig;
