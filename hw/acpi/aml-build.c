@@ -2012,7 +2012,7 @@ Aml *build_osc_method(uint32_t value)
 }
 
 void
-acpi_build_mcfg(GArray *table_data, BIOSLinker *linker, AcpiMcfgInfo *info)
+build_mcfg(GArray *table_data, BIOSLinker *linker, AcpiMcfgInfo *info)
 {
     AcpiTableMcfg *mcfg;
     const char *sig;
@@ -2589,8 +2589,8 @@ void build_srat_hotpluggable_memory(GArray *table_data, uint64_t base,
     qapi_free_MemoryDeviceInfoList(info_list);
 }
 
-void acpi_build_srat(GArray *table_data, BIOSLinker *linker,
-                     MachineState *machine, AcpiConfiguration *conf)
+void build_srat(GArray *table_data, BIOSLinker *linker,
+                MachineState *machine, AcpiConfiguration *conf)
 {
     AcpiSystemResourceAffinityTable *srat;
     AcpiSratMemoryAffinity *numamem;

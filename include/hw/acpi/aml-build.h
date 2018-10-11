@@ -419,7 +419,7 @@ void acpi_add_table(GArray *table_offsets, GArray *table_data);
 void acpi_build_tables_init(AcpiBuildTables *tables);
 void acpi_build_tables_cleanup(AcpiBuildTables *tables, bool mfre);
 Aml *build_osc_method(uint32_t value);
-void acpi_build_mcfg(GArray *table_data, BIOSLinker *linker, AcpiMcfgInfo *info);
+void build_mcfg(GArray *table_data, BIOSLinker *linker, AcpiMcfgInfo *info);
 Aml *build_gsi_link_dev(const char *name, uint8_t uid, uint8_t gsi);
 Aml *build_prt(bool is_pci0_prt);
 void build_acpi_pci_hotplug(Aml *scope, uint16_t acpi_iobase_addr);
@@ -443,8 +443,8 @@ build_xsdt(GArray *table_data, BIOSLinker *linker, GArray *table_offsets,
 
 void build_srat_hotpluggable_memory(GArray *table_data, uint64_t base,
                                     uint64_t len, int default_node);
-void acpi_build_srat(GArray *table_data, BIOSLinker *linker,
-                     MachineState *machine, AcpiConfiguration *conf);
+void build_srat(GArray *table_data, BIOSLinker *linker,
+                MachineState *machine, AcpiConfiguration *conf);
 int
 build_append_named_dword(GArray *array, const char *name_format, ...)
 GCC_FMT_ATTR(2, 3);

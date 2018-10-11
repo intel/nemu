@@ -1506,7 +1506,7 @@ void acpi_build(AcpiBuildTables *tables, MachineState *machine, AcpiConfiguratio
     }
     if (conf->numa_nodes) {
         acpi_add_table(table_offsets, tables_blob);
-        acpi_build_srat(tables_blob, tables->linker, machine, conf);
+        build_srat(tables_blob, tables->linker, machine, conf);
         if (have_numa_distance) {
             acpi_add_table(table_offsets, tables_blob);
             build_slit(tables_blob, tables->linker);
@@ -1514,7 +1514,7 @@ void acpi_build(AcpiBuildTables *tables, MachineState *machine, AcpiConfiguratio
     }
     if (acpi_get_mcfg(&mcfg)) {
         acpi_add_table(table_offsets, tables_blob);
-        acpi_build_mcfg(tables_blob, tables->linker, &mcfg);
+        build_mcfg(tables_blob, tables->linker, &mcfg);
     }
     if (x86_iommu_get_default()) {
         IommuType IOMMUType = x86_iommu_get_type();

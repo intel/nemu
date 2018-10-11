@@ -751,8 +751,8 @@ static void virt_machine_class_init(MachineClass *mc)
     mc->firmware_build_methods.acpi.madt = build_madt;
     mc->firmware_build_methods.acpi.rsdp = build_rsdp;
     mc->firmware_build_methods.acpi.setup = acpi_reduced_setup;
-    mc->firmware_build_methods.acpi.mcfg = acpi_build_mcfg;
-    mc->firmware_build_methods.acpi.srat = acpi_build_srat;
+    mc->firmware_build_methods.acpi.mcfg = build_mcfg;
+    mc->firmware_build_methods.acpi.srat = build_srat;
     mc->firmware_build_methods.acpi.slit = build_slit;
 }
 
