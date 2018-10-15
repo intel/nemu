@@ -202,7 +202,7 @@ func testCPUHotplug(ctx context.Context, q *qemuTest, t *testing.T) {
 		t.Errorf("Unexpected online cpus: %s", cpusOnlineBefore)
 	}
 
-	err := q.qmp.ExecuteCPUDeviceAdd(ctx, "host-x86_64-cpu", "core2", "2", "0", "0")
+	err := q.qmp.ExecuteCPUDeviceAdd(ctx, "host-x86_64-cpu", "core2", "2", "0", "0", "")
 	if err != nil {
 		t.Errorf("Error hotplugging CPU: %v", err)
 	}
