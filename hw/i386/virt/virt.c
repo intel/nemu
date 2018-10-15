@@ -79,6 +79,30 @@
 #define DEFINE_VIRT_MACHINE(major, minor) \
     DEFINE_VIRT_MACHINE_LATEST(major, minor, false)
 
+/*
+ * HACKHACKHACK
+ *
+ * In order to skip some already hackish DMI checks for the ACPI
+ * MCFG table from the kernel, we use an escape mechanism: Using
+ * an OEM ID which prefix is "SGI".
+ * See arch/x86/pci/mmconfig-shared.c:
+ *
+ * static int __init acpi_mcfg_check_entry(struct acpi_table_mcfg *mcfg,
+ *                                         struct acpi_mcfg_allocation *cfg)
+ * {
+ *	if (cfg->address < 0xFFFFFFFF)
+ *		return 0;
+ *
+ *	if (!strncmp(mcfg->header.oem_id, "SGI", 3))
+ *		return 0;
+ *
+ *	if ((mcfg->header.revision >= 1) && (dmi_get_bios_year() >= 2010))
+ *		return 0;
+ *   [...]
+ * }
+ */
+#define VIRT_OEM_ID "SGIEMU"
+
 static void acpi_conf_virt_init(MachineState *machine)
 {
     VirtMachineState *vms = VIRT_MACHINE(machine);
@@ -118,6 +142,9 @@ static void acpi_conf_virt_init(MachineState *machine)
     conf->ged_events = g_malloc0(events_size * sizeof(GedEvent));
     memcpy(conf->ged_events, events, events_size * sizeof(GedEvent));
     conf->ged_events_size = events_size;
+
+    /* OEM ID */
+    conf->oem_id = strndup(VIRT_OEM_ID, 6);
 }
 
 static void virt_machine_done(Notifier *notifier, void *data)
@@ -751,8 +778,8 @@ static void virt_machine_class_init(MachineClass *mc)
     mc->firmware_build_methods.acpi.madt = build_madt;
     mc->firmware_build_methods.acpi.rsdp = build_rsdp;
     mc->firmware_build_methods.acpi.setup = acpi_reduced_setup;
-    mc->firmware_build_methods.acpi.mcfg = acpi_build_mcfg;
-    mc->firmware_build_methods.acpi.srat = acpi_build_srat;
+    mc->firmware_build_methods.acpi.mcfg = build_mcfg;
+    mc->firmware_build_methods.acpi.srat = build_srat;
     mc->firmware_build_methods.acpi.slit = build_slit;
 }
 

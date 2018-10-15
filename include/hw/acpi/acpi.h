@@ -224,6 +224,10 @@ struct AcpiConfiguration {
 
     /* Build state */
     AcpiBuildState *build_state;
+
+    /* OEM IDs */
+    char *oem_id;
+    char *oem_table_id;
 } AcpiConfiguration;
 
 uint8_t *acpi_table_first(void);

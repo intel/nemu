@@ -31,7 +31,7 @@ typedef struct FirmwareBuildMethods {
             GArray *(*rsdp)(GArray *table_data, BIOSLinker *linker, unsigned rsdt_tbl_offset);
             GArray *(*madt)(GArray *table_data, BIOSLinker *linker, MachineState *ms, AcpiConfiguration *conf);
             void    (*setup)(MachineState *ms, AcpiConfiguration *conf);
-            void    (*mcfg)(GArray *table_data, BIOSLinker *linker, AcpiMcfgInfo *info);
+            void    (*mcfg)(GArray *table_data, BIOSLinker *linker, AcpiMcfgInfo *info, AcpiConfiguration *conf);
             void    (*srat)(GArray *table_data, BIOSLinker *linker, MachineState *machine, AcpiConfiguration *conf);
             void    (*slit)(GArray *table_data, BIOSLinker *linker);
         } acpi;

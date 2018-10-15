@@ -187,7 +187,7 @@ static void acpi_reduced_build(MachineState *ms, AcpiBuildTables *tables, AcpiCo
 
     if (acpi_get_mcfg(&mcfg)) {
         acpi_add_table(table_offsets, tables_blob);
-        mc->firmware_build_methods.acpi.mcfg(tables_blob, tables->linker, &mcfg);
+        mc->firmware_build_methods.acpi.mcfg(tables_blob, tables->linker, &mcfg, conf);
     }
     if (conf->acpi_nvdimm_state.is_enabled) {
         nvdimm_build_acpi(table_offsets, tables_blob, tables->linker,
