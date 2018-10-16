@@ -1340,8 +1340,8 @@ static void cortex_m33_initfn(Object *obj)
 static void arm_v7m_class_init(ObjectClass *oc, void *data)
 {
 #ifdef CONFIG_TCG
-#ifndef CONFIG_USER_ONLY
     CPUClass *cc = CPU_CLASS(oc);
+#ifndef CONFIG_USER_ONLY
 
     cc->do_interrupt = arm_v7m_cpu_do_interrupt;
 #endif
