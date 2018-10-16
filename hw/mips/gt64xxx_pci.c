@@ -29,6 +29,7 @@
 #include "hw/pci/pci_host.h"
 #include "hw/i386/pc.h"
 #include "exec/address-spaces.h"
+#include "hw/i386/apic.h"
 
 //#define DEBUG
 
