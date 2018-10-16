@@ -2581,8 +2581,8 @@ build_xsdt(GArray *table_data, BIOSLinker *linker, GArray *table_offsets,
 }
 
 /* Legacy RSDP pointing at an RSDT. This is deprecated */
-GArray *build_rsdp_rsdt(GArray *rsdp_table,
-                        BIOSLinker *linker, unsigned rsdt_tbl_offset)
+void build_rsdp_rsdt(GArray *rsdp_table,
+                     BIOSLinker *linker, unsigned rsdt_tbl_offset)
 {
     AcpiRsdpDescriptor *rsdp = acpi_data_push(rsdp_table, sizeof *rsdp);
     unsigned rsdt_pa_size = sizeof(rsdp->rsdt_physical_address);
@@ -2603,13 +2603,11 @@ GArray *build_rsdp_rsdt(GArray *rsdp_table,
     bios_linker_loader_add_checksum(linker, ACPI_BUILD_RSDP_FILE,
         (char *)rsdp - rsdp_table->data, sizeof *rsdp,
         (char *)&rsdp->checksum - rsdp_table->data);
-
-    return rsdp_table;
 }
 
 /* RSDP pointing at an XSDT */
-GArray *build_rsdp(GArray *rsdp_table,
-                   BIOSLinker *linker, unsigned xsdt_tbl_offset)
+void build_rsdp(GArray *rsdp_table,
+                BIOSLinker *linker, unsigned xsdt_tbl_offset)
 {
     AcpiRsdpDescriptor *rsdp = acpi_data_push(rsdp_table, sizeof *rsdp);
     unsigned xsdt_pa_size = sizeof(rsdp->xsdt_physical_address);
@@ -2641,8 +2639,6 @@ GArray *build_rsdp(GArray *rsdp_table,
     bios_linker_loader_add_checksum(linker, ACPI_BUILD_RSDP_FILE,
         (char *)rsdp - rsdp_table->data, sizeof *rsdp,
         (char *)&rsdp->extended_checksum - rsdp_table->data);
-
-    return rsdp_table;
 }
 
 void build_srat_memory(AcpiSratMemoryAffinity *numamem, uint64_t base,

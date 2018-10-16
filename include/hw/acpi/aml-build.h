@@ -429,10 +429,10 @@ Aml *build_crs(PCIHostState *host, CrsRangeSet *range_set);
 void crs_replace_with_free_ranges(GPtrArray *ranges,
                                   uint64_t start, uint64_t end);
 void crs_range_set_free(CrsRangeSet *range_set);
-GArray *build_rsdp_rsdt(GArray *rsdp_table,
+void build_rsdp_rsdt(GArray *rsdp_table,
                         BIOSLinker *linker, unsigned rsdt_tbl_offset);
-GArray *build_rsdp(GArray *rsdp_table,
-                   BIOSLinker *linker, unsigned xsdt_tbl_offset);
+void build_rsdp(GArray *rsdp_table,
+                BIOSLinker *linker, unsigned xsdt_tbl_offset);
 void
 build_rsdt(GArray *table_data, BIOSLinker *linker, GArray *table_offsets,
            const char *oem_id, const char *oem_table_id);
