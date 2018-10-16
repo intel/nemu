@@ -9,7 +9,7 @@
 #include "qemu/log.h"
 #include "sysemu/sysemu.h"
 #include "trace.h"
-
+#include "hw/i386/apic.h"
 
 /* Fallback for unassigned PCI I/O operations.  Avoids MCHK.  */
 
