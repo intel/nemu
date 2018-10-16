@@ -223,6 +223,54 @@ func testCPUHotplug(ctx context.Context, q *qemuTest, t *testing.T) {
 	}
 }
 
+// testPCIHotplug can only be tested for pc and virt machine types since q35
+// needs a PCIe hierarchy, meaning we need to add a root port to the initial
+// VM.
+func testPCIHotplug(ctx context.Context, q *qemuTest, t *testing.T) {
+	// Use virtio-net-pci device for PCI hotplug.
+	addr := "12"
+	macAddr := "ab:cd:ef:01:23:45"
+
+	// First check with an early SSH connection that we cannot find the
+	// expected PCI address.
+	expected := "not_exist"
+	cmd := fmt.Sprintf("ls /sys/bus/pci/devices/0000:00:%s.0 &> /dev/null || echo %s", addr, expected)
+	result := strings.TrimSpace(q.runCommandBySSH(cmd, t))
+	if result != expected {
+		t.Errorf("PCI address 0000:00:%s.0 already in use", addr)
+	}
+
+	err := q.qmp.ExecuteNetPCIDeviceAdd(ctx, "", "net1", macAddr, addr, "", "", 0)
+	if err != nil {
+		t.Errorf("Error hotplugging PCI device (virtio-net-pci): %v", err)
+	}
+
+	// This sleep ensures the guest OS has enough time to detect the new
+	// PCI device and create the network interface.
+	time.Sleep(time.Second * 15)
+
+	// Check the PCI device has been detected by the guest OS.
+	expected = "exist"
+	cmd = fmt.Sprintf("ls /sys/bus/pci/devices/0000:00:%s.0 &> /dev/null && echo %s", addr, expected)
+	result = strings.TrimSpace(q.runCommandBySSH(cmd, t))
+	if result != expected {
+		t.Error("PCI device not detected")
+	}
+
+	// Check the network interface has been created.
+	cmd = fmt.Sprintf("ip a | grep '%s' &> /dev/null && echo %s", macAddr, expected)
+	result = strings.TrimSpace(q.runCommandBySSH(cmd, t))
+	if result != expected {
+		t.Error("Network interface not created")
+	}
+
+	time.Sleep(time.Second * 15)
+	err = q.qmp.ExecuteQuit(ctx)
+	if err != nil {
+		t.Errorf("Error quiting via QMP: %v", err)
+	}
+}
+
 var machines = []string{"pc", "q35", "virt"}
 
 const (
@@ -297,5 +345,11 @@ var tests = []testConfig{
 		testFunc: testMemoryHotplug,
 		distros:  clearLinuxOnly,
 		machines: allMachines,
+	},
+	{
+		name:     "PCIHotplug",
+		testFunc: testPCIHotplug,
+		distros:  clearLinuxOnly,
+		machines: []string{"pc", "virt"},
 	},
 }
