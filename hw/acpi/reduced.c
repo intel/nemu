@@ -46,9 +46,7 @@
 
 #include "migration/vmstate.h"
 
-#define GED_DEVICE               "GED"
-#define CPU_SCAN_METHOD          "CSCN"
-#define MEMORY_SLOT_SCAN_METHOD  "MSCN"
+#define GED_DEVICE "GED"
 
 static void acpi_dsdt_add_memory_hotplug(MachineState *ms, Aml *dsdt)
 {
