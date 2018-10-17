@@ -46,6 +46,9 @@ typedef struct VirtAcpiState {
     CPUHotplugState cpuhp_state;
 
     MemHotplugState memhp_state;
+
+    GEDState ged_state;
+
     qemu_irq *gsi;
 
     AcpiPciHpState pcihp_state;
@@ -126,19 +129,25 @@ static void virt_ospm_status(AcpiDeviceIf *adev, ACPIOSTInfoList ***list)
 static void virt_send_ged(AcpiDeviceIf *adev, AcpiEventStatusBits ev)
 {
     VirtAcpiState *s = VIRT_ACPI(adev);
+    uint32_t sel = ACPI_GED_IRQ_SEL_INIT;
 
     if (ev & ACPI_CPU_HOTPLUG_STATUS) {
-        /* We inject the CPU hotplug interrupt */
-        qemu_irq_pulse(s->gsi[VIRT_GED_CPU_HOTPLUG_IRQ]);
+        sel = ACPI_GED_IRQ_SEL_CPU;
     } else if (ev & ACPI_MEMORY_HOTPLUG_STATUS) {
-        /* We inject the memory hotplug interrupt */
-        qemu_irq_pulse(s->gsi[VIRT_GED_MEMORY_HOTPLUG_IRQ]);
+        sel = ACPI_GED_IRQ_SEL_MEM;
     } else if (ev & ACPI_NVDIMM_HOTPLUG_STATUS) {
-        qemu_irq_pulse(s->gsi[VIRT_GED_NVDIMM_HOTPLUG_IRQ]);
+        sel = ACPI_GED_IRQ_SEL_NVDIMM;
     } else if (ev & ACPI_PCI_HOTPLUG_STATUS) {
-        /* Inject PCI hotplug interrupt */
-        qemu_irq_pulse(s->gsi[VIRT_GED_PCI_HOTPLUG_IRQ]);
+        sel = ACPI_GED_IRQ_SEL_PCI;
+    } else {
+        /* Unknown event. Return without generating interrupt. */
+        return;
     }
+
+    /* We inject the hotplug interrupt.
+     * The IRQ selector will make the difference from the ACPI table.
+     */
+    acpi_ged_event(&s->ged_state, s->gsi, sel);
 }
 
 static void virt_acpi_sleep_cnt_write(void *opaque, hwaddr addr,
@@ -187,6 +196,9 @@ static void virt_device_realize(DeviceState *dev, Error **errp)
 
     acpi_memory_hotplug_init(get_system_io(), OBJECT(dev),
                              &s->memhp_state, ACPI_MEMORY_HOTPLUG_BASE);
+
+    acpi_ged_init(get_system_io(), OBJECT(dev), &s->ged_state,
+                  ACPI_GED_EVENT_IO_BASE, VIRT_ACPI_GED_IRQ);
 
     memory_region_init_io(&s->sleep_iomem, OBJECT(dev),
                           &virt_sleep_cnt_ops, s, TYPE_VIRT_ACPI, 1);
