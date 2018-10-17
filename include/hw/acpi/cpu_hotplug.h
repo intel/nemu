@@ -19,6 +19,13 @@
 #include "hw/hotplug.h"
 #include "hw/acpi/cpu.h"
 
+#define CPU_LEGACY_EJECT_METHOD "CPEJ"
+#define CPU_MAT_METHOD "CPMA"
+#define CPU_ON_BITMAP "CPON"
+#define CPU_STATUS_METHOD "CPST"
+#define CPU_STATUS_MAP "PRS"
+#define CPU_LEGACY_SCAN_METHOD "PRSC"
+
 typedef struct AcpiCpuHotplug {
     Object *device;
     MemoryRegion io;
