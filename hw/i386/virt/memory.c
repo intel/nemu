@@ -99,7 +99,7 @@ MemoryRegion *virt_memory_init(VirtMachineState *vms)
                                     &machine->device_memory->mr);
     }
 
-    sysfw_firmware_init(system_memory, false);
+    sysfw_firmware_init(system_memory, true);
     
     return ram;
 }
