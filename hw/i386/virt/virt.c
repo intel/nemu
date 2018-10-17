@@ -97,20 +97,20 @@ static void acpi_conf_virt_init(MachineState *machine)
     /* GED events */
     GedEvent events[] = {
         {
-            .irq   = VIRT_GED_CPU_HOTPLUG_IRQ,
-            .event = GED_CPU_HOTPLUG,
+            .selector = ACPI_GED_IRQ_SEL_CPU,
+            .event    = GED_CPU_HOTPLUG,
         },
         {
-            .irq   = VIRT_GED_MEMORY_HOTPLUG_IRQ,
-            .event = GED_MEMORY_HOTPLUG,
+            .selector = ACPI_GED_IRQ_SEL_MEM,
+            .event    = GED_MEMORY_HOTPLUG,
         },
         {
-            .irq   = VIRT_GED_NVDIMM_HOTPLUG_IRQ,
-            .event = GED_NVDIMM_HOTPLUG,
+            .selector = ACPI_GED_IRQ_SEL_NVDIMM,
+            .event    = GED_NVDIMM_HOTPLUG,
         },
         {
-            .irq   = VIRT_GED_PCI_HOTPLUG_IRQ,
-            .event = GED_PCI_HOTPLUG,
+            .selector = ACPI_GED_IRQ_SEL_PCI,
+            .event    = GED_PCI_HOTPLUG,
         },
     };
 
@@ -119,6 +119,7 @@ static void acpi_conf_virt_init(MachineState *machine)
     conf->ged_events = g_malloc0(events_size * sizeof(GedEvent));
     memcpy(conf->ged_events, events, events_size * sizeof(GedEvent));
     conf->ged_events_size = events_size;
+    conf->ged_irq = VIRT_ACPI_GED_IRQ;
 }
 
 static void virt_machine_done(Notifier *notifier, void *data)

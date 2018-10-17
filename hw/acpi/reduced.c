@@ -71,7 +71,8 @@ static void acpi_dsdt_add_ged(Aml *scope, AcpiConfiguration *conf)
         return;
     }
 
-    build_ged_aml(scope, "\\_SB."GED_DEVICE, conf->ged_events, conf->ged_events_size);
+    build_ged_aml(scope, "\\_SB."GED_DEVICE, conf->ged_irq,
+                  conf->ged_events, conf->ged_events_size);
 }
 
 static void acpi_dsdt_add_sleep_state(Aml *scope)
