@@ -17,13 +17,6 @@
 #include "hw/pci/pci.h"
 #include "qemu/error-report.h"
 
-#define CPU_EJECT_METHOD "CPEJ"
-#define CPU_MAT_METHOD "CPMA"
-#define CPU_ON_BITMAP "CPON"
-#define CPU_STATUS_METHOD "CPST"
-#define CPU_STATUS_MAP "PRS"
-#define CPU_SCAN_METHOD "PRSC"
-
 static uint64_t cpu_status_read(void *opaque, hwaddr addr, unsigned int size)
 {
     AcpiCpuHotplug *cpus = opaque;
@@ -169,11 +162,11 @@ void build_legacy_cpu_hotplug_aml(Aml *ctx, MachineState *machine,
     aml_append(method, else_ctx);
     aml_append(sb_scope, method);
 
-    method = aml_method(CPU_EJECT_METHOD, 2, AML_NOTSERIALIZED);
+    method = aml_method(CPU_LEGACY_EJECT_METHOD, 2, AML_NOTSERIALIZED);
     aml_append(method, aml_sleep(200));
     aml_append(sb_scope, method);
 
-    method = aml_method(CPU_SCAN_METHOD, 0, AML_NOTSERIALIZED);
+    method = aml_method(CPU_LEGACY_SCAN_METHOD, 0, AML_NOTSERIALIZED);
     {
         Aml *while_ctx, *if_ctx2, *else_ctx2;
         Aml *bus_check_evt = aml_int(1);
@@ -284,7 +277,7 @@ void build_legacy_cpu_hotplug_aml(Aml *ctx, MachineState *machine,
 
         method = aml_method("_EJ0", 1, AML_NOTSERIALIZED);
         aml_append(method,
-            aml_return(aml_call2(CPU_EJECT_METHOD, aml_int(apic_id),
+            aml_return(aml_call2(CPU_LEGACY_EJECT_METHOD, aml_int(apic_id),
                 aml_arg(0)))
         );
         aml_append(dev, method);
@@ -331,6 +324,6 @@ void build_legacy_cpu_hotplug_aml(Aml *ctx, MachineState *machine,
     aml_append(ctx, sb_scope);
 
     method = aml_method("\\_GPE._E02", 0, AML_NOTSERIALIZED);
-    aml_append(method, aml_call0("\\_SB." CPU_SCAN_METHOD));
+    aml_append(method, aml_call0("\\_SB." CPU_LEGACY_SCAN_METHOD));
     aml_append(ctx, method);
 }
