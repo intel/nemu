@@ -7,22 +7,6 @@
 #define ACPI_REDUCED_RESET_IOPORT	  0x3C0
 #define ACPI_REDUCED_RESET_VALUE	  4
 
-typedef struct Aml Aml;
-
-typedef enum {
-    GED_CPU_HOTPLUG    = 1,
-    GED_MEMORY_HOTPLUG = 2,
-    GED_PCI_HOTPLUG    = 3,
-    GED_NVDIMM_HOTPLUG = 4,
-} GedEventType;
-
-typedef struct GedEvent {
-    uint32_t     irq;
-    GedEventType event;
-} GedEvent;
-
 void acpi_reduced_setup(MachineState *machine, AcpiConfiguration *conf);
-void build_ged_aml(Aml *table, const char* name,
-                   GedEvent *events, uint8_t events_size);
 
 #endif

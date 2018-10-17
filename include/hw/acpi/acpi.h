@@ -24,7 +24,7 @@
 #include "exec/memory.h"
 #include "hw/irq.h"
 #include "hw/acpi/acpi_dev_interface.h"
-#include "hw/acpi/reduced.h"
+#include "hw/acpi/ged.h"
 #include "hw/hotplug.h"
 #include "hw/mem/nvdimm.h"
 #include "hw/block/flash.h"
