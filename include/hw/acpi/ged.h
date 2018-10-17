@@ -24,7 +24,22 @@
 #include "hw/acpi/cpu.h"
 #include "hw/acpi/memory_hotplug.h"
 
-#define GED_DEVICE "GED"
+#define ACPI_GED_EVENT_IO_BASE 0xb000
+
+#define ACPI_GED_IRQ_SEL_OFFSET 0x0
+#define ACPI_GED_IRQ_SEL_LEN    0x4
+#define ACPI_GED_IRQ_SEL_INIT   0x0
+#define ACPI_GED_IRQ_SEL_CPU    0x1
+#define ACPI_GED_IRQ_SEL_MEM    0x2
+#define ACPI_GED_IRQ_SEL_NVDIMM 0x4
+#define ACPI_GED_IRQ_SEL_PCI    0x8
+#define ACPI_GED_REG_LEN        0x4
+
+#define GED_DEVICE      "GED"
+#define AML_GED_IRQ_REG "IREG"
+#define AML_GED_IRQ_SEL "ISEL"
+
+typedef struct Aml Aml;
 
 typedef enum {
     GED_CPU_HOTPLUG    = 1,
@@ -34,11 +49,21 @@ typedef enum {
 } GedEventType;
 
 typedef struct GedEvent {
-    uint32_t     irq;
+    uint32_t     selector;
     GedEventType event;
 } GedEvent;
 
-void build_ged_aml(Aml *table, const char* name,
-                   GedEvent *events, uint8_t events_size);
+typedef struct GEDState {
+    MemoryRegion io;
+    uint32_t     sel;
+    uint32_t     irq;
+    QemuMutex    lock;
+} GEDState;
+
+void acpi_ged_init(MemoryRegion *as, Object *owner, GEDState *ged_st,
+                   hwaddr base_addr, uint32_t ged_irq);
+void acpi_ged_event(GEDState *ged_st, qemu_irq *irq, uint32_t ged_irq_sel);
+void build_ged_aml(Aml *table, const char* name, uint32_t ged_irq,
+                   GedEvent *events, uint32_t events_size);
 
 #endif
