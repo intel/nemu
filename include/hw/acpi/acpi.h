@@ -220,7 +220,8 @@ struct AcpiConfiguration {
     AcpiNVDIMMState acpi_nvdimm_state;
     uint16_t cpu_hotplug_io_base;
     GedEvent *ged_events;
-    uint8_t ged_events_size;
+    uint32_t ged_events_size;
+    uint32_t ged_irq;
 
     /* Build state */
     AcpiBuildState *build_state;
