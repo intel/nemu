@@ -35,6 +35,7 @@
 #include "hw/acpi/pc-hotplug.h"
 #include "hw/acpi/reduced.h"
 #include "hw/acpi/pcihp.h"
+#include "hw/acpi/ged.h"
 
 #include "hw/pci/pci.h"
 

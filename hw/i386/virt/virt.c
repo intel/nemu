@@ -32,6 +32,7 @@
 #include "hw/acpi/pc-hotplug.h"
 #include "hw/acpi/reduced.h"
 #include "hw/acpi/aml-build.h"
+#include "hw/acpi/ged.h"
 
 #include "hw/i386/virt.h"
 #include "hw/i386/cpu-internal.h"
