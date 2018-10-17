@@ -94,6 +94,7 @@ static void acpi_reduced_build(MachineState *ms, AcpiBuildTables *tables,
     Range pci_hole, pci_hole64;
     Object *pci_host;
     PCIBus *bus = NULL;
+    AcpiMcfgInfo mcfg;
     GArray *tables_blob = tables->table_data;
     AcpiBuilder *ab = ACPI_BUILDER(ms);
 
@@ -127,6 +128,12 @@ static void acpi_reduced_build(MachineState *ms, AcpiBuildTables *tables,
     /* MADT pointed to by RSDT */
     acpi_add_table(table_offsets, tables_blob);
     acpi_builder_madt(ab, tables_blob, tables->linker, ms, conf);
+
+    if (acpi_get_mcfg(&mcfg)) {
+        acpi_add_table(table_offsets, tables_blob);
+        acpi_builder_mcfg(ab, tables_blob,
+                          tables->linker, &mcfg);
+    }
 
     /* RSDT is pointed to by RSDP */
     xsdt = tables_blob->len;
