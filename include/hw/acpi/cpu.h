@@ -17,6 +17,23 @@
 #include "hw/acpi/aml-build.h"
 #include "hw/hotplug.h"
 
+#define CPU_NAME_FMT      "C%.03X"
+#define CPUHP_RES_DEVICE  "PRES"
+#define CPU_LOCK          "CPLK"
+#define CPU_STS_METHOD    "CSTA"
+#define CPU_SCAN_METHOD   "CSCN"
+#define CPU_NOTIFY_METHOD "CTFY"
+#define CPU_EJECT_METHOD  "CEJ0"
+#define CPU_OST_METHOD    "COST"
+
+#define CPU_ENABLED       "CPEN"
+#define CPU_SELECTOR      "CSEL"
+#define CPU_COMMAND       "CCMD"
+#define CPU_DATA          "CDAT"
+#define CPU_INSERT_EVENT  "CINS"
+#define CPU_REMOVE_EVENT  "CRMV"
+#define CPU_EJECT_EVENT   "CEJ0"
+
 typedef struct AcpiCpuStatus {
     struct CPUState *cpu;
     uint64_t arch_id;
