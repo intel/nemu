@@ -38,7 +38,6 @@
 
 #include "hw/pci/pcie_host.h"
 #include "hw/pci/pci.h"
-#include "hw/i386/virt.h"
 
 #include "hw/loader.h"
 #include "hw/hw.h"
@@ -99,7 +98,9 @@ static void build_dsdt(MachineState *ms, GArray *table_data, BIOSLinker *linker,
     acpi_data_push(dsdt->buf, sizeof(AcpiTableHeader));
 
     scope = aml_scope("\\_SB");
-    acpi_dsdt_add_pci_bus(dsdt, pci_host);
+    if (pci_host->pci_bus) {
+        acpi_dsdt_add_pci_bus(dsdt, pci_host);
+    }
     acpi_dsdt_add_memory_hotplug(ms, dsdt);
     acpi_dsdt_add_cpus(ms, dsdt, scope, smp_cpus, conf);
     acpi_dsdt_add_ged(dsdt, conf);
@@ -144,6 +145,8 @@ static void acpi_reduced_build(MachineState *ms, AcpiBuildTables *tables, AcpiCo
     MachineClass *mc = MACHINE_GET_CLASS(ms);
     GArray *table_offsets;
     unsigned dsdt, xsdt;
+    Object *pci_host;
+    PCIBus *bus = NULL;
     Range pci_hole, pci_hole64;
     AcpiMcfgInfo mcfg;
     GArray *tables_blob = tables->table_data;
@@ -156,8 +159,13 @@ static void acpi_reduced_build(MachineState *ms, AcpiBuildTables *tables, AcpiCo
                              ACPI_BUILD_TABLE_FILE, tables_blob,
                              64, false /* high memory */);
 
-    AcpiPciBus pci_host = {
-        .pci_bus    = VIRT_MACHINE(ms)->pci_bus,
+    pci_host = acpi_get_pci_host();
+    if (pci_host) {
+        bus = PCI_HOST_BRIDGE(pci_host)->bus;
+    }
+
+    AcpiPciBus acpi_pci_host = {
+        .pci_bus    = bus,
         .pci_hole   = &pci_hole,
         .pci_hole64 = &pci_hole64,
         .pci_segment = 0,
@@ -166,7 +174,7 @@ static void acpi_reduced_build(MachineState *ms, AcpiBuildTables *tables, AcpiCo
 
     /* DSDT is pointed to by FADT */
     dsdt = tables_blob->len;
-    build_dsdt(ms, tables_blob, tables->linker, &pci_host, conf);
+    build_dsdt(ms, tables_blob, tables->linker, &acpi_pci_host, conf);
 
     /* FADT pointed to by RSDT */
     acpi_add_table(table_offsets, tables_blob);
