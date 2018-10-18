@@ -34,6 +34,42 @@
 static int apic_irq_delivered;
 bool apic_report_tpr_access;
 
+
+/* Find first bit starting from msb */
+static int apic_fls_bit(uint32_t value)
+{
+    return 31 - clz32(value);
+}
+
+
+/* return -1 if no bit is set */
+int get_highest_priority_int(uint32_t *tab)
+{
+    int i;
+    for (i = 7; i >= 0; i--) {
+        if (tab[i] != 0) {
+            return i * 32 + apic_fls_bit(tab[i]);
+        }
+    }
+    return -1;
+}
+
+int apic_get_ppr(APICCommonState *s)
+{
+    int tpr, isrv, ppr;
+
+    tpr = (s->tpr >> 4);
+    isrv = get_highest_priority_int(s->isr);
+    if (isrv < 0)
+        isrv = 0;
+    isrv >>= 4;
+    if (tpr >= isrv)
+        ppr = s->tpr;
+    else
+        ppr = isrv << 4;
+    return ppr;
+}
+
 void cpu_set_apic_base(DeviceState *dev, uint64_t val)
 {
     trace_cpu_set_apic_base(val);
