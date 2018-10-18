@@ -230,14 +230,16 @@ func testPCIHotplug(ctx context.Context, q *qemuTest, t *testing.T) {
 	// Use virtio-net-pci device for PCI hotplug.
 	addr := "12"
 	macAddr := "ab:cd:ef:01:23:45"
+	expected := "exist"
 	err := q.qmp.ExecuteNetPCIDeviceAdd(ctx, "", "net1", macAddr, addr, "", "", 0)
 	if err != nil {
 		t.Errorf("Error hotplugging PCI device (virtio-net-pci): %v", err)
 	}
 
+/*
 	// This sleep ensures the guest OS has enough time to detect the new
 	// PCI device and create the network interface.
-	time.Sleep(time.Second * 30)
+	time.Sleep(time.Second * 15)
 
 	// Check the PCI device has been detected by the guest OS.
 	expected := "exist"
@@ -246,6 +248,22 @@ func testPCIHotplug(ctx context.Context, q *qemuTest, t *testing.T) {
 	if result != expected {
 		t.Error("PCI device not detected")
 	}
+*/
+
+	// DEBUG
+        time.Sleep(time.Second * 15)
+        cmd := fmt.Sprintf("ls /sys/bus/pci/devices/")
+        result := strings.TrimSpace(q.runCommandBySSH(cmd, t))
+        t.Log(result)
+
+        time.Sleep(time.Second * 15)
+        result = strings.TrimSpace(q.runCommandBySSH(cmd, t))
+        t.Log(result)
+
+	time.Sleep(time.Second * 15)
+        result = strings.TrimSpace(q.runCommandBySSH(cmd, t))
+        t.Log(result)
+	// END OF DEBUG
 
 	// Check the network interface has been created.
 	cmd = fmt.Sprintf("ip a | grep '%s' &> /dev/null && echo %s", macAddr, expected)
