@@ -6,7 +6,7 @@ set -x
 #OVMF_GIT_REV="2f16693ce32cbe0956ce2dcaa571a32966413855"
 #OVMF_GIT_REPO="https://github.com/intel/ovmf-virt"
 
-GO_VERSION="1.10.3"
+GO_VERSION="1.11.1"
 CLEAR_VERSION=24740
 CLEAR_IMAGE=clear-$CLEAR_VERSION-cloud.img
 UBUNTU_IMAGE=xenial-server-cloudimg-amd64-uefi1.img
@@ -19,8 +19,8 @@ go_install() {
     go version | grep $GO_VERSION
     if [ $? -ne 0 ]; then
 	pushd /tmp
-	wget -nv https://dl.google.com/go/go1.10.3.linux-amd64.tar.gz || exit $?
-	sudo tar -C /usr/local -xzf go1.10.3.linux-amd64.tar.gz || exit $?
+	wget -nv "https://dl.google.com/go/go$GO_VERSION.linux-amd64.tar.gz" || exit $?
+	sudo tar -C /usr/local -xzf "go$GO_VERSION.linux-amd64.tar.gz" || exit $?
 	popd
     fi
 
