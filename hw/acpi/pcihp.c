@@ -87,13 +87,13 @@ static void *acpi_set_bsel(PCIBus *bus, void *opaque)
 
 static void acpi_set_pci_info(AcpiPciHpState *s)
 {
-    static bool bsel_is_set;
     unsigned bsel_alloc = ACPI_PCIHP_BSEL_DEFAULT;
 
-    if (bsel_is_set) {
+    /* To avoid setting the same property again */
+    if (s->root && object_property_get_qobject(OBJECT(s->root),
+                                         ACPI_PCIHP_PROP_BSEL, NULL)) {
         return;
     }
-    bsel_is_set = true;
 
     if (s->root) {
         /* Scan all PCI buses. Set property to enable acpi based hotplug. */
