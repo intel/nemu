@@ -1754,21 +1754,18 @@ static void pc_machine_set_vmport(Object *obj, Visitor *v, const char *name,
     visit_type_OnOffAuto(v, name, &pcms->vmport, errp);
 }
 
-static void pc_machine_get_smm(Object *obj, Visitor *v, const char *name,
-                               void *opaque, Error **errp)
+static int pc_machine_get_smm(Object *obj, Error **errp G_GNUC_UNUSED)
 {
     PCMachineState *pcms = PC_MACHINE(obj);
-    OnOffAuto smm = pcms->smm;
 
-    visit_type_OnOffAuto(v, name, &smm, errp);
+    return pcms->smm;
 }
 
-static void pc_machine_set_smm(Object *obj, Visitor *v, const char *name,
-                               void *opaque, Error **errp)
+static void pc_machine_set_smm(Object *obj, int smm, Error **errp)
 {
     PCMachineState *pcms = PC_MACHINE(obj);
 
-    visit_type_OnOffAuto(v, name, &pcms->smm, errp);
+    pcms->smm = smm;
 }
 
 static bool pc_machine_get_smbus(Object *obj, Error **errp)
@@ -1928,9 +1925,10 @@ static void pc_machine_class_init(ObjectClass *oc, void *data)
     object_class_property_set_description(oc, PC_MACHINE_MAX_RAM_BELOW_4G,
         "Maximum ram below the 4G boundary (32bit boundary)", &error_abort);
 
-    object_class_property_add(oc, MACHINE_SMM, "OnOffAuto",
-        pc_machine_get_smm, pc_machine_set_smm,
-        NULL, NULL, &error_abort);
+    object_class_property_add_enum(oc, MACHINE_SMM, "OnOffAuto",
+                                   &OnOffAuto_lookup,
+                                   pc_machine_get_smm, pc_machine_set_smm,
+                                   &error_abort);
     object_class_property_set_description(oc, MACHINE_SMM,
         "Enable SMM (pc & q35)", &error_abort);
 
