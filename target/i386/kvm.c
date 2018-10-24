@@ -1612,7 +1612,8 @@ int kvm_arch_init(MachineState *ms, KVMState *s)
         Error *prop_err = NULL;
         OnOffAuto smm;
 
-        smm = object_property_get_uint(qdev_get_machine(), MACHINE_SMM, &prop_err);
+        smm = object_property_get_enum(qdev_get_machine(), MACHINE_SMM,
+                                       "OnOffAuto", &prop_err);
         if (!prop_err && is_smm_enabled(smm)) {
                 smram_machine_done.notify = register_smram_listener;
                 qemu_add_machine_init_done_notifier(&smram_machine_done);
