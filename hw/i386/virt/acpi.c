@@ -24,6 +24,7 @@
 #include "hw/hotplug.h"
 #include "hw/sysbus.h"
 
+#include "hw/i386/apic_internal.h"
 #include "hw/i386/acpi.h"
 #include "hw/i386/virt.h"
 
@@ -38,6 +39,7 @@
 #include "hw/acpi/ged.h"
 
 #include "hw/pci/pci.h"
+#include "hw/pci/msi.h"
 
 typedef struct VirtAcpiState {
     SysBusDevice parent_obj;
@@ -129,6 +131,7 @@ static void virt_ospm_status(AcpiDeviceIf *adev, ACPIOSTInfoList ***list)
 
 static void virt_send_ged(AcpiDeviceIf *adev, AcpiEventStatusBits ev)
 {
+    MSIMessage msi;
     VirtAcpiState *s = VIRT_ACPI(adev);
     uint32_t sel = ACPI_GED_IRQ_SEL_INIT;
 
@@ -145,10 +148,19 @@ static void virt_send_ged(AcpiDeviceIf *adev, AcpiEventStatusBits ev)
         return;
     }
 
-    /* We inject the hotplug interrupt.
-     * The IRQ selector will make the difference from the ACPI table.
+    /* 
+     * Set the IRQ selector to allow proper demultiplexing from
+     * the ACPI table.
      */
-    acpi_ged_event(&s->ged_state, s->gsi, sel);
+    acpi_ged_set_event(&s->ged_state, sel);
+
+    /* Prepare MSI message */
+    msi.address = (((uint64_t)s->ged_state.msi_addr_hi) << 32) |
+                  ((uint64_t)s->ged_state.msi_addr_lo);
+    msi.data = s->ged_state.msi_data;
+
+    /* Inject MSI message */
+    apic_get_class()->send_msi(&msi);
 }
 
 static int virt_device_sysbus_init(SysBusDevice *dev)

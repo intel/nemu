@@ -79,7 +79,7 @@ typedef struct GEDState {
 
 void acpi_ged_init(MemoryRegion *as, Object *owner, GEDState *ged_st,
                    hwaddr base_addr, uint32_t ged_irq);
-void acpi_ged_event(GEDState *ged_st, qemu_irq *irq, uint32_t ged_irq_sel);
+void acpi_ged_set_event(GEDState *ged_st, uint32_t ged_irq_sel);
 void build_ged_aml(Aml *table, const char* name, uint32_t ged_irq,
                    GedEvent *events, uint32_t events_size);
 

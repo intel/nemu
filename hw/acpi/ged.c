@@ -78,7 +78,7 @@ void acpi_ged_init(MemoryRegion *as, Object *owner, GEDState *ged_st,
     memory_region_add_subregion(as, base_addr, &ged_st->io);
 }
 
-void acpi_ged_event(GEDState *ged_st, qemu_irq *irq, uint32_t ged_irq_sel)
+void acpi_ged_set_event(GEDState *ged_st, uint32_t ged_irq_sel)
 {
     /* Set the GED IRQ selector to the expected device type value. This
      * way, the ACPI method will be able to trigger the right code based
@@ -87,9 +87,6 @@ void acpi_ged_event(GEDState *ged_st, qemu_irq *irq, uint32_t ged_irq_sel)
     qemu_mutex_lock(&ged_st->lock);
     ged_st->sel |= ged_irq_sel;
     qemu_mutex_unlock(&ged_st->lock);
-
-    /* Trigger the event by sending an interrupt to the guest. */
-    qemu_irq_pulse(irq[ged_st->irq]);
 }
 
 static Aml *ged_event_aml(GedEvent *event)
