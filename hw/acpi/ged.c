@@ -59,7 +59,7 @@ void acpi_ged_init(MemoryRegion *as, Object *owner, GEDState *ged_st,
     qemu_mutex_init(&ged_st->lock);
     ged_st->irq = ged_irq;
     memory_region_init_io(&ged_st->io, owner, &ged_ops, ged_st,
-                          "acpi-ged-event", ACPI_GED_REG_LEN);
+                          "acpi-ged-event", ACPI_GED_IO_LEN);
     memory_region_add_subregion(as, base_addr, &ged_st->io);
 }
 
@@ -182,14 +182,41 @@ void build_ged_aml(Aml *table, const char *name, uint32_t ged_irq,
     aml_append(dev, aml_name_decl("_UID", zero));
     aml_append(dev, aml_name_decl("_CRS", crs));
 
-    /* Append IO region */
+    /* Append IO region to get selector value */
     aml_append(dev, aml_operation_region(AML_GED_IRQ_REG, AML_SYSTEM_IO,
                aml_int(ACPI_GED_EVENT_IO_BASE + ACPI_GED_IRQ_SEL_OFFSET),
-               ACPI_GED_IRQ_SEL_LEN));
+               ACPI_GED_IRQ_REG_LEN));
+    /* Append new field IREG */
     field = aml_field(AML_GED_IRQ_REG, AML_DWORD_ACC, AML_NOLOCK,
-                      AML_WRITE_AS_ZEROS);
-    aml_append(field, aml_named_field(AML_GED_IRQ_SEL,
-                                      ACPI_GED_IRQ_SEL_LEN * 8));
+                          AML_WRITE_AS_ZEROS);
+    {
+        /* Append new entry ISEL to retrieve selector value */
+        aml_append(field, aml_named_field(AML_GED_IRQ_SEL,
+                                          ACPI_GED_IRQ_SEL_LEN * 8));
+    }
+    aml_append(dev, field);
+
+    /* Append IO region to write MSI parameters to the hypervisor */
+    aml_append(dev, aml_operation_region(AML_GED_MSI_REG, AML_SYSTEM_IO,
+               aml_int(ACPI_GED_EVENT_IO_BASE + ACPI_GED_IRQ_REG_LEN),
+               ACPI_GED_MSI_REG_LEN));
+    /* Append new field MREG */
+    field = aml_field(AML_GED_MSI_REG, AML_DWORD_ACC, AML_NOLOCK,
+                          AML_WRITE_AS_ZEROS);
+    {
+        /* Append new entry MIDX */
+        aml_append(field, aml_named_field(AML_GED_MSI_IDX,
+                                          ACPI_GED_MSI_ENTRY_LEN * 8));
+        /* Append new entry MADH */
+        aml_append(field, aml_named_field(AML_GED_MSI_ADDR_HI,
+                                          ACPI_GED_MSI_ENTRY_LEN * 8));
+        /* Append new entry MADL */
+        aml_append(field, aml_named_field(AML_GED_MSI_ADDR_LO,
+                                          ACPI_GED_MSI_ENTRY_LEN * 8));
+        /* Append new entry MDAT */
+        aml_append(field, aml_named_field(AML_GED_MSI_DATA,
+                                          ACPI_GED_MSI_ENTRY_LEN * 8));
+    }
     aml_append(dev, field);
 
     /* Append _EVT method */
