@@ -111,7 +111,7 @@ void build_ged_aml(Aml *table, const char *name, uint32_t ged_irq,
                    GedEvent *events, uint32_t events_size)
 {
     Aml *crs = aml_resource_template();
-    Aml *evt, *field;
+    Aml *msi, *evt, *field;
     Aml *zero = aml_int(0);
     Aml *dev = aml_device("%s", name);
     Aml *irq_sel = aml_local(0);
@@ -218,6 +218,16 @@ void build_ged_aml(Aml *table, const char *name, uint32_t ged_irq,
                                           ACPI_GED_MSI_ENTRY_LEN * 8));
     }
     aml_append(dev, field);
+
+    /* Append _MSI method to pass down the MSI parameters from the guest OS */
+    msi = aml_method("_MSI", 4, AML_SERIALIZED);
+    {
+        aml_append(msi, aml_store(aml_arg(0), aml_name(AML_GED_MSI_IDX)));
+	aml_append(msi, aml_store(aml_arg(1), aml_name(AML_GED_MSI_ADDR_HI)));
+        aml_append(msi, aml_store(aml_arg(2), aml_name(AML_GED_MSI_ADDR_LO)));
+        aml_append(msi, aml_store(aml_arg(3), aml_name(AML_GED_MSI_DATA)));
+    }
+    aml_append(dev, msi);
 
     /* Append _EVT method */
     aml_append(dev, evt);
