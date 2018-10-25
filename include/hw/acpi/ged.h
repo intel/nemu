@@ -70,6 +70,10 @@ typedef struct GEDState {
     MemoryRegion io;
     uint32_t     sel;
     uint32_t     irq;
+    uint32_t     msi_idx;
+    uint32_t     msi_addr_hi;
+    uint32_t     msi_addr_lo;
+    uint32_t     msi_data;
     QemuMutex    lock;
 } GEDState;
 

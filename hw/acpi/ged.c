@@ -37,10 +37,25 @@ static uint64_t ged_read(void *opaque, hwaddr addr, unsigned size)
     return val;
 }
 
-/* Nothing is expected to be written to the GED memory region */
 static void ged_write(void *opaque, hwaddr addr, uint64_t data,
                       unsigned int size)
 {
+    GEDState *ged_st = opaque;
+
+    switch (addr) {
+    case ACPI_GED_MSI_IDX_OFFSET:
+        ged_st->msi_idx = data;
+        break;
+    case ACPI_GED_MSI_ADDR_HI_OFFSET:
+        ged_st->msi_addr_hi = data;
+        break;
+    case ACPI_GED_MSI_ADDR_LO_OFFSET:
+        ged_st->msi_addr_lo = data;
+        break;
+    case ACPI_GED_MSI_DATA_OFFSET:
+        ged_st->msi_data = data;
+        break;
+    }
 }
 
 static const MemoryRegionOps ged_ops = {
