@@ -102,7 +102,7 @@ static void pc_isa_bios_init(MemoryRegion *rom_memory,
  * it is passed to pc_isa_bios_init(). Merging several drives for isa-bios is
  * not supported.
  */
-static void pc_system_flash_init(MemoryRegion *rom_memory)
+static void pc_system_flash_init(MemoryRegion *rom_memory, bool isa_bios)
 {
     int unit;
     DriveInfo *pflash_drv;
@@ -171,7 +171,9 @@ static void pc_system_flash_init(MemoryRegion *rom_memory)
                                              0      /* be */);
         if (unit == 0) {
             flash_mem = pflash_cfi01_get_memory(system_flash);
-            pc_isa_bios_init(rom_memory, flash_mem, size);
+            if(isa_bios) {
+                pc_isa_bios_init(rom_memory, flash_mem, size);
+            }
 
             /* Encrypt the pflash boot ROM */
             if (kvm_memcrypt_enabled()) {
@@ -187,11 +189,11 @@ static void pc_system_flash_init(MemoryRegion *rom_memory)
     }
 }
 
-static void old_pc_system_rom_init(MemoryRegion *rom_memory, bool isapc_ram_fw)
+static void old_pc_system_rom_init(MemoryRegion *rom_memory, bool isapc_ram_fw, bool isa_bios)
 {
     char *filename;
-    MemoryRegion *bios, *isa_bios;
-    int bios_size, isa_bios_size;
+    MemoryRegion *bios;
+    int bios_size;
     int ret;
 
     /* BIOS load */
@@ -221,26 +223,29 @@ static void old_pc_system_rom_init(MemoryRegion *rom_memory, bool isapc_ram_fw)
     }
     g_free(filename);
 
-    /* map the last 128KB of the BIOS in ISA space */
-    isa_bios_size = MIN(bios_size, 128 * KiB);
-    isa_bios = g_malloc(sizeof(*isa_bios));
-    memory_region_init_alias(isa_bios, NULL, "isa-bios", bios,
-                             bios_size - isa_bios_size, isa_bios_size);
-    memory_region_add_subregion_overlap(rom_memory,
-                                        0x100000 - isa_bios_size,
-                                        isa_bios,
-                                        1);
-    if (!isapc_ram_fw) {
-        memory_region_set_readonly(isa_bios, true);
+    if (isa_bios) {
+        MemoryRegion *isa_bios;
+        int isa_bios_size;
+        /* map the last 128KB of the BIOS in ISA space */
+        isa_bios_size = MIN(bios_size, 128 * KiB);
+        isa_bios = g_malloc(sizeof(*isa_bios));
+        memory_region_init_alias(isa_bios, NULL, "isa-bios", bios,
+                                 bios_size - isa_bios_size, isa_bios_size);
+        memory_region_add_subregion_overlap(rom_memory,
+                                            0x100000 - isa_bios_size,
+                                            isa_bios,
+                                            1);
+        if (!isapc_ram_fw) {
+            memory_region_set_readonly(isa_bios, true);
+        }
     }
-
     /* map all the bios at the top of memory */
     memory_region_add_subregion(rom_memory,
                                 (uint32_t)(-bios_size),
                                 bios);
 }
 
-void sysfw_firmware_init(MemoryRegion *rom_memory, bool isapc_ram_fw)
+void sysfw_firmware_init(MemoryRegion *rom_memory, bool isapc_ram_fw, bool isa_bios)
 {
     DriveInfo *pflash_drv;
 
@@ -248,7 +253,7 @@ void sysfw_firmware_init(MemoryRegion *rom_memory, bool isapc_ram_fw)
 
     if (isapc_ram_fw || pflash_drv == NULL) {
         /* When a pflash drive is not found, use rom-mode */
-        old_pc_system_rom_init(rom_memory, isapc_ram_fw);
+        old_pc_system_rom_init(rom_memory, isapc_ram_fw, isa_bios);
         return;
     }
 
@@ -259,5 +264,5 @@ void sysfw_firmware_init(MemoryRegion *rom_memory, bool isapc_ram_fw)
         exit(1);
     }
 
-    pc_system_flash_init(rom_memory);
+    pc_system_flash_init(rom_memory, isa_bios);
 }

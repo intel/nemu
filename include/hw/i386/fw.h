@@ -27,6 +27,7 @@ enum {
 FWCfgState *fw_cfg_init(MachineState *ms, uint16_t boot_cpus, const CPUArchIdList *cpus, unsigned apic_id_limit);
 
 void sysfw_firmware_init(MemoryRegion *rom_memory,
-                             bool isapc_ram_fw);
+                             bool isapc_ram_fw,
+                             bool isa_bios);
 
 #endif
