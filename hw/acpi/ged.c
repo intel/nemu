@@ -44,6 +44,12 @@ static void ged_write(void *opaque, hwaddr addr, uint64_t data,
 
     switch (addr) {
     case ACPI_GED_MSI_IDX_OFFSET:
+        /*
+         * This identifier will not be used in the current implementation
+         * because the GED device is multiplexed. There is no need to rely
+         * on any sort of identifier to pair a vector with its correspoding
+         * ACPI Interrupt.
+         */
         ged_st->msi_idx = data;
         break;
     case ACPI_GED_MSI_ADDR_HI_OFFSET:
@@ -198,7 +204,15 @@ void build_ged_aml(Aml *table, const char *name, uint32_t ged_irq,
     aml_append(dev, aml_operation_region(AML_GED_IRQ_REG, AML_SYSTEM_IO,
                aml_int(ACPI_GED_EVENT_IO_BASE + ACPI_GED_IRQ_SEL_OFFSET),
                ACPI_GED_IRQ_REG_LEN));
-    /* Append new field IREG */
+    /*
+     * Append new IREG OperationRegion and Field
+     *
+     * OperationRegion (IREG, SystemIO, 0xB000, 0x04)
+     * Field (IREG, DWordAcc, NoLock, WriteAsZeros)
+     * {
+     *     ISEL,   32
+     * }
+     */
     field = aml_field(AML_GED_IRQ_REG, AML_DWORD_ACC, AML_NOLOCK,
                           AML_WRITE_AS_ZEROS);
     {
@@ -208,7 +222,35 @@ void build_ged_aml(Aml *table, const char *name, uint32_t ged_irq,
     }
     aml_append(dev, field);
 
-    /* Append IO region to write MSI parameters to the hypervisor */
+    /*
+     * Append IO region and fields to let the OSPM write MSI parameters to
+     * the hypervisor.
+     *
+     * MIDX: represents the MSI GSI identifier that is defined through
+     *       the Interrupt ACPI resource of the GED device. When the
+     *       GED is not multiplexed, the hypervisor will need a way to
+     *       match each Interrupt with the correct IRQ vector number.
+     *       Because this implementation of the GED device is multiplexed,
+     *       this value is ignored.
+     *
+     * MADH: represents the first 32 bits (higher bits) of the 64 bits MSI
+     *       address provided by the OSPM.
+     *
+     * MADL: represents the last 32 bits (lower bits) of the 64 bits MSI
+     *       address provided by the OSPM.
+     *
+     * MDAT: represents the information needed by the platform to send a
+     *       correct MSI message with the proper vector number and flags.
+     *
+     * OperationRegion (MREG, SystemIO, 0xB004, 0x10)
+     * Field (MREG, DWordAcc, NoLock, WriteAsZeros)
+     * {
+     *     MIDX,   32,
+     *     MADH,   32,
+     *     MADL,   32,
+     *     MDAT,   32
+     * }
+     */
     aml_append(dev, aml_operation_region(AML_GED_MSI_REG, AML_SYSTEM_IO,
                aml_int(ACPI_GED_EVENT_IO_BASE + ACPI_GED_IRQ_REG_LEN),
                ACPI_GED_MSI_REG_LEN));
@@ -231,7 +273,19 @@ void build_ged_aml(Aml *table, const char *name, uint32_t ged_irq,
     }
     aml_append(dev, field);
 
-    /* Append _MSI method to pass down the MSI parameters from the guest OS */
+    /*
+     * Append _MSI method passes down the MSI parameters from the OSPM.
+     * This new ACPI method is called with 4 parameters, and is responsible
+     * for writing them to the appropriate IO ports.
+     *
+     * Method (_MSI, 4, Serialized)
+     * {
+     *     MIDX = Arg0
+     *     MADH = Arg1
+     *     MADL = Arg2
+     *     MDAT = Arg3
+     * }
+     */
     msi = aml_method("_MSI", 4, AML_SERIALIZED);
     {
         aml_append(msi, aml_store(aml_arg(0), aml_name(AML_GED_MSI_IDX)));
