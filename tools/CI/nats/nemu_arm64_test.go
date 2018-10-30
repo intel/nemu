@@ -13,8 +13,12 @@ import (
 	"github.com/intel/govmm/qemu"
 )
 
-func createFlashImages(t *testing.T) (string, string) {
-	firmwareSourceFile, err := os.Open("/usr/share/qemu-efi/QEMU_EFI.fd")
+func getBiosPath() string {
+	return "/usr/share/qemu-efi/QEMU_EFI.fd"
+}
+
+func (q *qemuTest) createFlashImages(t *testing.T) (string, string) {
+	firmwareSourceFile, err := os.Open(q.boot.bios)
 	if err != nil {
 		t.Fatalf("Error creating opening source file for flash image: %v", err)
 	}
@@ -66,7 +70,7 @@ func (q *qemuTest) launchQemu(ctx context.Context, monitorSocketCh chan string, 
 	cloudInitImagePath := q.createCloudInitImage(t)
 	defer os.Remove(cloudInitImagePath)
 
-	flashZeroPath, flashOnePath := createFlashImages(t)
+	flashZeroPath, flashOnePath := q.createFlashImages(t)
 	defer os.Remove(flashZeroPath)
 	defer os.Remove(flashOnePath)
 
@@ -126,6 +130,12 @@ var ubuntuArmOnly = []distro{
 		name:      "xenial",
 		image:     xenialArmDiskImage,
 		cloudInit: cloudInitUbuntu,
+		bootConfigs: []bootConfig{
+			{
+				name: bootMethodOVMF,
+				bios: getBiosPath(),
+			},
+		},
 	},
 }
 
