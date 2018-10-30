@@ -194,6 +194,7 @@ type qemuTest struct {
 	sshPort   uint16
 	cloudInit cloudInitType
 	diskImage string
+	boot      bootConfig
 }
 
 func (q *qemuTest) startQemu(ctx context.Context, t *testing.T) error {
@@ -227,10 +228,20 @@ func (q *qemuTest) startQemu(ctx context.Context, t *testing.T) error {
 
 type cloudInitType string
 
+type bootMethodName string
+
+type bootConfig struct {
+	name        bootMethodName
+	bios        string
+	kernel      string
+	commandLine string
+}
+
 type distro struct {
-	name      string
-	image     string
-	cloudInit cloudInitType
+	name        string
+	image       string
+	cloudInit   cloudInitType
+	bootConfigs []bootConfig
 }
 
 type testConfig struct {
@@ -245,6 +256,11 @@ const (
 	cloudInitUbuntu cloudInitType = "ubuntu"
 )
 
+const (
+	bootMethodOVMF       bootMethodName = "ovmf"
+	bootMethodDirectOVMF bootMethodName = "direct-ovmf"
+)
+
 func TestNemu(t *testing.T) {
 	for testIndex := range tests {
 		test := &tests[testIndex]
@@ -252,27 +268,32 @@ func TestNemu(t *testing.T) {
 			m := &test.machines[machineIndex]
 			for distroIndex := range test.distros {
 				d := &test.distros[distroIndex]
-				t.Run(fmt.Sprintf("%s/%s/%s", test.name, *m, d.name), func(t *testing.T) {
-					t.Parallel()
-					q := qemuTest{
-						machine:   *m,
-						diskImage: d.image,
-						cloudInit: d.cloudInit,
-					}
+				for bootIndex := range d.bootConfigs {
+					b := &d.bootConfigs[bootIndex]
 
-					ctx, cancelFunc := context.WithTimeout(context.Background(), cancelTimeout)
-					err := q.startQemu(ctx, t)
-					if err != nil {
-						cancelFunc()
+					t.Run(fmt.Sprintf("%s/%s/%s/%s", test.name, *m, d.name, b.name), func(t *testing.T) {
+						t.Parallel()
+						q := qemuTest{
+							machine:   *m,
+							diskImage: d.image,
+							cloudInit: d.cloudInit,
+							boot:      *b,
+						}
+
+						ctx, cancelFunc := context.WithTimeout(context.Background(), cancelTimeout)
+						err := q.startQemu(ctx, t)
+						if err != nil {
+							cancelFunc()
+							<-q.doneCh
+							t.Fatalf("Error starting qemu: %v", err)
+						}
+
+						test.testFunc(ctx, &q, t)
+
 						<-q.doneCh
-						t.Fatalf("Error starting qemu: %v", err)
-					}
-
-					test.testFunc(ctx, &q, t)
-
-					<-q.doneCh
-					cancelFunc()
-				})
+						cancelFunc()
+					})
+				}
 			}
 		}
 	}

@@ -16,6 +16,11 @@ import (
 	"github.com/intel/govmm/qemu"
 )
 
+const (
+	clearKernelFileName    = "org.clearlinux.kvm.4.18.16-293"
+	clearKernelCommandLine = "root=/dev/vda2 rw console=hvc0"
+)
+
 func getNemuPath() string {
 	u, err := user.Current()
 	if err != nil {
@@ -26,14 +31,24 @@ func getNemuPath() string {
 	return path.Join(u.HomeDir, "build-x86_64", "x86_64-softmmu", "qemu-system-x86_64")
 }
 
-func getBiosPath(t *testing.T) string {
+func getBiosPath() string {
 	u, err := user.Current()
 	if err != nil {
-		t.Errorf("Error getting current user: %v", err)
+		fmt.Fprintf(os.Stderr, "Error getting current user: %v", err)
 		os.Exit(1)
 	}
 
 	return path.Join(u.HomeDir, "workloads", "OVMF.fd")
+}
+
+func getKernelPath() string {
+	u, err := user.Current()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error getting current user: %v", err)
+		os.Exit(1)
+	}
+
+	return path.Join(u.HomeDir, "workloads", clearKernelFileName)
 }
 
 func (q *qemuTest) launchQemu(ctx context.Context, monitorSocketCh chan string, t *testing.T) {
@@ -64,7 +79,7 @@ func (q *qemuTest) launchQemu(ctx context.Context, monitorSocketCh chan string, 
 
 	q.params = []string{
 		"-machine", fmt.Sprintf("%s,accel=kvm,kernel_irqchip,nvdimm", q.machine),
-		"-bios", getBiosPath(t),
+		"-bios", q.boot.bios,
 		"-smp", "2,cores=1,threads=1,sockets=2,maxcpus=32",
 		"-m", "512,slots=4,maxmem=16384M",
 		"-cpu", "host",
@@ -99,6 +114,18 @@ func (q *qemuTest) launchQemu(ctx context.Context, monitorSocketCh chan string, 
 			"-chardev", fmt.Sprintf("file,path=%s,id=debugcon", sysbusDebugLogFile.Name()),
 			"-device", "isa-debugcon,iobase=0x3f8,chardev=serialcon",
 			"-chardev", fmt.Sprintf("file,path=%s,id=serialcon", serialOutputLogFile.Name()))
+	}
+
+	if q.boot.kernel != "" {
+		q.params = append(q.params,
+			"-kernel", q.boot.kernel,
+		)
+	}
+
+	if q.boot.commandLine != "" {
+		q.params = append(q.params,
+			"-append", q.boot.commandLine,
+		)
 	}
 
 	if monitorSocketCh != nil {
@@ -278,24 +305,23 @@ const (
 	xenialDiskImage = "xenial-server-cloudimg-amd64-uefi1.img"
 )
 
-var allDistros = []distro{
-	{
-		name:      "xenial",
-		image:     xenialDiskImage,
-		cloudInit: cloudInitUbuntu,
-	},
-	{
-		name:      "clear",
-		image:     clearDiskImage,
-		cloudInit: cloudInitClear,
-	},
-}
-
 var clearLinuxOnly = []distro{
 	{
 		name:      "clear",
 		image:     clearDiskImage,
 		cloudInit: cloudInitClear,
+		bootConfigs: []bootConfig{
+			{
+				name: bootMethodOVMF,
+				bios: getBiosPath(),
+			},
+			{
+				name:        bootMethodDirectOVMF,
+				bios:        getBiosPath(),
+				kernel:      getKernelPath(),
+				commandLine: clearKernelCommandLine,
+			},
+		},
 	},
 }
 
@@ -304,8 +330,16 @@ var ubuntuOnly = []distro{
 		name:      "xenial",
 		image:     xenialDiskImage,
 		cloudInit: cloudInitUbuntu,
+		bootConfigs: []bootConfig{
+			{
+				name: bootMethodOVMF,
+				bios: getBiosPath(),
+			},
+		},
 	},
 }
+
+var allDistros = []distro{clearLinuxOnly[0], ubuntuOnly[0]}
 
 var allMachines = []string{"pc", "q35", "virt"}
 
