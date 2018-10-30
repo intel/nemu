@@ -13,6 +13,8 @@ UBUNTU_IMAGE=xenial-server-cloudimg-amd64-uefi1.img
 WORKLOADS_DIR="$HOME/workloads"
 OVMF="OVMF.fd"
 
+# Matches the kernel for the $CLEAR_IMAGE above
+CLEAR_KERNEL="org.clearlinux.kvm.4.18.16-293"
 
 go_install() {
     export PATH=/usr/local/go/bin:$PATH
@@ -44,6 +46,11 @@ if [ ! -f "$WORKLOADS_DIR"/"$CLEAR_IMAGE" ]; then
     wget -nv https://nemujenkinsstorage.blob.core.windows.net/images/clear-$CLEAR_VERSION-cloud.img.xz ||
     wget -nv https://download.clearlinux.org/releases/$CLEAR_VERSION/clear/clear-$CLEAR_VERSION-cloud.img.xz || exit $?
     unxz clear-$CLEAR_VERSION-cloud.img.xz || exit $?
+fi
+
+
+if [ ! -f "$WORKLOADS_DIR"/"$CLEAR_KERNEL" ]; then
+    wget -nv https://nemujenkinsstorage.blob.core.windows.net/images/$CLEAR_KERNEL
 fi
 
 if [ ! -f "$WORKLOADS_DIR"/"$UBUNTU_IMAGE" ]; then

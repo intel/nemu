@@ -130,23 +130,27 @@ var ubuntuArmOnly = []distro{
 }
 
 var armMachine = []string{"virt"}
+
 var tests = []testConfig{
 	{
-		name:     "Shutdown",
-		testFunc: testShutdown,
-		distros:  ubuntuArmOnly,
-		machines: armMachine,
+		name:        "Shutdown",
+		testFunc:    testShutdown,
+		distros:     ubuntuArmOnly,
+		machines:    armMachine,
+		bootMethods: bootLoaderOnly,
 	},
 	{
-		name:     "Reboot",
-		testFunc: testReboot,
-		distros:  ubuntuArmOnly,
-		machines: armMachine,
+		name:        "Reboot",
+		testFunc:    testReboot,
+		distros:     ubuntuArmOnly,
+		machines:    armMachine,
+		bootMethods: bootLoaderOnly,
 	},
 	{
-		name:     "QMPQuit",
-		testFunc: testQMPQuit,
-		distros:  ubuntuArmOnly,
-		machines: armMachine,
+		name:        "QMPQuit",
+		testFunc:    testQMPQuit,
+		distros:     ubuntuArmOnly,
+		machines:    armMachine,
+		bootMethods: bootLoaderOnly,
 	},
 }

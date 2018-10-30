@@ -187,13 +187,14 @@ func (l simpleLogger) Errorf(format string, v ...interface{}) {
 }
 
 type qemuTest struct {
-	qmp       *qemu.QMP
-	params    []string
-	doneCh    chan interface{}
-	machine   string
-	sshPort   uint16
-	cloudInit cloudInitType
-	diskImage string
+	qmp        *qemu.QMP
+	params     []string
+	doneCh     chan interface{}
+	machine    string
+	sshPort    uint16
+	cloudInit  cloudInitType
+	diskImage  string
+	bootMethod bootMethodType
 }
 
 func (q *qemuTest) startQemu(ctx context.Context, t *testing.T) error {
@@ -234,16 +235,27 @@ type distro struct {
 }
 
 type testConfig struct {
-	name     string
-	testFunc func(ctx context.Context, q *qemuTest, t *testing.T)
-	distros  []distro
-	machines []string
+	name        string
+	testFunc    func(ctx context.Context, q *qemuTest, t *testing.T)
+	distros     []distro
+	machines    []string
+	bootMethods []bootMethodType
 }
 
 const (
 	cloudInitClear  cloudInitType = "clear"
 	cloudInitUbuntu cloudInitType = "ubuntu"
 )
+
+type bootMethodType string
+
+const (
+	bootMethodBootloader bootMethodType = "bootloader"
+	bootMethodDirectOVMF bootMethodType = "direct-ovmf"
+)
+
+var bootLoaderOnly = []bootMethodType{bootMethodBootloader}
+var allBootMethods = []bootMethodType{bootMethodBootloader, bootMethodDirectOVMF}
 
 func TestNemu(t *testing.T) {
 	for testIndex := range tests {
@@ -252,27 +264,32 @@ func TestNemu(t *testing.T) {
 			m := &test.machines[machineIndex]
 			for distroIndex := range test.distros {
 				d := &test.distros[distroIndex]
-				t.Run(fmt.Sprintf("%s/%s/%s", test.name, *m, d.name), func(t *testing.T) {
-					t.Parallel()
-					q := qemuTest{
-						machine:   *m,
-						diskImage: d.image,
-						cloudInit: d.cloudInit,
-					}
+				for bootMethodIndex := range test.bootMethods {
+					b := &test.bootMethods[bootMethodIndex]
 
-					ctx, cancelFunc := context.WithTimeout(context.Background(), cancelTimeout)
-					err := q.startQemu(ctx, t)
-					if err != nil {
-						cancelFunc()
+					t.Run(fmt.Sprintf("%s/%s/%s/%s", test.name, *m, d.name, *b), func(t *testing.T) {
+						t.Parallel()
+						q := qemuTest{
+							machine:    *m,
+							diskImage:  d.image,
+							cloudInit:  d.cloudInit,
+							bootMethod: *b,
+						}
+
+						ctx, cancelFunc := context.WithTimeout(context.Background(), cancelTimeout)
+						err := q.startQemu(ctx, t)
+						if err != nil {
+							cancelFunc()
+							<-q.doneCh
+							t.Fatalf("Error starting qemu: %v", err)
+						}
+
+						test.testFunc(ctx, &q, t)
+
 						<-q.doneCh
-						t.Fatalf("Error starting qemu: %v", err)
-					}
-
-					test.testFunc(ctx, &q, t)
-
-					<-q.doneCh
-					cancelFunc()
-				})
+						cancelFunc()
+					})
+				}
 			}
 		}
 	}

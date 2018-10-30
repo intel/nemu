@@ -16,6 +16,8 @@ import (
 	"github.com/intel/govmm/qemu"
 )
 
+const clearKernelFileName = "org.clearlinux.kvm.4.18.16-293"
+
 func getNemuPath() string {
 	u, err := user.Current()
 	if err != nil {
@@ -34,6 +36,20 @@ func getBiosPath(t *testing.T) string {
 	}
 
 	return path.Join(u.HomeDir, "workloads", "OVMF.fd")
+}
+
+func getKernelPath(t *testing.T) string {
+	u, err := user.Current()
+	if err != nil {
+		t.Errorf("Error getting current user: %v", err)
+		os.Exit(1)
+	}
+
+	return path.Join(u.HomeDir, "workloads", clearKernelFileName)
+}
+
+func getKernelCommandLine() string {
+	return "root=/dev/vda2 rw console=hvc0"
 }
 
 func (q *qemuTest) launchQemu(ctx context.Context, monitorSocketCh chan string, t *testing.T) {
@@ -99,6 +115,13 @@ func (q *qemuTest) launchQemu(ctx context.Context, monitorSocketCh chan string, 
 			"-chardev", fmt.Sprintf("file,path=%s,id=debugcon", sysbusDebugLogFile.Name()),
 			"-device", "isa-debugcon,iobase=0x3f8,chardev=serialcon",
 			"-chardev", fmt.Sprintf("file,path=%s,id=serialcon", serialOutputLogFile.Name()))
+	}
+
+	if q.bootMethod != bootMethodBootloader {
+		q.params = append(q.params,
+			"-kernel", getKernelPath(t),
+			"-append", getKernelCommandLine(),
+		)
 	}
 
 	if monitorSocketCh != nil {
@@ -311,45 +334,74 @@ var allMachines = []string{"pc", "q35", "virt"}
 
 var tests = []testConfig{
 	{
-		name:     "Shutdown",
-		testFunc: testShutdown,
-		distros:  allDistros,
-		machines: allMachines,
+		name:        "Shutdown",
+		testFunc:    testShutdown,
+		distros:     ubuntuOnly,
+		machines:    allMachines,
+		bootMethods: bootLoaderOnly,
 	},
 	{
-		name:     "Reboot",
-		testFunc: testReboot,
-		distros:  ubuntuOnly,
-		machines: allMachines,
+		name:        "Shutdown",
+		testFunc:    testShutdown,
+		distros:     clearLinuxOnly,
+		machines:    allMachines,
+		bootMethods: allBootMethods,
+	},
+
+	{
+		name:        "Reboot",
+		testFunc:    testReboot,
+		distros:     ubuntuOnly,
+		machines:    allMachines,
+		bootMethods: bootLoaderOnly,
 	},
 	{
-		name:     "CheckACPITables",
-		testFunc: testCheckAcpiTables,
-		distros:  allDistros,
-		machines: allMachines,
+		name:        "CheckACPITables",
+		testFunc:    testCheckAcpiTables,
+		distros:     ubuntuOnly,
+		machines:    allMachines,
+		bootMethods: bootLoaderOnly,
 	},
 	{
-		name:     "QMPQuit",
-		testFunc: testQMPQuit,
-		distros:  allDistros,
-		machines: allMachines,
+		name:        "CheckACPITables",
+		testFunc:    testCheckAcpiTables,
+		distros:     clearLinuxOnly,
+		machines:    allMachines,
+		bootMethods: allBootMethods,
 	},
 	{
-		name:     "CPUHotplug",
-		testFunc: testCPUHotplug,
-		distros:  clearLinuxOnly,
-		machines: allMachines,
+		name:        "QMPQuit",
+		testFunc:    testQMPQuit,
+		distros:     ubuntuOnly,
+		machines:    allMachines,
+		bootMethods: bootLoaderOnly,
 	},
 	{
-		name:     "MemoryHotplug",
-		testFunc: testMemoryHotplug,
-		distros:  clearLinuxOnly,
-		machines: allMachines,
+		name:        "QMPQuit",
+		testFunc:    testQMPQuit,
+		distros:     clearLinuxOnly,
+		machines:    allMachines,
+		bootMethods: allBootMethods,
 	},
 	{
-		name:     "PCIHotplug",
-		testFunc: testPCIHotplug,
-		distros:  clearLinuxOnly,
-		machines: []string{"pc", "virt"},
+		name:        "CPUHotplug",
+		testFunc:    testCPUHotplug,
+		distros:     clearLinuxOnly,
+		machines:    allMachines,
+		bootMethods: allBootMethods,
+	},
+	{
+		name:        "MemoryHotplug",
+		testFunc:    testMemoryHotplug,
+		distros:     clearLinuxOnly,
+		machines:    allMachines,
+		bootMethods: allBootMethods,
+	},
+	{
+		name:        "PCIHotplug",
+		testFunc:    testPCIHotplug,
+		distros:     clearLinuxOnly,
+		machines:    []string{"pc", "virt"},
+		bootMethods: allBootMethods,
 	},
 }
