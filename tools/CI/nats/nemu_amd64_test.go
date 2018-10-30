@@ -274,7 +274,7 @@ func testPCIHotplug(ctx context.Context, q *qemuTest, t *testing.T) {
 var machines = []string{"pc", "q35", "virt"}
 
 const (
-	clearDiskImage  = "clear-24740-cloud.img"
+	clearDiskImage  = "clear-25950-cloud.img"
 	xenialDiskImage = "xenial-server-cloudimg-amd64-uefi1.img"
 )
 

@@ -7,7 +7,7 @@ set -x
 #OVMF_GIT_REPO="https://github.com/intel/ovmf-virt"
 
 GO_VERSION="1.11.1"
-CLEAR_VERSION=24740
+CLEAR_VERSION=25950
 CLEAR_IMAGE=clear-$CLEAR_VERSION-cloud.img
 UBUNTU_IMAGE=xenial-server-cloudimg-amd64-uefi1.img
 WORKLOADS_DIR="$HOME/workloads"
