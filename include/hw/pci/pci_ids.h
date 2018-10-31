@@ -257,6 +257,8 @@
 
 #define PCI_DEVICE_ID_INTEL_P35_MCH      0x29c0
 
+#define PCI_DEVICE_ID_INTEL_VIRT_PCIE_HOST 0x0d57
+
 #define PCI_VENDOR_ID_XEN                0x5853
 #define PCI_DEVICE_ID_XEN_PLATFORM       0x0001
 

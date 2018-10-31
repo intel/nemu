@@ -284,9 +284,8 @@ static void pci_lite_device_class_init(ObjectClass *klass, void *data)
     k->class_id = PCI_CLASS_BRIDGE_HOST;
     dc->desc = "Host bridge";
 
-    // TODO: Use different one to GPEX?
-    k->vendor_id = PCI_VENDOR_ID_REDHAT;
-    k->device_id = PCI_DEVICE_ID_REDHAT_PCIE_HOST;
+    k->vendor_id = PCI_VENDOR_ID_INTEL;
+    k->device_id = PCI_DEVICE_ID_INTEL_VIRT_PCIE_HOST;
     k->revision = 0;
 
     /*
