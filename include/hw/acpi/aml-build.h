@@ -411,8 +411,8 @@ build_header(BIOSLinker *linker, GArray *table_data,
 void *acpi_data_push(GArray *table_data, unsigned size);
 unsigned acpi_data_len(GArray *table);
 Object *acpi_get_pci_host(void);
-void acpi_get_pci_holes(Range *hole, Range *hole64);
-bool acpi_get_mcfg(AcpiMcfgInfo *mcfg);
+void acpi_get_pci_holes(Range *hole, Range *hole64, PCIBus *pci_bus);
+bool acpi_get_mcfg(AcpiMcfgInfo *mcfg, AcpiPciBus *acpi_pci_host);
 void acpi_link(AcpiConfiguration *conf, BIOSLinker *linker, Error **errp);
 void acpi_align_size(GArray *blob, unsigned align);
 void acpi_add_table(GArray *table_offsets, GArray *table_data);

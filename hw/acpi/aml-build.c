@@ -1649,11 +1649,11 @@ Object *acpi_get_pci_host(void)
     return NULL;
 }
 
-void acpi_get_pci_holes(Range *hole, Range *hole64)
+void acpi_get_pci_holes(Range *hole, Range *hole64, PCIBus *pci_bus)
 {
     Object *pci_host;
 
-    pci_host = acpi_get_pci_host();
+    pci_host = OBJECT(PCI_HOST_BRIDGE(BUS(pci_bus)->parent));
     g_assert(pci_host);
 
     range_set_bounds1(hole,
@@ -1673,12 +1673,12 @@ void acpi_get_pci_holes(Range *hole, Range *hole64)
 }
 
 
-bool acpi_get_mcfg(AcpiMcfgInfo *mcfg)
+bool acpi_get_mcfg(AcpiMcfgInfo *mcfg, AcpiPciBus *acpi_pci_host)
 {
     Object *pci_host;
     QObject *o;
 
-    pci_host = acpi_get_pci_host();
+    pci_host = OBJECT(PCI_HOST_BRIDGE(BUS(acpi_pci_host->pci_bus)->parent));
     g_assert(pci_host);
 
     o = object_property_get_qobject(pci_host, PCIE_HOST_MCFG_BASE, NULL);

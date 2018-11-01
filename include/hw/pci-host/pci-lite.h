@@ -31,9 +31,9 @@
 #include "hw/hw.h"
 
 
-PCIBus *pci_lite_init(MemoryRegion *address_space_mem,
-                      MemoryRegion *address_space_io,
-                      MemoryRegion *pci_address_space);
+PCIHostState *pci_lite_init(MemoryRegion *address_space_mem,
+                            MemoryRegion *address_space_io,
+                            MemoryRegion *pci_address_space);
 
 
 #endif /* HW_PCI_LITE_H */
