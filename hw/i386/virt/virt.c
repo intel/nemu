@@ -174,8 +174,10 @@ static void virt_pci_init(VirtMachineState *vms)
 
     pci_memory = g_new(MemoryRegion, 1);
     memory_region_init(pci_memory, NULL, "pci", UINT64_MAX);
-    vms->pci_bus = pci_lite_init(get_system_memory(), get_system_io(),
-                                 pci_memory);
+    vms->acpi_conf.pci_host = pci_lite_init(get_system_memory(),
+                                            get_system_io(),
+                                            pci_memory);
+    vms->pci_bus = vms->acpi_conf.pci_host->bus;
 }
 
 static void virt_machine_state_init(MachineState *machine)

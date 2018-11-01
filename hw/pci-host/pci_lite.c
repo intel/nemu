@@ -202,7 +202,7 @@ static void pci_lite_realize(DeviceState *dev, Error **errp)
     }
 }
 
-PCIBus *pci_lite_init(MemoryRegion *address_space_mem,
+PCIHostState *pci_lite_init(MemoryRegion *address_space_mem,
                       MemoryRegion *address_space_io,
                       MemoryRegion *pci_address_space)
 {
@@ -219,7 +219,6 @@ PCIBus *pci_lite_init(MemoryRegion *address_space_mem,
                                 pci_swizzle_map_irq_fn, pci, pci_address_space,
                                 address_space_io, 0, 4, TYPE_PCIE_BUS);
 
-    object_property_add_child(qdev_get_machine(), "pcilite", OBJECT(dev), NULL);
     qdev_init_nofail(dev);
 
     pci_lite = PCI_LITE_HOST(dev);
@@ -238,7 +237,7 @@ PCIBus *pci_lite_init(MemoryRegion *address_space_mem,
     pc_pci_as_mapping_init(OBJECT(dev), address_space_mem, pci_address_space);
 
     pci_create_simple(pci->bus, 0, TYPE_PCI_LITE_DEVICE);
-    return pci->bus;
+    return pci;
 }
 
 static const char *pci_lite_root_bus_path(PCIHostState *host_bridge,

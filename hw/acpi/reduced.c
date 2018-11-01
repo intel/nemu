@@ -142,32 +142,25 @@ static void acpi_reduced_build(MachineState *ms, AcpiBuildTables *tables, AcpiCo
     MachineClass *mc = MACHINE_GET_CLASS(ms);
     GArray *table_offsets;
     unsigned dsdt, xsdt;
-    Object *pci_host;
-    PCIBus *bus = NULL;
     Range pci_hole, pci_hole64;
     AcpiMcfgInfo mcfg;
     GArray *tables_blob = tables->table_data;
 
-    acpi_get_pci_holes(&pci_hole, &pci_hole64);
+    AcpiPciBus acpi_pci_host = {
+        .pci_bus    = conf->pci_host->bus,
+        .pci_hole   = &pci_hole,
+        .pci_hole64 = &pci_hole64,
+        .pci_segment = 0,
+        .acpi_iobase_addr = VIRT_ACPI_PCI_HOTPLUG_IO_BASE,
+    };
+
+    acpi_get_pci_holes(&pci_hole, &pci_hole64, acpi_pci_host.pci_bus);
     table_offsets = g_array_new(false, true /* clear */,
                                         sizeof(uint32_t));
 
     bios_linker_loader_alloc(tables->linker,
                              ACPI_BUILD_TABLE_FILE, tables_blob,
                              64, false /* high memory */);
-
-    pci_host = acpi_get_pci_host();
-    if (pci_host) {
-        bus = PCI_HOST_BRIDGE(pci_host)->bus;
-    }
-
-    AcpiPciBus acpi_pci_host = {
-        .pci_bus    = bus,
-        .pci_hole   = &pci_hole,
-        .pci_hole64 = &pci_hole64,
-        .pci_segment = 0,
-        .acpi_iobase_addr = VIRT_ACPI_PCI_HOTPLUG_IO_BASE,
-    };
 
     /* DSDT is pointed to by FADT */
     dsdt = tables_blob->len;
@@ -190,7 +183,7 @@ static void acpi_reduced_build(MachineState *ms, AcpiBuildTables *tables, AcpiCo
         }
     }
 
-    if (acpi_get_mcfg(&mcfg)) {
+    if (acpi_get_mcfg(&mcfg, &acpi_pci_host)) {
         acpi_add_table(table_offsets, tables_blob);
         mc->firmware_build_methods.acpi.mcfg(tables_blob, tables->linker, &mcfg);
     }

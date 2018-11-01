@@ -1433,9 +1433,16 @@ void acpi_build(AcpiBuildTables *tables, MachineState *machine, AcpiConfiguratio
     AcpiSlicOem slic_oem = { .id = NULL, .table_id = NULL };
     Object *vmgenid_dev;
 
+    AcpiPciBus pci_host = {
+        .pci_bus    = PC_MACHINE(machine)->bus,
+        .pci_hole   = &pci_hole,
+        .pci_hole64 = &pci_hole64,
+        .pci_segment = 0,
+    };
+
     acpi_get_pm_info(&pm);
     acpi_get_misc_info(&misc);
-    acpi_get_pci_holes(&pci_hole, &pci_hole64);
+    acpi_get_pci_holes(&pci_hole, &pci_hole64, pci_host.pci_bus);
     acpi_get_slic_oem(&slic_oem);
 
     table_offsets = g_array_new(false, true /* clear */,
@@ -1447,12 +1454,6 @@ void acpi_build(AcpiBuildTables *tables, MachineState *machine, AcpiConfiguratio
                              64 /* Ensure FACS is aligned */,
                              false /* high memory */);
 
-    AcpiPciBus pci_host = {
-        .pci_bus    = PC_MACHINE(machine)->bus,
-        .pci_hole   = &pci_hole,
-        .pci_hole64 = &pci_hole64,
-        .pci_segment = 0,
-    };
     /*
      * FACS is pointed to by FADT.
      * We place it first since it's the only table that has alignment
@@ -1512,7 +1513,7 @@ void acpi_build(AcpiBuildTables *tables, MachineState *machine, AcpiConfiguratio
             build_slit(tables_blob, tables->linker);
         }
     }
-    if (acpi_get_mcfg(&mcfg)) {
+    if (acpi_get_mcfg(&mcfg, &pci_host)) {
         acpi_add_table(table_offsets, tables_blob);
         acpi_build_mcfg(tables_blob, tables->linker, &mcfg);
     }
