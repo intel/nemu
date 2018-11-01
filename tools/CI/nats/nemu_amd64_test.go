@@ -80,7 +80,7 @@ func (q *qemuTest) launchQemu(ctx context.Context, monitorSocketCh chan string, 
 	q.params = []string{
 		"-machine", fmt.Sprintf("%s,accel=kvm,kernel_irqchip,nvdimm", q.machine),
 		"-bios", q.boot.bios,
-		"-smp", "2,cores=1,threads=1,sockets=2,maxcpus=32",
+		"-smp", "1,cores=1,threads=1,sockets=1,maxcpus=32",
 		"-m", "512,slots=4,maxmem=16384M",
 		"-cpu", "host",
 		"-nographic",
@@ -227,21 +227,21 @@ func testMemoryHotplug(ctx context.Context, q *qemuTest, t *testing.T) {
 
 func testCPUHotplug(ctx context.Context, q *qemuTest, t *testing.T) {
 	cpusOnlineBefore := strings.TrimSpace(q.runCommandBySSH("cat /sys/devices/system/cpu/online", t))
-	if cpusOnlineBefore != "0-1" {
+	if cpusOnlineBefore != "0" {
 		t.Errorf("Unexpected online cpus: %s", cpusOnlineBefore)
 	}
 
-	err := q.qmp.ExecuteCPUDeviceAdd(ctx, "host-x86_64-cpu", "core2", "2", "0", "0", "")
+	err := q.qmp.ExecuteCPUDeviceAdd(ctx, "host-x86_64-cpu", "core1", "1", "0", "0", "")
 	if err != nil {
 		t.Errorf("Error hotplugging CPU: %v", err)
 	}
 
 	time.Sleep(time.Second * 15)
-	q.runCommandBySSH(`sudo sh -c "echo 1 > /sys/devices/system/cpu/cpu2/online"`, t)
+	q.runCommandBySSH(`sudo sh -c "echo 1 > /sys/devices/system/cpu/cpu1/online"`, t)
 	time.Sleep(time.Second * 15)
 
 	cpusOnlineAfter := strings.TrimSpace(q.runCommandBySSH("cat /sys/devices/system/cpu/online", t))
-	if cpusOnlineAfter != "0-2" {
+	if cpusOnlineAfter != "0-1" {
 		t.Errorf("Unexpected online cpus: %s", cpusOnlineAfter)
 	}
 
