@@ -1,9 +1,10 @@
 obj-y += arm-semi.o crypto_helper.o gdbstub.o helper.o cpu.o
-obj-y += translate.o op_helper.o neon_helper.o
-obj-y += iwmmxt_helper.o vec_helper.o m_helper.o
-obj-y += excp_helper.o vfp_helper.o
+obj-$(CONFIG_TCG) += translate.o op_helper.o neon_helper.o
+obj-$(CONFIG_TCG) += iwmmxt_helper.o vec_helper.o m_helper.o
+obj-$(CONFIG_TCG) += excp_helper.o vfp_helper.o
 
-obj-$(CONFIG_SOFTMMU) += machine.o psci.o arch_dump.o monitor.o arm-powerctl.o
+obj-$(CONFIG_SOFTMMU) += machine.o arch_dump.o monitor.o arm-powerctl.o
+obj-$(call land,$(CONFIG_TCG),$(CONFIG_SOFTMMU)) += psci.o
 obj-$(CONFIG_KVM) += kvm.o
 obj-$(call land,$(CONFIG_KVM),$(call lnot,$(TARGET_AARCH64))) += kvm32.o
 obj-$(call land,$(CONFIG_KVM),$(TARGET_AARCH64)) += kvm64.o
@@ -17,5 +18,6 @@ target/arm/decode-sve.inc.c: $(SRC_PATH)/target/arm/sve.decode $(DECODETREE)
 	  "GEN", $(TARGET_DIR)$@)
 
 target/arm/translate-sve.o: target/arm/decode-sve.inc.c
-obj-$(TARGET_AARCH64) += translate-sve.o sve_helper.o
-obj-$(TARGET_AARCH64) += cpu64.o translate-a64.o helper-a64.o gdbstub64.o
+obj-$(call land,$(CONFIG_TCG),$(TARGET_AARCH64)) += translate-sve.o sve_helper.o
+obj-$(call land,$(CONFIG_TCG),$(TARGET_AARCH64)) += translate-a64.o helper-a64.o
+obj-$(TARGET_AARCH64) += cpu64.o gdbstub64.o
