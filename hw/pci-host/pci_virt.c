@@ -40,7 +40,21 @@
 #include "qapi/visitor.h"
 #include "qemu/error-report.h"
 #include "hw/i386/virt.h"
+#include "hw/nvram/fw_cfg.h"
 
+static uint64_t pci_virt_pci_mcfg_base(PCIExpressHost *pcie)
+{
+    uint64_t mcfg_base;
+    VirtMachineState *vms = VIRT_MACHINE(qdev_get_machine());
+    PCIHostState *h = vms->acpi_conf.pci_host[0];
+    PCIExpressHost *e = PCIE_HOST_BRIDGE(h);
+    PCIVirtHost *v = PCI_VIRT_HOST(pcie);
+
+    mcfg_base = e->base_addr + e->size;
+    mcfg_base += (v->segment_nr - 1) * PCI_VIRT_PCIEXBAR_SIZE;
+
+    return mcfg_base;
+}
 /*
  * The 64bit pci hole starts after "above 4G RAM" and
  * potentially the space reserved for memory device.
@@ -53,7 +67,7 @@ static uint64_t pci_virt_pci_hole64_start(PCIHostState *h)
     PCIVirtHost *s = PCI_VIRT_HOST(h);
 
     hole64_start = range_upb(&pci_lite->pci_hole64) + 1;
-    hole64_start += (s->segment_nr - 1) * s->pci_hole64_size;
+    hole64_start += (s->segment_nr - 1) * DEFAULT_PCI_HOLE64_SIZE;
     return ROUND_UP(hole64_start, 1ULL << 30);
 }
 
@@ -150,6 +164,7 @@ static PCIHostState *pci_virt_init(DeviceState *dev,
     PCIExpressHost *pcie;
     PCIVirtHost *pci_virt;
     uint64_t mcfg_base, pci_hole_start, pci_hole_end;
+    VirtMachineState *vms = VIRT_MACHINE(qdev_get_machine());
 
     pci = PCI_HOST_BRIDGE(dev);
     pcie = PCIE_HOST_BRIDGE(dev);
@@ -159,8 +174,7 @@ static PCIHostState *pci_virt_init(DeviceState *dev,
                                 address_space_io, 0, 4, TYPE_PCIE_BUS); 
     pci_virt = PCI_VIRT_HOST(dev);
 
-    mcfg_base = PCI_VIRT_PCIEXBAR_BASE + (pci_virt->segment_nr - 1)
-                * PCI_VIRT_PCIEXBAR_SIZE;
+    mcfg_base = pci_virt_pci_mcfg_base(pcie);
     pci_hole_start = PCI_VIRT_HOLE_START_BASE +
                      (pci_virt->segment_nr - 1) * PCI_VIRT_PCIEXBAR_SIZE;
     pci_hole_end = pci_hole_start + PCI_VIRT_PCIEXBAR_SIZE;
@@ -174,7 +188,9 @@ static PCIHostState *pci_virt_init(DeviceState *dev,
 
     pcie_host_mmcfg_update(pcie, 1, mcfg_base, PCI_VIRT_PCIEXBAR_SIZE);
 
-    e820_add_entry(PCI_VIRT_PCIEXBAR_BASE, PCI_VIRT_PCIEXBAR_SIZE, E820_RESERVED);
+    e820_add_entry(mcfg_base, PCI_VIRT_PCIEXBAR_SIZE, E820_RESERVED);
+    fw_cfg_modify_file(vms->acpi_conf.fw_cfg, "etc/e820", e820_table,
+                       sizeof(struct e820_entry) * e820_entries);
 
     /* setup pci memory mapping */
     pc_pci_as_mapping_init(OBJECT(dev), address_space_mem, pci_address_space);

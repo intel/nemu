@@ -1426,7 +1426,6 @@ void acpi_build(AcpiBuildTables *tables, MachineState *machine, AcpiConfiguratio
     AcpiPmInfo pm;
     AcpiMiscInfo misc;
     AcpiMcfgInfo mcfg;
-    Range pci_hole, pci_hole64;
     uint8_t *u;
     size_t aml_len = 0;
     GArray *tables_blob = tables->table_data;
@@ -1435,14 +1434,12 @@ void acpi_build(AcpiBuildTables *tables, MachineState *machine, AcpiConfiguratio
 
     AcpiPciBus pci_host = {
         .pci_bus    = PC_MACHINE(machine)->bus,
-        .pci_hole   = &pci_hole,
-        .pci_hole64 = &pci_hole64,
         .pci_segment = 0,
     };
 
     acpi_get_pm_info(&pm);
     acpi_get_misc_info(&misc);
-    acpi_get_pci_holes(&pci_hole, &pci_hole64, pci_host.pci_bus);
+    acpi_get_pci_holes(&pci_host.pci_hole, &pci_host.pci_hole64, pci_host.pci_bus);
     acpi_get_slic_oem(&slic_oem);
 
     table_offsets = g_array_new(false, true /* clear */,
