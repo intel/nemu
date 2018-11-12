@@ -1656,19 +1656,22 @@ void acpi_get_pci_holes(Range *hole, Range *hole64, PCIBus *pci_bus)
     pci_host = OBJECT(PCI_HOST_BRIDGE(BUS(pci_bus)->parent));
     g_assert(pci_host);
 
-    range_set_bounds1(hole,
-                      object_property_get_uint(pci_host,
-                                               PCI_HOST_PROP_PCI_HOLE_START,
-                                               NULL),
-                      object_property_get_uint(pci_host,
-                                               PCI_HOST_PROP_PCI_HOLE_END,
-                                               NULL));
     range_set_bounds1(hole64,
                       object_property_get_uint(pci_host,
                                                PCI_HOST_PROP_PCI_HOLE64_START,
                                                NULL),
                       object_property_get_uint(pci_host,
                                                PCI_HOST_PROP_PCI_HOLE64_END,
+                                               NULL));
+    /* Segment non-zero does not have pci-hole below 32 bit */
+    if (!hole)
+        return;
+    range_set_bounds1(hole,
+                      object_property_get_uint(pci_host,
+                                               PCI_HOST_PROP_PCI_HOLE_START,
+                                               NULL),
+                      object_property_get_uint(pci_host,
+                                               PCI_HOST_PROP_PCI_HOLE_END,
                                                NULL));
 }
 
@@ -1678,20 +1681,28 @@ bool acpi_get_mcfg(AcpiMcfgInfo *mcfg, AcpiPciBus *acpi_pci_host)
     Object *pci_host;
     QObject *o;
 
-    pci_host = OBJECT(PCI_HOST_BRIDGE(BUS(acpi_pci_host->pci_bus)->parent));
-    g_assert(pci_host);
-
-    o = object_property_get_qobject(pci_host, PCIE_HOST_MCFG_BASE, NULL);
-    if (!o) {
-        return false;
+    uint16_t i;
+    mcfg->mcfg_base = g_malloc0(mcfg->total_segment * sizeof(uint64_t));
+    mcfg->mcfg_size = g_malloc0(mcfg->total_segment * sizeof(uint32_t));
+    for(i = 0; i < mcfg->total_segment; i++) {
+        pci_host = OBJECT(PCI_HOST_BRIDGE(BUS(acpi_pci_host[i].pci_bus)->parent));
+        g_assert(pci_host);
+         o = object_property_get_qobject(pci_host, PCIE_HOST_MCFG_BASE, NULL);
+        if (!o) {
+            /* If one pci_host got no mcfg base, just return false */
+            g_free(mcfg->mcfg_base);
+            g_free(mcfg->mcfg_size);
+            return false;
+        }
+        mcfg->mcfg_base[i] = qnum_get_uint(qobject_to(QNum, o));
+        qobject_unref(o);
+    
+        o = object_property_get_qobject(pci_host, PCIE_HOST_MCFG_SIZE, NULL);
+        assert(o);
+        mcfg->mcfg_size[i] = qnum_get_uint(qobject_to(QNum, o));
+        qobject_unref(o);
     }
-    mcfg->mcfg_base = qnum_get_uint(qobject_to(QNum, o));
-    qobject_unref(o);
 
-    o = object_property_get_qobject(pci_host, PCIE_HOST_MCFG_SIZE, NULL);
-    assert(o);
-    mcfg->mcfg_size = qnum_get_uint(qobject_to(QNum, o));
-    qobject_unref(o);
     return true;
 }
 
@@ -2016,14 +2027,16 @@ acpi_build_mcfg(GArray *table_data, BIOSLinker *linker, AcpiMcfgInfo *info)
 {
     AcpiTableMcfg *mcfg;
     const char *sig;
-    int len = sizeof(*mcfg) + 1 * sizeof(mcfg->allocation[0]);
+    int len = sizeof(*mcfg) + info->total_segment * sizeof(mcfg->allocation[0]);
+    uint16_t i;
 
     mcfg = acpi_data_push(table_data, len);
-    mcfg->allocation[0].address = cpu_to_le64(info->mcfg_base);
-    /* Only a single allocation so no need to play with segments */
-    mcfg->allocation[0].pci_segment = cpu_to_le16(0);
-    mcfg->allocation[0].start_bus_number = 0;
-    mcfg->allocation[0].end_bus_number = PCIE_MMCFG_BUS(info->mcfg_size - 1);
+    for (i = 0; i < info->total_segment; i++) {
+        mcfg->allocation[i].address = cpu_to_le64(info->mcfg_base[i]);
+        mcfg->allocation[i].pci_segment = cpu_to_le16(i);
+        mcfg->allocation[i].start_bus_number = 0;
+        mcfg->allocation[i].end_bus_number = PCIE_MMCFG_BUS(info->mcfg_size[i] - 1);
+    }
 
     /* MCFG is used for ECAM which can be enabled or disabled by guest.
      * To avoid table size changes (which create migration issues),
@@ -2031,7 +2044,7 @@ acpi_build_mcfg(GArray *table_data, BIOSLinker *linker, AcpiMcfgInfo *info)
      * but set the signature to a reserved value in this case.
      * ACPI spec requires OSPMs to ignore such tables.
      */
-    if (info->mcfg_base == PCIE_BASE_ADDR_UNMAPPED) {
+    if (info->mcfg_base[0] == PCIE_BASE_ADDR_UNMAPPED) {
         /* Reserved signature: ignored by OSPM */
         sig = "QEMU";
     } else {
@@ -2198,13 +2211,13 @@ Aml *build_pci_host_bridge(Aml *table, AcpiPciBus *pci_host)
     Range *pci_hole64 = NULL;
     uint16_t pci_segment = 0;
     PCIBus *bus = NULL;
-    int root_bus_limit = 0xFF;
+    int root_bus_limit = 0;
     int i;
 
     bus = pci_host->pci_bus;
     assert(bus);
-    pci_hole = pci_host->pci_hole;
-    pci_hole64 = pci_host->pci_hole64;
+    pci_hole = &pci_host->pci_hole;
+    pci_hole64 = &pci_host->pci_hole64;
     pci_segment = pci_host->pci_segment;
 
     crs_range_set_init(&crs_range_set);
@@ -2249,6 +2262,9 @@ Aml *build_pci_host_bridge(Aml *table, AcpiPciBus *pci_host)
         aml_word_bus_number(AML_MIN_FIXED, AML_MAX_FIXED, AML_POS_DECODE,
                             0x0000, 0x0, root_bus_limit,
                             0x0000, root_bus_limit + 1));
+
+    if (pci_segment > 0)
+        goto skip_low;
     aml_append(crs, aml_io(AML_DECODE16, PCI_HOST_BRIDGE_CONFIG_ADDR,
                            PCI_HOST_BRIDGE_CONFIG_ADDR, 0x01, 0x08));
     /* set the io region 0 in pci host bridge */
@@ -2291,6 +2307,7 @@ Aml *build_pci_host_bridge(Aml *table, AcpiPciBus *pci_host)
                              0, entry->limit - entry->base + 1));
     }
 
+skip_low:
     /* set the mem region 2 in pci host bridge */
     if (!range_is_empty(pci_hole64)) {
         crs_replace_with_free_ranges(crs_range_set.mem_64bit_ranges,

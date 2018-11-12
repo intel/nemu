@@ -639,6 +639,7 @@ static void acpi_conf_pc_init(MachineState *machine)
     conf->apic_xrupt_override = pcms->apic_xrupt_override;
     conf->apic_id_limit = pcms->apic_id_limit;
     conf->acpi_nvdimm_state = pcms->acpi_nvdimm_state;
+    conf->total_segment = 1;
 
     /* ACPI build state */
     conf->build_state = NULL;

@@ -40,6 +40,7 @@
 #include "qapi/visitor.h"
 #include "qemu/error-report.h"
 #include "hw/i386/virt.h"
+#include "hw/nvram/fw_cfg.h"
 
 /*
  * The 64bit pci hole starts after "above 4G RAM" and
@@ -115,6 +116,7 @@ static PCIHostState *pci_virt_init(DeviceState *dev,
     PCIExpressHost *pcie;
     PCIVirtHost *pci_virt;
     uint64_t mcfg_base, mcfg_size;
+    VirtMachineState *vms = VIRT_MACHINE(qdev_get_machine());
 
     pci = PCI_HOST_BRIDGE(dev);
     pcie = PCIE_HOST_BRIDGE(dev);
@@ -136,6 +138,9 @@ static PCIHostState *pci_virt_init(DeviceState *dev,
     pcie_host_mmcfg_update(pcie, 1, mcfg_base, mcfg_size);
 
     e820_add_entry(mcfg_base, mcfg_size, E820_RESERVED);
+
+    fw_cfg_modify_file(vms->acpi_conf.fw_cfg, "etc/e820", e820_table,
+                       sizeof(struct e820_entry) * e820_entries);
 
     /* setup pci memory mapping */
     pc_pci_as_mapping_init(OBJECT(dev), address_space_mem, pci_address_space);

@@ -46,6 +46,7 @@
 #include "sysemu/numa.h"
 
 #include "migration/vmstate.h"
+#include "hw/i386/virt.h"
 
 static void acpi_dsdt_add_memory_hotplug(MachineState *ms, Aml *dsdt)
 {
@@ -87,13 +88,16 @@ static void acpi_dsdt_add_sleep_state(Aml *scope)
 static void build_dsdt(MachineState *ms, GArray *table_data, BIOSLinker *linker, AcpiPciBus *pci_host, AcpiConfiguration *conf)
 {
     Aml *dsdt;
+    uint16_t i;
 
     dsdt = init_aml_allocator();
     /* Reserve space for header */
     acpi_data_push(dsdt->buf, sizeof(AcpiTableHeader));
 
-    if (pci_host->pci_bus) {
-        acpi_dsdt_add_pci_bus(dsdt, pci_host);
+    for (i = 0; i < conf->total_segment; i++) {
+        if (pci_host[i].pci_bus) {
+            acpi_dsdt_add_pci_bus(dsdt, &pci_host[i]);
+        }
     }
     acpi_dsdt_add_memory_hotplug(ms, dsdt);
     acpi_dsdt_add_cpus(ms, dsdt, smp_cpus, conf);
@@ -145,19 +149,30 @@ static void acpi_reduced_build(MachineState *ms, AcpiBuildTables *tables, AcpiCo
     MachineClass *mc = MACHINE_GET_CLASS(ms);
     GArray *table_offsets;
     unsigned dsdt, xsdt;
-    Range pci_hole, pci_hole64;
-    AcpiMcfgInfo mcfg;
+    AcpiMcfgInfo *mcfg;
     GArray *tables_blob = tables->table_data;
+    uint16_t i;
 
-    AcpiPciBus acpi_pci_host = {
-        .pci_bus    = conf->pci_host[0]->bus,
-        .pci_hole   = &pci_hole,
-        .pci_hole64 = &pci_hole64,
-        .pci_segment = 0,
-        .acpi_iobase_addr = VIRT_ACPI_PCI_HOTPLUG_IO_BASE,
-    };
+    AcpiPciBus *acpi_pci_host;
+    acpi_pci_host = g_new(AcpiPciBus, conf->total_segment);
 
-    acpi_get_pci_holes(&pci_hole, &pci_hole64, acpi_pci_host.pci_bus);
+    for (i = 0; i < conf->total_segment; i++) {
+        acpi_pci_host[i].pci_bus = conf->pci_host[i]->bus;
+        acpi_pci_host[i].pci_segment = i;
+        acpi_pci_host[i].acpi_iobase_addr = VIRT_ACPI_PCI_HOTPLUG_IO_BASE
+                                     + VIRT_ACPI_PCI_HOTPLUG_IO_TOKEN * i;
+        if (!i) {
+            /* Segment zero */
+            acpi_get_pci_holes(&acpi_pci_host[0].pci_hole,
+                               &acpi_pci_host[0].pci_hole64,
+                               acpi_pci_host[0].pci_bus);
+        }
+        /* Other segment */
+        acpi_get_pci_holes(NULL,
+                           &acpi_pci_host[i].pci_hole64,
+                           acpi_pci_host[i].pci_bus);
+   }
+
     table_offsets = g_array_new(false, true /* clear */,
                                         sizeof(uint32_t));
 
@@ -167,7 +182,7 @@ static void acpi_reduced_build(MachineState *ms, AcpiBuildTables *tables, AcpiCo
 
     /* DSDT is pointed to by FADT */
     dsdt = tables_blob->len;
-    build_dsdt(ms, tables_blob, tables->linker, &acpi_pci_host, conf);
+    build_dsdt(ms, tables_blob, tables->linker, acpi_pci_host, conf);
 
     /* FADT pointed to by RSDT */
     acpi_add_table(table_offsets, tables_blob);
@@ -186,9 +201,12 @@ static void acpi_reduced_build(MachineState *ms, AcpiBuildTables *tables, AcpiCo
         }
     }
 
-    if (acpi_get_mcfg(&mcfg, &acpi_pci_host)) {
+    mcfg = g_new0(AcpiMcfgInfo, 1);
+    mcfg->total_segment = conf->total_segment;
+
+    if (acpi_get_mcfg(mcfg, acpi_pci_host)) {
         acpi_add_table(table_offsets, tables_blob);
-        mc->firmware_build_methods.acpi.mcfg(tables_blob, tables->linker, &mcfg);
+        mc->firmware_build_methods.acpi.mcfg(tables_blob, tables->linker, mcfg);
     }
     if (conf->acpi_nvdimm_state.is_enabled) {
         nvdimm_build_acpi(table_offsets, tables_blob, tables->linker,
