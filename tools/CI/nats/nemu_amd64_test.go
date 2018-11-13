@@ -188,7 +188,10 @@ func testCheckAcpiTables(ctx context.Context, q *qemuTest, t *testing.T) {
 	}
 
 	time.Sleep(time.Second * 15)
-	q.runCommandBySSH("sudo shutdown -h now", t)
+	err := q.qmp.ExecuteQuit(ctx)
+	if err != nil {
+		t.Errorf("Error quiting via QMP: %v", err)
+	}
 }
 
 func (q *qemuTest) getTotalMemory(t *testing.T) int {
@@ -220,7 +223,6 @@ func testMemoryHotplug(ctx context.Context, q *qemuTest, t *testing.T) {
 	if err != nil {
 		t.Errorf("Error quiting via QMP: %v", err)
 	}
-
 }
 
 func testCPUHotplug(ctx context.Context, q *qemuTest, t *testing.T) {
