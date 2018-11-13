@@ -66,7 +66,8 @@ fi
 
 rm -rf $OVMF
 if [[ -z "$OVMF_GIT_REV" || -z "$OVMF_GIT_REPO" ]]; then
-   OVMF_URL=$(curl --silent https://api.github.com/repos/intel/ovmf-virt/releases/latest | grep -o https://.*OVMF.fd)
+   #OVMF_URL=$(curl --silent https://api.github.com/repos/intel/ovmf-virt/releases/latest | grep -o https://.*OVMF.fd)
+   OVMF_URL="https://github.com/intel/ovmf-virt/releases/download/0.5/OVMF.fd"
    wget -nv $OVMF_URL || exit $?
 else
    sudo apt-get install -y build-essential uuid-dev iasl git gcc-5 nasm
