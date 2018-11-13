@@ -370,7 +370,7 @@ qemu_args+=" -netdev tap,fd=3,id=hostnet0,vhost=on,vhostfd=4 \
 
 
 qemu_args+=" -device virtio-rng-pci,rng=rng0 \
-         -object rng-random,filename=/dev/random,id=rng0"
+         -object rng-random,filename=/dev/urandom,id=rng0"
 
 qemu_args+=" -device virtio-balloon-pci"
 qemu_args+=" -object cryptodev-backend-builtin,id=cryptodev0"
