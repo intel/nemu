@@ -13,11 +13,11 @@ git clone --shared $SRCDIR 2>/dev/null
 pushd `basename $SRCDIR` >/dev/null
 echo "Before:" 
 git checkout $REV 2>/dev/null
-scc --pathblacklist ".git,tests/" . | sed -n '1,5p'
+scc --exclude-dir ".git,tests/" . | sed -n '1,5p'
 echo
 echo "After:" 
 git checkout HEAD@{1} 2>/dev/null
-scc --pathblacklist ".git,tests/" . | sed -n '1,5p'
+scc --exclude-dir ".git,tests/" . | sed -n '1,5p'
 popd > /dev/null
 rm -rf `basename $SRCDIR`
 popd > /dev/null
