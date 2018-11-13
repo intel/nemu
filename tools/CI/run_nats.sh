@@ -54,6 +54,7 @@ if [ ! -f "$WORKLOADS_DIR"/"$CLEAR_KERNEL" ]; then
 fi
 
 if [ ! -f "$WORKLOADS_DIR"/"$UBUNTU_IMAGE" ]; then
+   wget -nv https://nemujenkinsstorage.blob.core.windows.net/images/xenial-server-cloudimg-amd64-uefi1.img ||
    wget -nv https://cloud-images.ubuntu.com/xenial/current/xenial-server-cloudimg-amd64-uefi1.img || exit $?
    sudo apt-get install -y libguestfs-tools
    sudo mkdir -p /tmp/mnt
