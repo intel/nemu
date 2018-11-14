@@ -97,6 +97,7 @@ enum {
 struct lo_data {
 	pthread_mutex_t mutex;
 	int debug;
+	int norace;
 	int writeback;
 	int flock;
 	int xattr;
@@ -137,6 +138,8 @@ static const struct fuse_opt lo_opts[] = {
 	  offsetof(struct lo_data, cache), CACHE_NORMAL },
 	{ "cache=always",
 	  offsetof(struct lo_data, cache), CACHE_ALWAYS },
+	{ "norace",
+	  offsetof(struct lo_data, norace), 1 },
 	{ "readdirplus",
 	  offsetof(struct lo_data, readdirplus_set), 1 },
 	{ "no_readdirplus",
@@ -144,6 +147,9 @@ static const struct fuse_opt lo_opts[] = {
 	FUSE_OPT_END
 };
 static void unref_inode(struct lo_data *lo, struct lo_inode *inode, uint64_t n);
+
+static struct lo_inode *lo_find(struct lo_data *lo, struct stat *st);
+
 
 static struct lo_data *lo_data(fuse_req_t req)
 {
@@ -357,24 +363,114 @@ static void lo_getattr(fuse_req_t req, fuse_ino_t ino,
 	fuse_reply_attr(req, &buf, lo->timeout);
 }
 
-static int utimensat_empty_nofollow(struct lo_inode *inode,
-				    const struct timespec *tv)
+static int lo_parent_and_name(struct lo_data *lo, struct lo_inode *inode,
+			      char path[PATH_MAX], struct lo_inode **parent)
+{
+	char procname[64];
+	char *last;
+	struct stat stat;
+	struct lo_inode *p;
+	int retries = 2;
+	int res;
+
+retry:
+	sprintf(procname, "/proc/self/fd/%i", inode->fd);
+
+	res = readlink(procname, path, PATH_MAX);
+	if (res < 0) {
+		warn("lo_parent_and_name: readlink failed");
+		goto fail_noretry;
+	}
+
+	if (res >= PATH_MAX) {
+		warnx("lo_parent_and_name: readlink overflowed");
+		goto fail_noretry;
+	}
+	path[res] = '\0';
+
+	last = strrchr(path, '/');
+	if (last == NULL) {
+		/* Shouldn't happen */
+		warnx("lo_parent_and_name: INTERNAL ERROR: bad path read from proc");
+		goto fail_noretry;
+	}
+	if (last == path) {
+		p = &lo->root;
+		pthread_mutex_lock(&lo->mutex);
+		p->refcount++;
+		pthread_mutex_unlock(&lo->mutex);
+	} else {
+		*last = '\0';
+		res = fstatat(AT_FDCWD, last == path ? "/" : path, &stat, 0);
+		if (res == -1) {
+			if (!retries)
+				warn("lo_parent_and_name: failed to stat parent");
+			goto fail;
+		}
+		p = lo_find(lo, &stat);
+		if (p == NULL) {
+			if (!retries)
+				warnx("lo_parent_and_name: failed to find parent");
+			goto fail;
+		}
+	}
+	last++;
+	res = fstatat(p->fd, last, &stat, AT_SYMLINK_NOFOLLOW);
+	if (res == -1) {
+		if (!retries)
+			warn("lo_parent_and_name: failed to stat last");
+		goto fail_unref;
+	}
+	if (stat.st_dev != inode->dev || stat.st_ino != inode->ino) {
+		if (!retries)
+			warnx("lo_parent_and_name: filed to match last");
+		goto fail_unref;
+	}
+	*parent = p;
+	memmove(path, last, strlen(last) + 1);
+
+	return 0;
+
+fail_unref:
+	unref_inode(lo, p, 1);
+fail:
+	if (retries) {
+		retries--;
+		goto retry;
+	}
+fail_noretry:
+	errno = EIO;
+	return -1;
+}
+
+static int utimensat_empty(struct lo_data *lo, struct lo_inode *inode,
+			   const struct timespec *tv)
 {
 	int res;
-	char procname[64];
+	struct lo_inode *parent;
+	char path[PATH_MAX];
 
 	if (inode->is_symlink) {
-		res = utimensat(inode->fd, "", tv,
-				AT_EMPTY_PATH | AT_SYMLINK_NOFOLLOW);
+		res = utimensat(inode->fd, "", tv, AT_EMPTY_PATH);
 		if (res == -1 && errno == EINVAL) {
 			/* Sorry, no race free way to set times on symlink. */
-			errno = EPERM;
+			if (lo->norace)
+				errno = EPERM;
+			else
+				goto fallback;
 		}
 		return res;
 	}
-	sprintf(procname, "/proc/self/fd/%i", inode->fd);
+	sprintf(path, "/proc/self/fd/%i", inode->fd);
 
-	return utimensat(AT_FDCWD, procname, tv, 0);
+	return utimensat(AT_FDCWD, path, tv, 0);
+
+fallback:
+	res = lo_parent_and_name(lo, inode, path, &parent);
+	if (res != -1)
+		res = utimensat(parent->fd, path, tv, AT_SYMLINK_NOFOLLOW);
+
+	return res;
 }
 
 static int lo_fi_fd(fuse_req_t req, struct fuse_file_info *fi)
@@ -466,7 +562,7 @@ static void lo_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
 		if (fi)
 			res = futimens(fd, tv);
 		else
-			res = utimensat_empty_nofollow(inode, tv);
+			res = utimensat_empty(lo, inode, tv);
 		if (res == -1)
 			goto out_err;
 	}
@@ -697,24 +793,35 @@ static void lo_symlink(fuse_req_t req, const char *link,
 	lo_mknod_symlink(req, parent, name, S_IFLNK, 0, link);
 }
 
-static int linkat_empty_nofollow(struct lo_inode *inode, int dfd,
-				 const char *name)
+static int linkat_empty_nofollow(struct lo_data *lo, struct lo_inode *inode,
+				 int dfd, const char *name)
 {
 	int res;
-	char procname[64];
+	struct lo_inode *parent;
+	char path[PATH_MAX];
 
 	if (inode->is_symlink) {
 		res = linkat(inode->fd, "", dfd, name, AT_EMPTY_PATH);
 		if (res == -1 && (errno == ENOENT || errno == EINVAL)) {
 			/* Sorry, no race free way to hard-link a symlink. */
-			errno = EPERM;
+			if (lo->norace)
+				errno = EPERM;
+			else
+				goto fallback;
 		}
 		return res;
 	}
 
-	sprintf(procname, "/proc/self/fd/%i", inode->fd);
+	sprintf(path, "/proc/self/fd/%i", inode->fd);
 
-	return linkat(AT_FDCWD, procname, dfd, name, AT_SYMLINK_FOLLOW);
+	return linkat(AT_FDCWD, path, dfd, name, AT_SYMLINK_FOLLOW);
+
+fallback:
+	res = lo_parent_and_name(lo, inode, path, &parent);
+	if (res != -1)
+		res = linkat(parent->fd, path, dfd, name, 0);
+
+	return res;
 }
 
 static void lo_link(fuse_req_t req, fuse_ino_t ino, fuse_ino_t parent,
@@ -736,7 +843,7 @@ static void lo_link(fuse_req_t req, fuse_ino_t ino, fuse_ino_t parent,
 	e.attr_timeout = lo->timeout;
 	e.entry_timeout = lo->timeout;
 
-	res = linkat_empty_nofollow(inode, lo_fd(req, parent), name);
+	res = linkat_empty_nofollow(lo, inode, lo_fd(req, parent), name);
 	if (res == -1)
 		goto out_err;
 
@@ -1532,7 +1639,7 @@ static void lo_setxattr(fuse_req_t req, fuse_ino_t ino, const char *name,
 	}
 
 	if (inode->is_symlink) {
-		/* Sorry, no race free way to setxattr on symlink. */
+		/* Sorry, no race free way to removexattr on symlink. */
 		saverr = EPERM;
 		goto out;
 	}
