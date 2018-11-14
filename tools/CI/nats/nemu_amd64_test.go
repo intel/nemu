@@ -374,8 +374,7 @@ var tests = []testConfig{
 		name:     "CPUHotplug",
 		testFunc: testCPUHotplug,
 		distros:  clearLinuxOnly,
-		// https://github.com/intel/nemu/issues/174
-		machines: []string{"pc", "q35"},
+		machines: allMachines,
 	},
 	{
 		name:     "MemoryHotplug",
