@@ -56,5 +56,6 @@ PCIHostState *pci_lite_init(MemoryRegion *address_space_mem,
                             MemoryRegion *address_space_io,
                             MemoryRegion *pci_address_space);
 
+void pci_fw_cfg_add(FWCfgState *fw_cfg, PCIHostState *pci_host);
 
 #endif /* HW_PCI_LITE_H */
