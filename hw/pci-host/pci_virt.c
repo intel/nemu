@@ -142,6 +142,8 @@ static PCIHostState *pci_virt_init(DeviceState *dev,
     fw_cfg_modify_file(vms->acpi_conf.fw_cfg, "etc/e820", e820_table,
                        sizeof(struct e820_entry) * e820_entries);
 
+    fw_cfg_modify_file(vms->acpi_conf.fw_cfg, "etc/pci-host/total-segment",
+                       &vms->acpi_conf.total_segment, sizeof(uint16_t));
     /* setup pci memory mapping */
     pc_pci_as_mapping_init(OBJECT(dev), address_space_mem, pci_address_space);
     return pci;

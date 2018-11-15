@@ -40,6 +40,7 @@
 #include "qapi/visitor.h"
 #include "qemu/error-report.h"
 #include "hw/i386/virt.h"
+#include "hw/nvram/fw_cfg.h"
 
 /*
  * The 64bit pci hole starts after "above 4G RAM" and
@@ -177,6 +178,25 @@ static void pci_lite_realize(DeviceState *dev, Error **errp)
     for (i = 0; i < PCI_LITE_NUM_IRQS; i++) {
         sysbus_init_irq(sbd, &d->irq[i]);
     }
+}
+
+/*
+ * Pass MCFG base and PCI hole base via etc/pci-host/base.
+ * Pass total segment number via etc/pci-host/total-segment.
+ */
+void pci_fw_cfg_add(FWCfgState *fw_cfg, PCIHostState *pci_host)
+{
+    PCILiteHost *pci_lite = PCI_LITE_HOST(pci_host);
+    int len = 2 * sizeof(uint64_t);
+    uint64_t *val = g_malloc(len);
+    uint16_t *nr = g_malloc(sizeof(*nr));
+
+    *val = cpu_to_le64(PCI_LITE_PCIEXBAR_BASE);
+    *(val + 1) = cpu_to_le64(range_lob(&pci_lite->pci_hole));
+    fw_cfg_add_file(fw_cfg, "etc/pci-host/base", val, len);
+
+    *nr = cpu_to_le16(1);
+    fw_cfg_add_file(fw_cfg, "etc/pci-host/total-segment", nr, sizeof(uint16_t));
 }
 
 PCIHostState *pci_lite_init(MemoryRegion *address_space_mem,
