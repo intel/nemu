@@ -1,10 +1,9 @@
 /*
- * QEMU Light weight PCI Host Bridge Emulation
+ * QEMU Light weight PCI Expander Host Bridge Emulation
  *
- * Copyright (C) 2016 Intel Corporation.
+ * Copyright (C) 2018 Intel Corporation.
  *
  * Author:
- *  Chao Peng <chao.p.peng@linux.intel.com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,36 +24,30 @@
  * THE SOFTWARE.
  */
 
-#ifndef HW_PCI_LITE_H
-#define HW_PCI_LITE_H
+#ifndef HW_PCI_VIRT_H
+#define HW_PCI_VIRT_H
 
 #include "hw/hw.h"
 #include "qemu/range.h"
 #include "hw/pci/pcie_host.h"
 
-#define TYPE_PCI_LITE_HOST      "pci-lite-host"
-#define TYPE_PCI_LITE_DEVICE    "pci-lite-device"
+#define TYPE_PCI_VIRT_HOST      "pci-virt"
+#define TYPE_PCI_VIRT_DEVICE    "pci-virt-device"
 
-#define PCI_LITE_HOST(obj) \
-    OBJECT_CHECK(PCILiteHost, (obj), TYPE_PCI_LITE_HOST)
+#define PCI_VIRT_HOST(obj) \
+    OBJECT_CHECK(PCIVirtHost, (obj), TYPE_PCI_VIRT_HOST)
 
-#define PCI_LITE_NUM_IRQS       4
-
-typedef struct PCILiteHost {
+typedef struct PCIVirtHost {
     /*< private >*/
     PCIExpressHost parent_obj;
     /*< public >*/
 
     Range pci_hole;
     Range pci_hole64;
-    qemu_irq irq[PCI_LITE_NUM_IRQS];
     uint64_t pci_hole64_size;
-} PCILiteHost;
 
+    char bus_path[8];
+    uint16_t segment_nr;
+} PCIVirtHost;
 
-PCIHostState *pci_lite_init(MemoryRegion *address_space_mem,
-                            MemoryRegion *address_space_io,
-                            MemoryRegion *pci_address_space);
-
-
-#endif /* HW_PCI_LITE_H */
+#endif

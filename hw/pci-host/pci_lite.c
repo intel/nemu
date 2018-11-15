@@ -30,42 +30,16 @@
 #include "hw/i386/pci.h"
 #include "hw/i386/memory.h"
 #include "hw/pci/pci.h"
-#include "hw/pci/pcie_host.h"
 #include "hw/pci-host/pci-lite.h"
 #include "hw/isa/isa.h"
 #include "hw/sysbus.h"
 #include "qapi/error.h"
-#include "qemu/range.h"
 #include "hw/xen/xen.h"
 #include "sysemu/sysemu.h"
 #include "hw/i386/ioapic.h"
 #include "qapi/visitor.h"
 #include "qemu/error-report.h"
 #include "hw/i386/virt.h"
-
-#define TYPE_PCI_LITE_HOST      "pci-lite-host"
-#define TYPE_PCI_LITE_DEVICE    "pci-lite-device"
-
-#define PCI_LITE_HOST(obj) \
-    OBJECT_CHECK(PCILiteHost, (obj), TYPE_PCI_LITE_HOST)
-
-#define PCI_LITE_NUM_IRQS       4
-#define PCI_LITE_PCIEXBAR_BASE  0x80000000
-#define PCI_LITE_PCIEXBAR_SIZE  (0x10000000) /* 256M for bus 0 */
-
-#define DEFAULT_PCI_HOLE64_SIZE (1ULL << 35)
-#define PCI_LITE_HOLE64_START_BASE 0x100000000ULL
-
-typedef struct PCILiteHost {
-    /*< private >*/
-    PCIExpressHost parent_obj;
-    /*< public >*/
-
-    Range pci_hole;
-    Range pci_hole64;
-    qemu_irq irq[PCI_LITE_NUM_IRQS];
-    uint64_t pci_hole64_size;
-} PCILiteHost;
 
 /*
  * The 64bit pci hole starts after "above 4G RAM" and
@@ -120,6 +94,7 @@ static void pci_lite_get_pci_hole64_start(Object *obj, Visitor *v,
                                           void *opaque, Error **errp)
 {
     PCIHostState *h = PCI_HOST_BRIDGE(obj);
+    PCILiteHost *s = PCI_LITE_HOST(obj);
     Range w64;
     uint64_t value;
 
@@ -129,6 +104,7 @@ static void pci_lite_get_pci_hole64_start(Object *obj, Visitor *v,
         value = pci_lite_pci_hole64_start();
     }
     visit_type_uint64(v, name, &value, errp);
+    range_set_bounds(&s->pci_hole64, value, range_upb(&s->pci_hole64));
 }
 
 static void pci_lite_get_pci_hole64_end(Object *obj, Visitor *v,
@@ -148,6 +124,7 @@ static void pci_lite_get_pci_hole64_end(Object *obj, Visitor *v,
         value = hole64_end;
     }
     visit_type_uint64(v, name, &value, errp);
+    range_set_bounds(&s->pci_hole64, range_lob(&s->pci_hole64), value);
 }
 
 static void pci_lite_initfn(Object *obj)
@@ -223,9 +200,8 @@ PCIHostState *pci_lite_init(MemoryRegion *address_space_mem,
 
     pci_lite = PCI_LITE_HOST(dev);
 
-    range_set_bounds(&pci_lite->pci_hole,
-                    PCI_LITE_PCIEXBAR_BASE + PCI_LITE_PCIEXBAR_SIZE,
-                    IO_APIC_DEFAULT_ADDRESS);
+    range_set_bounds(&pci_lite->pci_hole, PCI_LITE_HOLE_START_BASE,
+                     PCI_LITE_HOLE_START_BASE + PCI_LITE_PCIEXBAR_SIZE - 1);
 
 
     pcie_host_mmcfg_update(pcie, 1, PCI_LITE_PCIEXBAR_BASE,

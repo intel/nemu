@@ -46,7 +46,7 @@ typedef struct {
     /* GSI */
     qemu_irq *gsi;
 
-    PCIBus *pci_bus;
+    PCIBus **pci_bus;
     ram_addr_t above_4g_mem_size;
 
     DeviceState *acpi;
@@ -64,6 +64,18 @@ typedef struct {
 
 /* Our GED IRQ lives after the legacy IRQs */
 #define VIRT_ACPI_GED_IRQ 0x10
+
+#define PCI_LITE_PCIEXBAR_BASE  0x40000000
+#define PCI_LITE_PCIEXBAR_SIZE  (0x10000000) /* 256M for bus 0 */
+
+#define PCI_LITE_HOLE_START_BASE 0x90000000
+#define PCI_LITE_HOLE64_START_BASE 0x100000000ULL
+
+#define PCI_VIRT_PCIEXBAR_BASE  0x50000000
+#define PCI_VIRT_PCIEXBAR_SIZE  0x10000000
+#define PCI_VIRT_HOLE_START_BASE 0xA0000000
+
+#define DEFAULT_PCI_HOLE64_SIZE (1ULL << 32)
 
 MemoryRegion *virt_memory_init(VirtMachineState *vms);
 
