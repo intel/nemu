@@ -174,10 +174,10 @@ static void virt_pci_init(VirtMachineState *vms)
 
     pci_memory = g_new(MemoryRegion, 1);
     memory_region_init(pci_memory, NULL, "pci", UINT64_MAX);
-    vms->acpi_conf.pci_host = pci_lite_init(get_system_memory(),
-                                            get_system_io(),
-                                            pci_memory);
-    vms->pci_bus = vms->acpi_conf.pci_host->bus;
+    vms->acpi_conf.pci_host[0] = pci_lite_init(get_system_memory(),
+                                               get_system_io(),
+                                               pci_memory);
+    vms->pci_bus[0] = vms->acpi_conf.pci_host[0]->bus;
 }
 
 static void virt_machine_state_init(MachineState *machine)
@@ -204,7 +204,7 @@ static void virt_machine_state_init(MachineState *machine)
     virt_memory_init(vms);
     virt_pci_init(vms);
     virt_ioapic_init(vms);
-    vms->acpi = virt_acpi_init(vms->gsi, vms->pci_bus);
+    vms->acpi = virt_acpi_init(vms->gsi, vms->pci_bus[0]);
 
     vms->apic_id_limit = cpus_init(machine, false);
 
@@ -724,6 +724,7 @@ static void virt_machine_class_init(MachineClass *mc)
     mc->no_floppy = 1;
     machine_class_allow_dynamic_sysbus_dev(mc, "sysbus-debugcon");
     machine_class_allow_dynamic_sysbus_dev(mc, "sysbus-debugexit");
+    machine_class_allow_dynamic_sysbus_dev(mc, "pci-virt");
     mc->max_cpus = 288;
     mc->has_hotpluggable_cpus = true;
     mc->auto_enable_numa_with_memhp = true;

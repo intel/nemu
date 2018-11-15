@@ -25,7 +25,7 @@
 #include "qemu/error-report.h"
 #include "cpu.h"
 
-#define VIRT_LOWMEM 0x80000000
+#define VIRT_LOWMEM 0x40000000
 
 MemoryRegion *virt_memory_init(VirtMachineState *vms)
 {
