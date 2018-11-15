@@ -89,8 +89,8 @@ struct lo_cred {
 };
 
 enum {
-	CACHE_NEVER,
-	CACHE_NORMAL,
+	CACHE_NONE,
+	CACHE_AUTO,
 	CACHE_ALWAYS,
 };
 
@@ -132,10 +132,10 @@ static const struct fuse_opt lo_opts[] = {
 	  offsetof(struct lo_data, timeout), 0 },
 	{ "timeout=",
 	  offsetof(struct lo_data, timeout_set), 1 },
-	{ "cache=never",
-	  offsetof(struct lo_data, cache), CACHE_NEVER },
+	{ "cache=none",
+	  offsetof(struct lo_data, cache), CACHE_NONE },
 	{ "cache=auto",
-	  offsetof(struct lo_data, cache), CACHE_NORMAL },
+	  offsetof(struct lo_data, cache), CACHE_AUTO },
 	{ "cache=always",
 	  offsetof(struct lo_data, cache), CACHE_ALWAYS },
 	{ "norace",
@@ -338,7 +338,7 @@ static void lo_init(void *userdata,
 			fprintf(stderr, "lo_init: activating flock locks\n");
 		conn->want |= FUSE_CAP_FLOCK_LOCKS;
 	}
-	if ((lo->cache == CACHE_NEVER && !lo->readdirplus_set) ||
+	if ((lo->cache == CACHE_NONE && !lo->readdirplus_set) ||
 	    lo->readdirplus_clear) {
 		if (lo->debug)
 			fprintf(stderr, "lo_init: disabling readdirplus\n");
@@ -1270,7 +1270,7 @@ static void lo_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 		fi->fh = fh;
 		err = lo_do_lookup(req, parent, name, &e);
 	}
-	if (lo->cache == CACHE_NEVER)
+	if (lo->cache == CACHE_NONE)
 		fi->direct_io = 1;
 	else if (lo->cache == CACHE_ALWAYS)
 		fi->keep_cache = 1;
@@ -1351,7 +1351,7 @@ static void lo_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 	}
 
 	fi->fh = fh;
-	if (lo->cache == CACHE_NEVER)
+	if (lo->cache == CACHE_NONE)
 		fi->direct_io = 1;
 	else if (lo->cache == CACHE_ALWAYS)
 		fi->keep_cache = 1;
@@ -1885,7 +1885,7 @@ int main(int argc, char *argv[])
 	lo.root.next = lo.root.prev = &lo.root;
 	lo.root.fd = -1;
 	lo.root.fuse_ino = FUSE_ROOT_ID;
-	lo.cache = CACHE_NORMAL;
+	lo.cache = CACHE_AUTO;
 
 	/* Set up the ino map like this:
 	 * [0] Reserved (will not be used)
@@ -1934,11 +1934,11 @@ int main(int argc, char *argv[])
 	lo.root.is_symlink = false;
 	if (!lo.timeout_set) {
 		switch (lo.cache) {
-		case CACHE_NEVER:
+		case CACHE_NONE:
 			lo.timeout = 0.0;
 			break;
 
-		case CACHE_NORMAL:
+		case CACHE_AUTO:
 			lo.timeout = 1.0;
 			break;
 
