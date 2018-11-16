@@ -636,7 +636,7 @@ static void piix4_acpi_system_hot_add_init(MemoryRegion *parent,
     memory_region_add_subregion(parent, GPE_BASE, &s->io_gpe);
 
     acpi_pcihp_init(OBJECT(s), &s->acpi_pci_hotplug, bus, parent,
-                    s->use_acpi_pci_hotplug, PIIX_ACPI_PCI_HOTPLUG_IO_BASE);
+                    s->use_acpi_pci_hotplug, 0, PIIX_ACPI_PCI_HOTPLUG_IO_BASE);
     acpi_pcihp_set_properties(OBJECT(s), &s->acpi_pci_hotplug);
 
     s->cpu_hotplug_legacy = true;

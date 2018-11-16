@@ -16,52 +16,18 @@
  */
 
 #include "qemu/osdep.h"
-#include "qemu/range.h"
 #include "qapi/error.h"
-#include "qom/cpu.h"
-
-#include "hw/hw.h"
-#include "hw/hotplug.h"
-#include "hw/sysbus.h"
-
 #include "hw/i386/acpi.h"
 #include "hw/i386/virt.h"
 
-#include "hw/acpi/acpi.h"
-#include "hw/acpi/cpu.h"
-#include "hw/acpi/cpu_hotplug.h"
-#include "hw/acpi/acpi_dev_interface.h"
-#include "hw/acpi/memory_hotplug.h"
-#include "hw/acpi/pc-hotplug.h"
 #include "hw/acpi/reduced.h"
 #include "hw/acpi/pcihp.h"
 #include "hw/acpi/ged.h"
 
 #include "hw/pci/pci.h"
-
-typedef struct VirtAcpiState {
-    SysBusDevice parent_obj;
-
-    AcpiCpuHotplug cpuhp;
-    CPUHotplugState cpuhp_state;
-
-    MemHotplugState memhp_state;
-
-    GEDState ged_state;
-
-    qemu_irq *gsi;
-
-    AcpiPciHpState pcihp_state;
-    PCIBus *pci_bus;
-
-    MemoryRegion sleep_iomem;
-    MemoryRegion sleep_status_iomem;
-    MemoryRegion reset_iomem;
-} VirtAcpiState;
-
-#define TYPE_VIRT_ACPI "virt-acpi"
-#define VIRT_ACPI(obj) \
-    OBJECT_CHECK(VirtAcpiState, (obj), TYPE_VIRT_ACPI)
+#include "hw/pci-host/pci-virt.h"
+#include "hw/pci-host/pci-lite.h"
+#include "hw/i386/acpi-virt.h"
 
 static const VMStateDescription vmstate_acpi = {
     .name = "virt_acpi",
@@ -84,7 +50,15 @@ static void virt_device_plug_cb(HotplugHandler *hotplug_dev,
                                 dev, errp);
         }
     } else if (object_dynamic_cast(OBJECT(dev), TYPE_PCI_DEVICE)) {
-        acpi_pcihp_device_plug_cb(hotplug_dev, &s->pcihp_state, dev, errp);
+        BusState *qbus = qdev_get_parent_bus(DEVICE(dev));
+        uint16_t idx;
+
+        if (object_dynamic_cast(OBJECT(qbus->parent), TYPE_PCI_LITE_HOST)) {
+            idx = 0;
+        } else if (object_dynamic_cast(OBJECT(qbus->parent), TYPE_PCI_VIRT_HOST)) {
+            idx = PCI_VIRT_HOST(qbus->parent)->segment_nr;
+        }
+        acpi_pcihp_device_plug_cb(hotplug_dev, s->pcihp_state[idx], dev, errp);
     } else {
         error_setg(errp, "virt: device plug request for unsupported device"
                    " type: %s", object_get_typename(OBJECT(dev)));
@@ -101,7 +75,15 @@ static void virt_device_unplug_request_cb(HotplugHandler *hotplug_dev,
     } else if (object_dynamic_cast(OBJECT(dev), TYPE_PC_DIMM)) {
         acpi_memory_unplug_request_cb(hotplug_dev, &s->memhp_state, dev, errp);
     } else if (object_dynamic_cast(OBJECT(dev), TYPE_PCI_DEVICE)) {
-        acpi_pcihp_device_unplug_cb(hotplug_dev, &s->pcihp_state, dev, errp);
+        BusState *qbus = qdev_get_parent_bus(DEVICE(dev));
+        uint16_t idx;
+
+        if (object_dynamic_cast(OBJECT(qbus->parent), TYPE_PCI_LITE_HOST)) {
+            idx = 0;
+        } else {
+            idx = PCI_VIRT_HOST(qbus->parent)->segment_nr;
+        }
+        acpi_pcihp_device_unplug_cb(hotplug_dev, s->pcihp_state[idx], dev, errp);
     }else {
         error_setg(errp, "virt: device unplug request for unsupported device"
                    " type: %s", object_get_typename(OBJECT(dev)));
@@ -239,9 +221,12 @@ DeviceState *virt_acpi_init(qemu_irq *gsi, PCIBus *pci_bus)
         /* Initialize PCI hotplug */
         qbus_set_hotplug_handler(BUS(pci_bus), dev, NULL);
 
-        acpi_pcihp_init(OBJECT(s), &s->pcihp_state, s->pci_bus,
-                        get_system_io(), true, VIRT_ACPI_PCI_HOTPLUG_IO_BASE);
-        acpi_pcihp_reset(&s->pcihp_state);
+        s->pcihp_state = g_malloc0(sizeof(AcpiPciHpState*));
+        s->pcihp_state[0] = g_malloc0(sizeof(AcpiPciHpState));
+
+        acpi_pcihp_init(OBJECT(s), s->pcihp_state[0], s->pci_bus,
+                        get_system_io(), true, 0, VIRT_ACPI_PCI_HOTPLUG_IO_BASE);
+        acpi_pcihp_reset(s->pcihp_state[0]);
     }
 
     return dev;
