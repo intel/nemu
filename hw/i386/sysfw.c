@@ -237,11 +237,7 @@ static void pc_system_firmware_init(MemoryRegion *rom_memory, bool rw_fw)
 
 void sysfw_firmware_init(MemoryRegion *rom_memory, bool rw_fw)
 {
-    DriveInfo *pflash_drv;
-
-    pflash_drv = drive_get(IF_PFLASH, 0, 0);
-
-    if (rw_fw || pflash_drv == NULL) {
+    if (rw_fw || !drive_get(IF_PFLASH, 0, 0)) {
         /* When a pflash drive is not found, use rom-mode */
         pc_system_firmware_init(rom_memory, rw_fw);
         return;
