@@ -182,7 +182,7 @@ static void pc_system_flash_init(MemoryRegion *rom_memory)
     }
 }
 
-static void old_pc_system_rom_init(MemoryRegion *rom_memory, bool isapc_ram_fw)
+static void old_pc_system_rom_init(MemoryRegion *rom_memory, bool rw_fw)
 {
     char *filename;
     MemoryRegion *bios, *isa_bios;
@@ -205,7 +205,7 @@ static void old_pc_system_rom_init(MemoryRegion *rom_memory, bool isapc_ram_fw)
     }
     bios = g_malloc(sizeof(*bios));
     memory_region_init_ram(bios, NULL, "pc.bios", bios_size, &error_fatal);
-    if (!isapc_ram_fw) {
+    if (!rw_fw) {
         memory_region_set_readonly(bios, true);
     }
     ret = rom_add_file_fixed(bios_name, (uint32_t)(-bios_size), -1);
@@ -225,7 +225,7 @@ static void old_pc_system_rom_init(MemoryRegion *rom_memory, bool isapc_ram_fw)
                                         0x100000 - isa_bios_size,
                                         isa_bios,
                                         1);
-    if (!isapc_ram_fw) {
+    if (!rw_fw) {
         memory_region_set_readonly(isa_bios, true);
     }
 
@@ -235,15 +235,15 @@ static void old_pc_system_rom_init(MemoryRegion *rom_memory, bool isapc_ram_fw)
                                 bios);
 }
 
-void sysfw_firmware_init(MemoryRegion *rom_memory, bool isapc_ram_fw)
+void sysfw_firmware_init(MemoryRegion *rom_memory, bool rw_fw)
 {
     DriveInfo *pflash_drv;
 
     pflash_drv = drive_get(IF_PFLASH, 0, 0);
 
-    if (isapc_ram_fw || pflash_drv == NULL) {
+    if (rw_fw || pflash_drv == NULL) {
         /* When a pflash drive is not found, use rom-mode */
-        old_pc_system_rom_init(rom_memory, isapc_ram_fw);
+        old_pc_system_rom_init(rom_memory, rw_fw);
         return;
     }
 
