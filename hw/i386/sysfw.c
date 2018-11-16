@@ -182,7 +182,7 @@ static void pc_system_flash_init(MemoryRegion *rom_memory)
     }
 }
 
-static void old_pc_system_rom_init(MemoryRegion *rom_memory, bool rw_fw)
+static void pc_system_firmware_init(MemoryRegion *rom_memory, bool rw_fw)
 {
     char *filename;
     MemoryRegion *bios, *isa_bios;
@@ -243,7 +243,7 @@ void sysfw_firmware_init(MemoryRegion *rom_memory, bool rw_fw)
 
     if (rw_fw || pflash_drv == NULL) {
         /* When a pflash drive is not found, use rom-mode */
-        old_pc_system_rom_init(rom_memory, rw_fw);
+        pc_system_firmware_init(rom_memory, rw_fw);
         return;
     }
 
