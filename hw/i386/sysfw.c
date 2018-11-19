@@ -74,7 +74,7 @@ void pc_system_rom_init(MemoryRegion *rom_memory, bool rw_fw)
     g_free(filename);
 
     /* map the last 128KB of the BIOS in ISA space */
-    isa_bios_size = MIN(bios_size, 128 * KiB);
+    isa_bios_size = MIN(bios_size, 256 * KiB);
     isa_bios = g_malloc(sizeof(*isa_bios));
     memory_region_init_alias(isa_bios, NULL, "isa-bios", bios,
                              bios_size - isa_bios_size, isa_bios_size);
