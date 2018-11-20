@@ -239,7 +239,12 @@ static void virt_machine_state_init(MachineState *machine)
     acpi_conf_virt_init(machine);
 
     if (linux_boot) {
+        vms->acpi_conf.linuxboot_dma_enabled = true;
         load_linux(MACHINE(vms), &vms->acpi_conf, fw_cfg);
+
+        for (i = 0; i < nb_option_roms; i++) {
+            rom_add_option(option_rom[i].name, option_rom[i].bootindex);
+        }
     }
 }
 
