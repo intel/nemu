@@ -77,9 +77,11 @@ void acpi_ged_event(GEDState *ged_st, qemu_irq *irq, uint32_t ged_irq_sel)
     qemu_irq_pulse(irq[ged_st->irq]);
 }
 
-static Aml *ged_event_aml(GedEvent *event)
+static Aml *ged_event_aml(GedEvent *event, uint16_t segment)
 {
-    Aml *method;
+    Aml *method, *each;
+    char name[20];
+    uint16_t i;
 
     if (!event) {
         return NULL;
@@ -97,6 +99,16 @@ static Aml *ged_event_aml(GedEvent *event)
         method = aml_acquire(aml_name("\\_SB.PCI0.BLCK"), 0xFFFF);
         aml_append(method, aml_call0("\\_SB.PCI0.PCNT"));
         aml_append(method, aml_release(aml_name("\\_SB.PCI0.BLCK")));
+
+        for (i = 1; i < segment; i++) {
+            snprintf(name, sizeof(name), "\\_SB.PCI%x.PCNT", i);
+
+            each = aml_acquire(aml_name("\\_SB.PCI%x.BLCK", i), 0xFFFF);
+            aml_append(each, aml_call0(name));
+            aml_append(each, aml_release(aml_name("\\_SB.PCI%x.BLCK", i)));
+            aml_append(method, each);
+        }
+
 	return method;
     case GED_NVDIMM_HOTPLUG:
         return aml_notify(aml_name("\\_SB.NVDR"), aml_int(0x80));
@@ -108,7 +120,8 @@ static Aml *ged_event_aml(GedEvent *event)
 }
 
 void build_ged_aml(Aml *table, const char *name, uint32_t ged_irq,
-                   GedEvent *events, uint32_t events_size)
+                   GedEvent *events, uint32_t events_size,
+                   uint16_t segment)
 {
     Aml *crs = aml_resource_template();
     Aml *evt, *field;
@@ -158,7 +171,7 @@ void build_ged_aml(Aml *table, const char *name, uint32_t ged_irq,
          */
 
         for (i = 0; i < events_size; i++) {
-            ged_aml = ged_event_aml(&events[i]);
+            ged_aml = ged_event_aml(&events[i], segment);
             if (!ged_aml) {
                 continue;
             }
