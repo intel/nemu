@@ -2102,8 +2102,21 @@ void fuse_session_process_buf_int(struct fuse_session *se,
 		expected = se->cuse_data ? CUSE_INIT : FUSE_INIT;
 		if (in->opcode != expected)
 			goto reply_err;
-	} else if (in->opcode == FUSE_INIT || in->opcode == CUSE_INIT)
-		goto reply_err;
+	} else if (in->opcode == FUSE_INIT || in->opcode == CUSE_INIT) {
+                if (se->vu_socket_path) {
+			// TODO: This is after a hard reboot typically, we need to do
+			// a destroy, but we can't reply to this request yet so
+			// we can't use do_destroy
+	                if (se->debug)
+                		fprintf(stderr, "%s: reinit\n", __func__);
+			se->got_destroy = 1;
+			se->got_init = 0;
+                        if (se->op.destroy)
+				se->op.destroy(se->userdata);
+		} else {
+			goto reply_err;
+		}
+        }
 
 	err = EACCES;
 	/* Implement -o allow_root */
