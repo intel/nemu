@@ -55,6 +55,7 @@ typedef struct VirtAcpiState {
     PCIBus *pci_bus;
 
     MemoryRegion sleep_iomem;
+    MemoryRegion sleep_status_iomem;
     MemoryRegion reset_iomem;
 } VirtAcpiState;
 
@@ -170,6 +171,11 @@ static const MemoryRegionOps virt_sleep_cnt_ops = {
     .write = virt_acpi_sleep_cnt_write,
 };
 
+// NOOP I/O port as the Linux kernel expects to write to the sleep status
+// register on HW-reduced shutdown
+const MemoryRegionOps virt_sleep_status_ops = {
+};
+
 static void virt_acpi_reset_write(void *opaque, hwaddr addr,
                                       uint64_t val, unsigned width)
 {
@@ -203,6 +209,10 @@ static void virt_device_realize(DeviceState *dev, Error **errp)
     memory_region_init_io(&s->sleep_iomem, OBJECT(dev),
                           &virt_sleep_cnt_ops, s, TYPE_VIRT_ACPI, 1);
     sysbus_add_io(sys, ACPI_REDUCED_SLEEP_CONTROL_IOPORT, &s->sleep_iomem);
+
+    memory_region_init_io(&s->sleep_status_iomem, OBJECT(dev),
+                          &virt_sleep_status_ops, s, TYPE_VIRT_ACPI, 1);
+    sysbus_add_io(sys, ACPI_REDUCED_SLEEP_STATUS_IOPORT, &s->sleep_status_iomem);
 
     memory_region_init_io(&s->reset_iomem, OBJECT(dev),
                           &virt_reset_ops, s, TYPE_VIRT_ACPI, 1);
