@@ -355,7 +355,7 @@ var tests = []testConfig{
 	{
 		name:     "Reboot",
 		testFunc: testReboot,
-		distros:  ubuntuOnly,
+		distros:  allDistros,
 		machines: allMachines,
 	},
 	{
