@@ -54,7 +54,7 @@ static void acpi_dsdt_add_memory_hotplug(MachineState *ms, Aml *dsdt)
     build_memory_hotplug_aml(dsdt, nr_mem, "\\_SB", NULL);
 }
 
-static void acpi_dsdt_add_cpus(MachineState *ms, Aml *dsdt, Aml *scope, int smp_cpus, AcpiConfiguration *conf)
+static void acpi_dsdt_add_cpus(MachineState *ms, Aml *dsdt, int smp_cpus, AcpiConfiguration *conf)
 {
     CPUHotplugFeatures opts = {
         .acpi_1_compatible = false,
@@ -86,22 +86,21 @@ static void acpi_dsdt_add_sleep_state(Aml *scope)
 /* DSDT */
 static void build_dsdt(MachineState *ms, GArray *table_data, BIOSLinker *linker, AcpiPciBus *pci_host, AcpiConfiguration *conf)
 {
-    Aml *scope, *dsdt;
+    Aml *dsdt;
 
     dsdt = init_aml_allocator();
     /* Reserve space for header */
     acpi_data_push(dsdt->buf, sizeof(AcpiTableHeader));
 
-    scope = aml_scope("\\_SB");
     if (pci_host->pci_bus) {
         acpi_dsdt_add_pci_bus(dsdt, pci_host);
     }
     acpi_dsdt_add_memory_hotplug(ms, dsdt);
-    acpi_dsdt_add_cpus(ms, dsdt, scope, smp_cpus, conf);
+    acpi_dsdt_add_cpus(ms, dsdt, smp_cpus, conf);
     acpi_dsdt_add_ged(dsdt, conf);
     acpi_dsdt_add_sleep_state(dsdt);
 
-    aml_append(dsdt, scope);
+
     /* copy AML table into ACPI tables blob and patch header there */
     g_array_append_vals(table_data, dsdt->buf->data, dsdt->buf->len);
     build_header(linker, table_data,
