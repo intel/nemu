@@ -130,6 +130,9 @@ static void build_fadt_reduced(GArray *table_data, BIOSLinker *linker,
         .sleep_control_reg = { .space_id = AML_AS_SYSTEM_IO,
                               .bit_width = 8, .bit_offset = 0,
                               .address = ACPI_REDUCED_SLEEP_CONTROL_IOPORT },
+        .sleep_status_reg = { .space_id = AML_AS_SYSTEM_IO,
+                              .bit_width = 8, .bit_offset = 0,
+                              .address = ACPI_REDUCED_SLEEP_STATUS_IOPORT },
     };
 
     build_fadt(table_data, linker, &fadt, NULL, NULL);
