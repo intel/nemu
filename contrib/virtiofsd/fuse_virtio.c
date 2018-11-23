@@ -43,6 +43,7 @@ struct fv_QueueInfo {
         /* Our queue index, corresponds to array position */
         int       qidx;
         int       kick_fd;
+        int       kill_fd; /* For killing the thread */
 
         /* The element for the command currently being processed */
         VuVirtqElement *qe;
@@ -404,14 +405,17 @@ static void *fv_queue_thread(void *opaque)
         fprintf(stderr, "%s: Start for queue %d kick_fd %d\n",
                 __func__, qi->qidx, qi->kick_fd);
         while (1) {
-               struct pollfd pf[1];
+               struct pollfd pf[2];
                pf[0].fd = qi->kick_fd;
                pf[0].events = POLLIN;
                pf[0].revents = 0;
+               pf[1].fd = qi->kill_fd;
+               pf[1].events = POLLIN;
+               pf[1].revents = 0;
 
                if (qi->virtio_dev->se->debug)
                        fprintf(stderr, "%s: Waiting for Queue %d event\n", __func__, qi->qidx);
-               int poll_res = ppoll(pf, 1, NULL, NULL);
+               int poll_res = ppoll(pf, 2, NULL, NULL);
 
                if (poll_res == -1) {
                        if (errno == EINTR) {
@@ -421,10 +425,20 @@ static void *fv_queue_thread(void *opaque)
                        perror("fv_queue_thread ppoll");
                        break;
                }
-               assert(poll_res == 1);
+               assert(poll_res >= 1);
                if (pf[0].revents & (POLLERR | POLLHUP | POLLNVAL)) {
                        fprintf(stderr, "%s: Unexpected poll revents %x Queue %d\n",
                                 __func__, pf[0].revents, qi->qidx);
+                       break;
+               }
+               if (pf[1].revents & (POLLERR | POLLHUP | POLLNVAL)) {
+                       fprintf(stderr, "%s: Unexpected poll revents %x Queue %d killfd\n",
+                                __func__, pf[0].revents, qi->qidx);
+                       break;
+               }
+               if (pf[1].revents) {
+                       fprintf(stderr, "%s: kill event on queue %d - quitting\n",
+                               __func__, qi->qidx);
                        break;
                }
                assert(pf[0].revents & POLLIN);
@@ -554,6 +568,9 @@ static void fv_queue_set_started(VuDev *dev, int qidx, bool started)
                 }
                 ourqi = vud->qi[qidx];
                 ourqi->kick_fd = dev->vq[qidx].kick_fd;
+
+                ourqi->kill_fd = eventfd(0, EFD_CLOEXEC | EFD_SEMAPHORE);
+                assert(ourqi->kill_fd != -1);
                 if (pthread_create(&ourqi->thread, NULL,  fv_queue_thread,
                                    ourqi)) {
                         fprintf(stderr, "%s: Failed to create thread for queue %d\n",
@@ -561,9 +578,21 @@ static void fv_queue_set_started(VuDev *dev, int qidx, bool started)
                         assert(0);
                 }
         } else {
-                /* TODO: Kill the thread */
+                int ret;
                 assert(qidx < vud->nqueues);
                 ourqi = vud->qi[qidx];
+
+                /* Kill the thread */
+                if (eventfd_write(ourqi->kill_fd, 1)) {
+                       perror("Eventfd_read for queue");
+                }
+                ret = pthread_join(ourqi->thread, NULL);
+                if (ret) {
+                       fprintf(stderr,
+                               "%s: Failed to join thread idx %d err %d\n",
+                               __func__, qidx, ret);
+                }
+                close(ourqi->kill_fd);
                 ourqi->kick_fd = -1;
         }
 }
