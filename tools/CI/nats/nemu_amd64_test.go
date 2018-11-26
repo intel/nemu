@@ -41,6 +41,16 @@ func getBiosPath() string {
 	return path.Join(u.HomeDir, "workloads", "OVMF.fd")
 }
 
+func getSeabiosPath() string {
+	u, err := user.Current()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error getting current user: %v", err)
+		os.Exit(1)
+	}
+
+	return path.Join(u.HomeDir, "workloads", "seabios.bin")
+}
+
 func getKernelPath() string {
 	u, err := user.Current()
 	if err != nil {
@@ -305,6 +315,7 @@ var machines = []string{"pc", "q35", "virt"}
 const (
 	clearDiskImage  = "clear-25950-cloud.img"
 	xenialDiskImage = "xenial-server-cloudimg-amd64-uefi1.img"
+	centosDiskImage = "CentOS-7-x86_64-GenericCloud-1809.qcow2"
 )
 
 var clearLinuxOnly = []distro{
@@ -341,7 +352,21 @@ var ubuntuOnly = []distro{
 	},
 }
 
-var allDistros = []distro{clearLinuxOnly[0], ubuntuOnly[0]}
+var centosOnly = []distro{
+	{
+		name:      "centos7",
+		image:     centosDiskImage,
+		cloudInit: cloudInitUbuntu,
+		bootConfigs: []bootConfig{
+			{
+				name: bootMethodSeabios,
+				bios: getSeabiosPath(),
+			},
+		},
+	},
+}
+
+var allDistros = []distro{clearLinuxOnly[0], ubuntuOnly[0], centosOnly[0]}
 
 var allMachines = []string{"pc", "q35", "virt"}
 
