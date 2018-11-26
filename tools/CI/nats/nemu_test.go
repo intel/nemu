@@ -259,6 +259,7 @@ const (
 const (
 	bootMethodOVMF       bootMethodName = "ovmf"
 	bootMethodDirectOVMF bootMethodName = "direct-ovmf"
+	bootMethodSeabios    bootMethodName = "seabios"
 )
 
 func TestNemu(t *testing.T) {
