@@ -10,24 +10,29 @@ GO_VERSION="1.11.1"
 CLEAR_VERSION=25950
 CLEAR_IMAGE=clear-$CLEAR_VERSION-cloud.img
 UBUNTU_IMAGE=xenial-server-cloudimg-amd64-uefi1.img
+CENTOS_IMAGE=CentOS-7-x86_64-GenericCloud-1809.qcow2
 WORKLOADS_DIR="$HOME/workloads"
 OVMF="OVMF.fd"
 
 # Matches the kernel for the $CLEAR_IMAGE above
 CLEAR_KERNEL="org.clearlinux.kvm.4.18.16-293"
 
+SEABIOS_GIT_REPO="https://github.com/rbradford/seabios.git"
+SEABIOS_GIT_REV="virt-x86"
+SEABIOS="seabios.bin"
+
 go_install() {
     export PATH=/usr/local/go/bin:$PATH
     go version | grep $GO_VERSION
     if [ $? -ne 0 ]; then
-	pushd /tmp
-	wget -nv "https://dl.google.com/go/go$GO_VERSION.linux-amd64.tar.gz" || exit $?
-	sudo tar -C /usr/local -xzf "go$GO_VERSION.linux-amd64.tar.gz" || exit $?
-	popd
-    fi
+        pushd /tmp
+        wget -nv "https://dl.google.com/go/go$GO_VERSION.linux-amd64.tar.gz" || exit $?
+        sudo tar -C /usr/local -xzf "go$GO_VERSION.linux-amd64.tar.gz" || exit $?
 
-    export GOROOT=/usr/local/go
-    export GOPATH=~/go
+        export GOROOT=/usr/local/go
+        export GOPATH=~/go
+	    popd
+    fi
 
     go version
 }
@@ -48,7 +53,6 @@ if [ ! -f "$WORKLOADS_DIR"/"$CLEAR_IMAGE" ]; then
     unxz clear-$CLEAR_VERSION-cloud.img.xz || exit $?
 fi
 
-
 if [ ! -f "$WORKLOADS_DIR"/"$CLEAR_KERNEL" ]; then
     wget -nv https://nemujenkinsstorage.blob.core.windows.net/images/$CLEAR_KERNEL
 fi
@@ -63,6 +67,11 @@ if [ ! -f "$WORKLOADS_DIR"/"$UBUNTU_IMAGE" ]; then
    sudo umount /tmp/mnt
 fi
 
+if [ ! -f "$WORKLOADS_DIR"/"$CENTOS_IMAGE" ]; then
+    wget -nv https://nemujenkinsstorage.blob.core.windows.net/images/$CENTOS_IMAGE.xz ||
+    wget -nv https://cloud.centos.org/centos/7/images/$CENTOS_IMAGE.xz || exit $?
+    unxz $CENTOS_IMAGE.xz|| exit $?
+fi
 
 rm -rf $OVMF
 if [[ -z "$OVMF_GIT_REV" || -z "$OVMF_GIT_REPO" ]]; then
@@ -79,6 +88,16 @@ else
    popd
    rm -rf ovmf-virt
 fi
+
+rm -rf $SEABIOS
+git clone $SEABIOS_GIT_REPO || exit $?
+pushd seabios
+git checkout $SEABIOS_GIT_REV || exit $?
+cp virt-x86.config .config || exit $?
+make
+cp out/bios.bin "$WORKLOADS_DIR"/"$SEABIOS"
+popd
+rm -rf seabios
 
 popd
 
