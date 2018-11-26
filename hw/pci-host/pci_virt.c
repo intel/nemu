@@ -158,6 +158,7 @@ static void pci_virt_realize(DeviceState *dev, Error **errp)
     VirtMachineState *vms = VIRT_MACHINE(qdev_get_machine());
     PCIHostState *pre;
     VirtAcpiState *acpi = VIRT_ACPI(vms->acpi);
+    AcpiPciSegHpState *sseg = acpi->pcihp_seg_state;
     char name[15];
 
     /* Numbered sequentially */
@@ -185,14 +186,14 @@ static void pci_virt_realize(DeviceState *dev, Error **errp)
     /* Initialize PCI hotplug */
     qbus_set_hotplug_handler(BUS(vms->pci_bus[pci_virt->segment]), vms->acpi, NULL);
 
-    acpi->pcihp_state = g_renew(AcpiPciHpState*, acpi->pcihp_state,
+    sseg->pcihp_state = g_renew(AcpiPciHpState*, sseg->pcihp_state,
                                 vms->acpi_conf.total_segment);
-    acpi->pcihp_state[pci_virt->segment] = g_new0(AcpiPciHpState, 1);
-    acpi_pcihp_init(OBJECT(acpi), acpi->pcihp_state[pci_virt->segment],
+    sseg->pcihp_state[pci_virt->segment] = g_new0(AcpiPciHpState, 1);
+    acpi_pcihp_init(OBJECT(acpi), sseg->pcihp_state[pci_virt->segment],
                     vms->pci_bus[pci_virt->segment],
                     get_system_io(), true, pci_virt->segment, VIRT_ACPI_PCI_HOTPLUG_IO_BASE
                     + pci_virt->segment * VIRT_ACPI_PCI_HOTPLUG_IO_TOKEN);
-    acpi_pcihp_reset(acpi->pcihp_state[pci_virt->segment]);
+    acpi_pcihp_reset(sseg->pcihp_state[pci_virt->segment]);
 }
 
 static const char *pci_virt_root_bus_path(PCIHostState *host_bridge,

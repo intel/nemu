@@ -54,6 +54,7 @@ typedef struct AcpiPciHpPciStatus {
 #define ACPI_PCI_RMV_BASE 0x000c
 #define ACPI_PCI_SEL_BASE 0x0010
 #define ACPI_PCI_SEL_LEN 0x0004
+#define ACPI_PCI_SEG_SEL_LEN 0x0002
 
 typedef struct AcpiPciHpState {
     AcpiPciHpPciStatus acpi_pcihp_pci_status[ACPI_PCIHP_MAX_HOTPLUG_BUS];
@@ -65,11 +66,20 @@ typedef struct AcpiPciHpState {
     uint16_t io_len;
 } AcpiPciHpState;
 
+typedef struct AcpiPciSegHpState {
+    AcpiPciHpState **pcihp_state; /* each segment has one pointer */
+    MemoryRegion io;
+    uint16_t segment_select;
+} AcpiPciSegHpState;
+
 void acpi_pcihp_init(Object *owner, AcpiPciHpState *, PCIBus *root,
                      MemoryRegion *address_space_io, bool bridges_enabled,
                      uint16_t segment_nr, uint16_t apci_pcihp_addr);
 
 void acpi_pcihp_set_properties(Object *owner, AcpiPciHpState *s);
+
+void acpi_pcihp_seg_init(Object *owner, AcpiPciSegHpState *sseg,
+                         MemoryRegion *address_space_io, uint16_t addr);
 
 void acpi_pcihp_device_plug_cb(HotplugHandler *hotplug_dev, AcpiPciHpState *s,
                                DeviceState *dev, Error **errp);
