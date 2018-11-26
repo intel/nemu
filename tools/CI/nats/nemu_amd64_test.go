@@ -334,6 +334,12 @@ var clearLinuxOnly = []distro{
 				kernel:      getKernelPath(),
 				commandLine: clearKernelCommandLine,
 			},
+			{
+				name:        bootMethodDirectSeabios,
+				bios:        getSeabiosPath(),
+				kernel:      getKernelPath(),
+				commandLine: clearKernelCommandLine,
+			},
 		},
 	},
 }
