@@ -346,6 +346,25 @@ void acpi_pcihp_set_properties(Object *owner, AcpiPciHpState *s)
                                    &error_abort);
 }
 
+static uint64_t pci_seg_read(void *opaque, hwaddr addr, unsigned int size)
+{
+    AcpiPciSegHpState *sseg = opaque;
+
+    return sseg->segment_select;
+}
+
+static const MemoryRegionOps acpi_pcihp_seg_io_ops = {
+    .read = pci_seg_read,
+};
+
+void acpi_pcihp_seg_init(Object *owner, AcpiPciSegHpState *sseg,
+                         MemoryRegion *address_space_io, uint16_t addr)
+{
+    memory_region_init_io(&sseg->io, owner, &acpi_pcihp_seg_io_ops,
+                          sseg, "acpi_pcihp_seg_io", 4);
+    memory_region_add_subregion(address_space_io, addr, &sseg->io);
+}
+
 const VMStateDescription vmstate_acpi_pcihp_pci_status = {
     .name = "acpi_pcihp_pci_status",
     .version_id = 1,

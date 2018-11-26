@@ -34,7 +34,8 @@ typedef struct VirtAcpiState {
 
     qemu_irq *gsi;
 
-    AcpiPciHpState **pcihp_state;
+    AcpiPciSegHpState *pcihp_seg_state;
+   // AcpiPciHpState **pcihp_state;
     PCIBus *pci_bus;
 
     MemoryRegion sleep_iomem;

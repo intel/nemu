@@ -428,6 +428,8 @@ void build_acpi_pci_hotplug(Aml *scope, uint16_t acpi_iobase_addr);
 void build_append_pci_bus_devices(Aml *parent_scope, PCIBus *bus,
                                   bool pcihp_bridge_en);
 void acpi_dsdt_add_pci_bus(Aml *dsdt, AcpiPciBus *pci_host);
+void acpi_dsdt_add_pci_segment_hotplug(Aml *scope, uint16_t total_seg,
+                                       uint16_t io_base);
 Aml *build_pci_host_bridge(Aml *table, AcpiPciBus *pci_host);
 void crs_range_set_init(CrsRangeSet *range_set);
 Aml *build_crs(PCIHostState *host, CrsRangeSet *range_set);

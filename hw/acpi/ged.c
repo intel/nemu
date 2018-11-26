@@ -79,10 +79,6 @@ void acpi_ged_event(GEDState *ged_st, qemu_irq *irq, uint32_t ged_irq_sel)
 
 static Aml *ged_event_aml(GedEvent *event, uint16_t segment)
 {
-    Aml *method, *each;
-    char name[20];
-    uint16_t i;
-
     if (!event) {
         return NULL;
     }
@@ -96,20 +92,7 @@ static Aml *ged_event_aml(GedEvent *event, uint16_t segment)
         return aml_call0("\\_SB.MHPC." MEMORY_SLOT_SCAN_METHOD);
     case GED_PCI_HOTPLUG:
 	/* Take the PCI lock and trigger a PCI rescan */
-        method = aml_acquire(aml_name("\\_SB.PCI0.BLCK"), 0xFFFF);
-        aml_append(method, aml_call0("\\_SB.PCI0.PCNT"));
-        aml_append(method, aml_release(aml_name("\\_SB.PCI0.BLCK")));
-
-        for (i = 1; i < segment; i++) {
-            snprintf(name, sizeof(name), "\\_SB.PCI%x.PCNT", i);
-
-            each = aml_acquire(aml_name("\\_SB.PCI%x.BLCK", i), 0xFFFF);
-            aml_append(each, aml_call0(name));
-            aml_append(each, aml_release(aml_name("\\_SB.PCI%x.BLCK", i)));
-            aml_append(method, each);
-        }
-
-	return method;
+        return aml_call1("\\_SB.SGHP", aml_name("SEGN"));
     case GED_NVDIMM_HOTPLUG:
         return aml_notify(aml_name("\\_SB.NVDR"), aml_int(0x80));
     default:

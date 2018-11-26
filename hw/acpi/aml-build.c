@@ -2524,6 +2524,38 @@ void build_append_pci_bus_devices(Aml *parent_scope, PCIBus *bus,
     qobject_unref(bsel);
 }
 
+void acpi_dsdt_add_pci_segment_hotplug(Aml *dsdt, uint16_t total_seg,
+                                       uint16_t io_base)
+{
+    Aml *scope, *field, *method, *if_ctx;
+    uint16_t seg;
+    char name[20];
+
+    /* PCI hotplug segment number */
+    scope = aml_scope("\\_SB");
+    
+    aml_append(scope, aml_operation_region("PHSN", AML_SYSTEM_IO,
+                                            aml_int(io_base),
+                                            ACPI_PCI_SEG_SEL_LEN));
+    field = aml_field("PHSN", AML_DWORD_ACC, AML_NOLOCK, AML_WRITE_AS_ZEROS);
+    aml_append(field, aml_named_field("SEGN", ACPI_PCI_SEG_SEL_LEN * 8));
+    aml_append(scope, field);
+
+    /* Segment hotplug method */
+    method = aml_method("SGHP", 1, AML_NOTSERIALIZED);
+    for (seg = 0; seg < total_seg; seg++) {
+        snprintf(name, sizeof(name), "\\_SB.PCI%x.PCNT", seg);
+        if_ctx = aml_if(aml_equal(aml_arg(0), aml_int(seg)));
+        aml_append(if_ctx, aml_acquire(aml_name("\\_SB.PCI%x.BLCK", seg),
+                                       0xFFFF));
+        aml_append(if_ctx, aml_call0(name));
+        aml_append(if_ctx, aml_release(aml_name("\\_SB.PCI%x.BLCK", seg)));
+        aml_append(method, if_ctx);
+    }
+    aml_append(scope, method);
+    aml_append(dsdt, scope);
+}
+
 void acpi_dsdt_add_pci_bus(Aml *dsdt, AcpiPciBus *pci_host)
 {
     Aml *dev, *pci_scope, *hp_scope;

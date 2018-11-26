@@ -95,6 +95,9 @@ static void build_dsdt(MachineState *ms, GArray *table_data, BIOSLinker *linker,
     /* Reserve space for header */
     acpi_data_push(dsdt->buf, sizeof(AcpiTableHeader));
 
+    acpi_dsdt_add_pci_segment_hotplug(dsdt, conf->total_segment,
+                                      VIRT_ACPI_PCIHP_SEG_SEL_IO_BASE);
+
     for (i = 0; i < conf->total_segment; i++) {
         if (pci_host[i].pci_bus) {
             acpi_dsdt_add_pci_bus(dsdt, &pci_host[i]);
