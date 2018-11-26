@@ -171,9 +171,24 @@ static const MemoryRegionOps virt_sleep_cnt_ops = {
     .write = virt_acpi_sleep_cnt_write,
 };
 
+
 // NOOP I/O port as the Linux kernel expects to write to the sleep status
 // register on HW-reduced shutdown
+static void virt_acpi_sleep_status_write(void *opaque, hwaddr addr,
+                                         uint64_t val, unsigned width)
+{
+    return;
+}
+
+static uint64_t virt_acpi_sleep_status_read(void *opaque, hwaddr addr,
+                                            unsigned width)
+{
+    return 0;
+}
+
 const MemoryRegionOps virt_sleep_status_ops = {
+        .write = virt_acpi_sleep_status_write,
+        .read = virt_acpi_sleep_status_read,
 };
 
 static void virt_acpi_reset_write(void *opaque, hwaddr addr,
@@ -184,7 +199,6 @@ static void virt_acpi_reset_write(void *opaque, hwaddr addr,
         return;
     }
 }
-
 
 static const MemoryRegionOps virt_reset_ops = {
     .write = virt_acpi_reset_write,
