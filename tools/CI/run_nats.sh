@@ -94,7 +94,7 @@ git clone $SEABIOS_GIT_REPO || exit $?
 pushd seabios
 git checkout $SEABIOS_GIT_REV || exit $?
 cp virt-x86.config .config || exit $?
-make
+make -j `nproc` || exit $?
 cp out/bios.bin "$WORKLOADS_DIR"/"$SEABIOS"
 popd
 rm -rf seabios
