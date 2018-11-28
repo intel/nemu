@@ -51,6 +51,16 @@ func getSeabiosPath() string {
 	return path.Join(u.HomeDir, "workloads", "seabios.bin")
 }
 
+func getQbootPath() string {
+	u, err := user.Current()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error getting current user: %v", err)
+		os.Exit(1)
+	}
+
+	return path.Join(u.HomeDir, "workloads", "qboot.bin")
+}
+
 func getKernelPath() string {
 	u, err := user.Current()
 	if err != nil {
@@ -337,6 +347,12 @@ var clearLinuxOnly = []distro{
 			{
 				name:        bootMethodDirectSeabios,
 				bios:        getSeabiosPath(),
+				kernel:      getKernelPath(),
+				commandLine: clearKernelCommandLine,
+			},
+			{
+				name:        bootMethodDirectQboot,
+				bios:        getQbootPath(),
 				kernel:      getKernelPath(),
 				commandLine: clearKernelCommandLine,
 			},

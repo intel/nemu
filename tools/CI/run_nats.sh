@@ -21,6 +21,10 @@ SEABIOS_GIT_REPO="https://github.com/rbradford/seabios.git"
 SEABIOS_GIT_REV="virt-x86"
 SEABIOS="seabios.bin"
 
+QBOOT_GIT_REPO="https://github.com/rbradford/qboot.git"
+QBOOT_GIT_REV="virt-x86"
+QBOOT="qboot.bin"
+
 go_install() {
     export PATH=/usr/local/go/bin:$PATH
     go version | grep $GO_VERSION
@@ -37,7 +41,7 @@ go_install() {
     go version
 }
 
-sudo apt-get install -y mtools dosfstools
+sudo apt-get install -y mtools dosfstools libc6-dev-i386
 
 go_install
 
@@ -98,6 +102,15 @@ make -j `nproc` || exit $?
 cp out/bios.bin "$WORKLOADS_DIR"/"$SEABIOS"
 popd
 rm -rf seabios
+
+rm -rf $QBOOT
+git clone $QBOOT_GIT_REPO || exit $?
+pushd qboot
+git checkout $QBOOT_GIT_REV || exit $?
+make -j `nproc` || exit $?
+cp bios.bin "$WORKLOADS_DIR"/"$QBOOT"
+popd
+rm -rf qboot
 
 popd
 
