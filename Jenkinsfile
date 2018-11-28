@@ -58,6 +58,11 @@ stage ("Builds") {
 			}
 			stage ('Compile: x86-64 (virt only)') {
 				sh "SRCDIR=$WORKSPACE tools/build_x86_64_virt.sh"
+				sh "cp $HOME/build-x86_64_virt/x86_64_virt-softmmu/qemu-system-x86_64_virt ."
+				azureUpload storageCredentialId: 'nemu-jenkins-storage-account', 
+					filesPath: "qemu-system-x86_64_virt",
+					storageType: 'blobstorage',
+					containerName: env.BUILD_TAG.replaceAll("%2F","-")
 			}
 			stage ('NATS: x86-64 (virt only)') {
 				sh "SRCDIR=$WORKSPACE tools/CI/run_nats.sh -run '.*/.*/virt/.*' -args -nemu-binary-path=$HOME/build-x86_64_virt/x86_64_virt-softmmu/qemu-system-x86_64_virt"
