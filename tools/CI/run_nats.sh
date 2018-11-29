@@ -18,11 +18,11 @@ OVMF="OVMF.fd"
 CLEAR_KERNEL="org.clearlinux.kvm.4.18.16-293"
 
 SEABIOS_GIT_REPO="https://github.com/rbradford/seabios.git"
-SEABIOS_GIT_REV="virt-x86"
+SEABIOS_GIT_REV="92f583b98afcb47adf05d55f51bb87e28bcf964d"
 SEABIOS="seabios.bin"
 
 QBOOT_GIT_REPO="https://github.com/rbradford/qboot.git"
-QBOOT_GIT_REV="virt-x86"
+QBOOT_GIT_REV="49ff7fa0404e689ff3a89a7ed3c614d66d283da1"
 QBOOT="qboot.bin"
 
 go_install() {
