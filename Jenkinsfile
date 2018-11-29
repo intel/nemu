@@ -36,6 +36,15 @@ stage ("Builds") {
 			}
 			stage ('NATS: aarch64') {
 				sh "SRCDIR=$WORKSPACE tools/CI/run_nats_aarch64.sh"
+			}
+			stage ('Upload binary: aarch64') {
+				if (env.BRANCH_NAME.contains("releases/candidate")) {
+					sh "cp $HOME/build-aarch64/aarch64-softmmu/qemu-system-aarch64 ."
+					azureUpload storageCredentialId: 'nemu-jenkins-storage-account', 
+						filesPath: "qemu-system-aarch64",
+						storageType: 'blobstorage',
+						containerName: env.BUILD_TAG.replaceAll("%2F","-")
+				}
 			}	
 		}
 	}, 'xenial-virt': {
@@ -61,6 +70,15 @@ stage ("Builds") {
 			}
 			stage ('NATS: x86-64 (virt only)') {
 				sh "SRCDIR=$WORKSPACE tools/CI/run_nats.sh -run '.*/.*/virt/.*' -args -nemu-binary-path=$HOME/build-x86_64_virt/x86_64_virt-softmmu/qemu-system-x86_64_virt"
+			}
+			stage ('Upload binary: x86-64 (virt only)') {
+				if (env.BRANCH_NAME.contains("releases/candidate")) {
+					sh "cp $HOME/build-x86_64_virt/x86_64_virt-softmmu/qemu-system-x86_64_virt ."
+					azureUpload storageCredentialId: 'nemu-jenkins-storage-account', 
+						filesPath: "qemu-system-x86_64_virt",
+						storageType: 'blobstorage',
+						containerName: env.BUILD_TAG.replaceAll("%2F","-")
+				}
 			}
 		}
 	})
@@ -106,3 +124,27 @@ stage ("Analyse") {
 	}
 }
 
+stage ("Release") {
+	if (env.BRANCH_NAME.contains("releases/candidate")) { 
+		node ('master'){
+			stage ('Checkout: analyse') {
+					checkout scm
+			}
+			stage ('Download results') {
+				azureDownload storageCredentialId: 'nemu-jenkins-storage-account', 
+						downloadType: 'container',
+						containerName: env.BUILD_TAG.replaceAll("%2F","-")
+			}
+			stage ('Create release') {
+				withCredentials([[
+					$class: 'UsernamePasswordMultiBinding',
+					credentialsId: 'a27947d5-1706-465f-99f7-231eff68787b',
+					usernameVariable: 'GITHUB_USERNAME',
+					passwordVariable: 'GITHUB_PASSWORD'
+				]]) {
+					sh "hub release create -m \"Release \$(date +%Y-%m-%d)\" -a qemu-system-x86_64_virt -a qemu-system-aarch64 release-`date +%Y-%m-%d`" 
+				}
+			}
+		}
+	}
+}
