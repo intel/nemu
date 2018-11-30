@@ -45,6 +45,8 @@ $SRCDIR/configure \
  --disable-vvfat \
  --disable-parallels \
  --disable-dmg \
+ --disable-gnutls \
+ --disable-nettle \
  --enable-attr \
  --enable-cap-ng \
  --enable-kvm \
