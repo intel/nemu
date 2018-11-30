@@ -865,6 +865,31 @@ Aml *aml_interrupt(AmlConsumerAndProducer con_and_pro,
     return var;
 }
 
+/*
+ * Interrupt MSI Descriptor
+ * Type 1, Large Item Name 0x13
+ */
+Aml *aml_interrupt_msi(AmlConsumerAndProducer con_and_pro,
+                       AmlLevelAndEdge level_and_edge,
+                       AmlActiveHighAndLow high_and_low, AmlShared shared,
+                       uint64_t msi_id, uint8_t vect_count)
+{
+    Aml *var = aml_alloc();
+    uint8_t irq_flags = con_and_pro | (level_and_edge << 1)
+                        | (high_and_low << 2) | (shared << 3);
+    uint16_t len = 10;
+
+    assert(vect_count > 0);
+
+    build_append_byte(var->buf, 0x93); /* MSI irq descriptor */
+    build_append_byte(var->buf, len & 0xFF); /* Length, bits[7:0] */
+    build_append_byte(var->buf, len >> 8); /* Length, bits[15:8] */
+    build_append_byte(var->buf, irq_flags); /* Interrupt Vector Information. */
+    build_append_int_noprefix(var->buf, msi_id, 8); /* MSI unique ID */
+    build_append_byte(var->buf, vect_count); /* Number of IRQ per vector */
+    return var;
+}
+
 /* ACPI 1.0b: 6.4.2.5 I/O Port Descriptor */
 Aml *aml_io(AmlIODecode dec, uint16_t min_base, uint16_t max_base,
             uint8_t aln, uint8_t len)
