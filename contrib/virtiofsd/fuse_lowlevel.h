@@ -203,7 +203,7 @@ struct fuse_lowlevel_ops {
 	 *
 	 * @param userdata the user data passed to fuse_session_new()
 	 */
-	void (*destroy) (void *userdata);
+	void (*destroy) (void *userdata, struct fuse_session *se);
 
 	/**
 	 * Look up a directory entry by name and get its attributes.
