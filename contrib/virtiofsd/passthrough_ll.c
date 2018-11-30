@@ -1331,6 +1331,20 @@ static void lo_removemapping(fuse_req_t req, struct fuse_session *se,
 	fuse_reply_err(req, ret);
 }
 
+static void lo_destroy(void *userdata, struct fuse_session *se)
+{
+        if (fuse_lowlevel_is_virtio(se)) {
+                VhostUserFSSlaveMsg msg = { 0 };
+
+                msg.len[0] = ~(uint64_t)0; /* Special: means 'all' */
+        	msg.c_offset[0] = 0;
+                if (fuse_virtio_unmap(se, &msg)) {
+                        fprintf(stderr, "%s: unmap during destroy failed\n", __func__);
+                }
+        }
+}
+
+
 static struct fuse_lowlevel_ops lo_oper = {
 	.init		= lo_init,
 	.lookup		= lo_lookup,
@@ -1368,6 +1382,7 @@ static struct fuse_lowlevel_ops lo_oper = {
 #ifdef HAVE_COPY_FILE_RANGE
 	.copy_file_range = lo_copy_file_range,
 #endif
+	.destroy        = lo_destroy,
         .setupmapping   = lo_setupmapping,
         .removemapping  = lo_removemapping,
 };
