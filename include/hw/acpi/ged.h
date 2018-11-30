@@ -69,7 +69,6 @@ typedef struct GedEvent {
 typedef struct GEDState {
     MemoryRegion io;
     uint32_t     sel;
-    uint32_t     irq;
     uint32_t     msi_idx;
     uint32_t     msi_addr_hi;
     uint32_t     msi_addr_lo;
@@ -78,9 +77,9 @@ typedef struct GEDState {
 } GEDState;
 
 void acpi_ged_init(MemoryRegion *as, Object *owner, GEDState *ged_st,
-                   hwaddr base_addr, uint32_t ged_irq);
+                   hwaddr base_addr);
 void acpi_ged_set_event(GEDState *ged_st, uint32_t ged_irq_sel);
-void build_ged_aml(Aml *table, const char* name, uint32_t ged_irq,
+void build_ged_aml(Aml *table, const char* name, uint64_t msi_id,
                    GedEvent *events, uint32_t events_size);
 
 #endif

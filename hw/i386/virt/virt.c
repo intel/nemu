@@ -119,7 +119,7 @@ static void acpi_conf_virt_init(MachineState *machine)
     conf->ged_events = g_malloc0(events_size * sizeof(GedEvent));
     memcpy(conf->ged_events, events, events_size * sizeof(GedEvent));
     conf->ged_events_size = events_size;
-    conf->ged_irq = VIRT_ACPI_GED_IRQ;
+    conf->ged_msi_id = VIRT_ACPI_GED_MSI_ID;
 }
 
 static void virt_machine_done(Notifier *notifier, void *data)

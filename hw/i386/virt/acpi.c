@@ -235,7 +235,7 @@ static void virt_device_realize(DeviceState *dev, Error **errp)
                              &s->memhp_state, ACPI_MEMORY_HOTPLUG_BASE);
 
     acpi_ged_init(get_system_io(), OBJECT(dev), &s->ged_state,
-                  ACPI_GED_EVENT_IO_BASE, VIRT_ACPI_GED_IRQ);
+                  ACPI_GED_EVENT_IO_BASE);
 
     memory_region_init_io(&s->sleep_iomem, OBJECT(dev),
                           &virt_sleep_cnt_ops, s, TYPE_VIRT_ACPI, 1);

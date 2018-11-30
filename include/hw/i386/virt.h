@@ -62,8 +62,8 @@ typedef struct {
 #define VIRT_MACHINE_CLASS(class) \
     OBJECT_CLASS_CHECK(VirtMachineClass, class, TYPE_VIRT_MACHINE)
 
-/* Our GED IRQ lives after the legacy IRQs */
-#define VIRT_ACPI_GED_IRQ 0x10
+/* Define a global and unique MSI ID at the platform level */
+#define VIRT_ACPI_GED_MSI_ID 0xFFFF
 
 MemoryRegion *virt_memory_init(VirtMachineState *vms);
 
