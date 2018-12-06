@@ -7,6 +7,7 @@
 #define ACPI_REDUCED_SLEEP_STATUS_IOPORT 0x3D0
 #define ACPI_REDUCED_RESET_IOPORT	  0x3C0
 #define ACPI_REDUCED_RESET_VALUE	  4
+#define ACPI_REDUCED_PMTIMER_IOPORT   0x3E0
 
 void acpi_reduced_setup(MachineState *machine, AcpiConfiguration *conf);
 
