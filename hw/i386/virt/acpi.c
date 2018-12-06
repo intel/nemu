@@ -57,6 +57,7 @@ typedef struct VirtAcpiState {
     MemoryRegion sleep_iomem;
     MemoryRegion sleep_status_iomem;
     MemoryRegion reset_iomem;
+    MemoryRegion pm_timer_iomem;
 } VirtAcpiState;
 
 #define TYPE_VIRT_ACPI "virt-acpi"
@@ -204,6 +205,25 @@ static const MemoryRegionOps virt_reset_ops = {
     .write = virt_acpi_reset_write,
 };
 
+static void virt_acpi_pm_timer_write(void *opaque, hwaddr addr,
+                                         uint64_t val, unsigned width)
+{
+    return;
+}
+
+static uint64_t virt_acpi_pm_timer_read(void *opaque, hwaddr addr,
+                                            unsigned width)
+{
+    uint64_t counter = muldiv64(qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL),
+                                PM_TIMER_FREQUENCY, NANOSECONDS_PER_SECOND);
+    return counter & 0xffffff;
+}
+
+const MemoryRegionOps virt_pm_timer_ops = {
+        .write = virt_acpi_pm_timer_write,
+        .read = virt_acpi_pm_timer_read,
+};
+
 static void virt_device_realize(DeviceState *dev, Error **errp)
 {
     VirtAcpiState *s = VIRT_ACPI(dev);
@@ -231,6 +251,10 @@ static void virt_device_realize(DeviceState *dev, Error **errp)
     memory_region_init_io(&s->reset_iomem, OBJECT(dev),
                           &virt_reset_ops, s, TYPE_VIRT_ACPI, 1);
     sysbus_add_io(sys, ACPI_REDUCED_RESET_IOPORT, &s->reset_iomem);
+
+    memory_region_init_io(&s->pm_timer_iomem, OBJECT(dev), 
+                         &virt_pm_timer_ops, s, TYPE_VIRT_ACPI, 4);
+    sysbus_add_io(sys, ACPI_REDUCED_PMTIMER_IOPORT, &s->pm_timer_iomem);
 }
 
 DeviceState *virt_acpi_init(qemu_irq *gsi, PCIBus *pci_bus)
