@@ -279,7 +279,7 @@ func testPCIHotplug(ctx context.Context, q *qemuTest, t *testing.T) {
 		t.Errorf("PCI address 0000:00:%s.0 already in use", addr)
 	}
 
-	err := q.qmp.ExecuteNetPCIDeviceAdd(ctx, "", "net1", macAddr, addr, "", "", 0)
+	err := q.qmp.ExecuteNetPCIDeviceAdd(ctx, "", "net1", macAddr, addr, "", "", 0, false)
 	if err != nil {
 		t.Errorf("Error hotplugging PCI device (virtio-net-pci): %v", err)
 	}
