@@ -49,6 +49,7 @@
 
 #include "cpu.h"
 #include "kvm_i386.h"
+#include "ioapic.h"
 
 #include "../acpi-build.h"
 
@@ -119,7 +120,9 @@ static void acpi_conf_virt_init(MachineState *machine)
     conf->ged_events = g_malloc0(events_size * sizeof(GedEvent));
     memcpy(conf->ged_events, events, events_size * sizeof(GedEvent));
     conf->ged_events_size = events_size;
-    conf->ged_irq = VIRT_ACPI_GED_IRQ;
+#ifdef CONFIG_GED_IOAPIC
+    conf->u.ged_ioapic_irq = VIRT_ACPI_GED_IRQ;
+#endif
 }
 
 static void virt_machine_done(Notifier *notifier, void *data)
@@ -130,42 +133,6 @@ static void virt_machine_done(Notifier *notifier, void *data)
     MachineClass *mc = MACHINE_GET_CLASS(ms);
 
     mc->firmware_build_methods.acpi.setup(ms, &vms->acpi_conf);
-}
-
-static void virt_gsi_handler(void *opaque, int n, int level)
-{
-    qemu_irq *ioapic_irq = opaque;
-
-    qemu_set_irq(ioapic_irq[n], level);
-}
-
-static void virt_ioapic_init(VirtMachineState *vms)
-{
-    qemu_irq *ioapic_irq;
-    DeviceState *ioapic_dev;
-    SysBusDevice *d;
-    unsigned int i;
-
-    /* KVM IRQ chip */
-    assert(kvm_irqchip_in_kernel());
-    ioapic_irq = g_new0(qemu_irq, IOAPIC_NUM_PINS);
-    kvm_pc_setup_irq_routing(true);
-
-    /* KVM IOAPIC */
-    assert(kvm_ioapic_in_kernel());
-    ioapic_dev = qdev_create(NULL, "kvm-ioapic");
-
-    object_property_add_child(qdev_get_machine(), "ioapic", OBJECT(ioapic_dev), NULL);
-
-    qdev_init_nofail(ioapic_dev);
-    d = SYS_BUS_DEVICE(ioapic_dev);
-    sysbus_mmio_map(d, 0, IO_APIC_DEFAULT_ADDRESS);
-
-    for (i = 0; i < IOAPIC_NUM_PINS; i++) {
-        ioapic_irq[i] = qdev_get_gpio_in(ioapic_dev, i);
-    }
-
-    vms->gsi = qemu_allocate_irqs(virt_gsi_handler, ioapic_irq, IOAPIC_NUM_PINS);
 }
 
 static void virt_pci_init(VirtMachineState *vms)
@@ -201,8 +168,12 @@ static void virt_machine_state_init(MachineState *machine)
     /* TODO Add the ram pointer to the QOM */
     virt_memory_init(vms);
     virt_pci_init(vms);
+    vms->acpi = virt_acpi_init(vms->pci_bus);
+#ifdef CONFIG_GED_IOAPIC
     virt_ioapic_init(vms);
-    vms->acpi = virt_acpi_init(vms->gsi, vms->pci_bus);
+    virt_acpi_init_gsi(vms->acpi, vms->gsi);
+#endif
+
 
     vms->apic_id_limit = cpus_init(machine, false);
 

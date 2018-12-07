@@ -53,17 +53,22 @@ static const MemoryRegionOps ged_ops = {
     },
 };
 
+/* 
+ * @ged_irq pointer: for IOAPIC passes irq number, for MSI passes NULL 
+ */
 void acpi_ged_init(MemoryRegion *as, Object *owner, GEDState *ged_st,
-                   hwaddr base_addr, uint32_t ged_irq)
+                   hwaddr base_addr, uint32_t *ged_irq)
 {
     qemu_mutex_init(&ged_st->lock);
-    ged_st->irq = ged_irq;
+#ifdef CONFIG_GED_IOAPIC
+    ged_st->irq = *ged_irq;
     memory_region_init_io(&ged_st->io, owner, &ged_ops, ged_st,
                           "acpi-ged-event", ACPI_GED_REG_LEN);
+#endif
     memory_region_add_subregion(as, base_addr, &ged_st->io);
 }
 
-void acpi_ged_event(GEDState *ged_st, qemu_irq *irq, uint32_t ged_irq_sel)
+void acpi_ged_set_event(GEDState *ged_st, uint32_t ged_irq_sel)
 {
     /* Set the GED IRQ selector to the expected device type value. This
      * way, the ACPI method will be able to trigger the right code based
@@ -72,10 +77,15 @@ void acpi_ged_event(GEDState *ged_st, qemu_irq *irq, uint32_t ged_irq_sel)
     qemu_mutex_lock(&ged_st->lock);
     ged_st->sel |= ged_irq_sel;
     qemu_mutex_unlock(&ged_st->lock);
+}
 
+#ifdef CONFIG_GED_IOAPIC
+void acpi_ged_irq(GEDState *ged_st, qemu_irq *irq)
+{
     /* Trigger the event by sending an interrupt to the guest. */
     qemu_irq_pulse(irq[ged_st->irq]);
 }
+#endif
 
 static Aml *ged_event_aml(GedEvent *event)
 {
@@ -107,7 +117,10 @@ static Aml *ged_event_aml(GedEvent *event)
     return NULL;
 }
 
-void build_ged_aml(Aml *table, const char *name, uint32_t ged_irq,
+/* 
+ * @ged_irq pointer: for IOAPIC passes irq number, for MSI passes MSI Id 
+ */
+void build_ged_aml(Aml *table, const char *name, void *ged_irq,
                    GedEvent *events, uint32_t events_size)
 {
     Aml *crs = aml_resource_template();
@@ -118,9 +131,11 @@ void build_ged_aml(Aml *table, const char *name, uint32_t ged_irq,
     Aml *isel = aml_name(AML_GED_IRQ_SEL);
     uint32_t i;
 
+#ifdef CONFIG_GED_IOAPIC
     /* _CRS interrupt */
     aml_append(crs, aml_interrupt(AML_CONSUMER, AML_LEVEL, AML_ACTIVE_HIGH,
-                                  AML_EXCLUSIVE, &ged_irq, 1));
+                                  AML_EXCLUSIVE, ged_irq, 1));
+#endif
 
     /*
      * For each GED event we:

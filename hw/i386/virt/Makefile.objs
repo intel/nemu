@@ -1,1 +1,2 @@
 obj-y += virt.o memory.o acpi.o
+obj-$(CONFIG_GED_IOAPIC) += ioapic.o

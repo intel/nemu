@@ -43,8 +43,10 @@ typedef struct {
     /* number of CPUs */
     uint16_t boot_cpus;
 
+#ifdef CONFIG_GED_IOAPIC
     /* GSI */
     qemu_irq *gsi;
+#endif
 
     PCIBus *pci_bus;
     ram_addr_t above_4g_mem_size;
@@ -67,6 +69,10 @@ typedef struct {
 
 MemoryRegion *virt_memory_init(VirtMachineState *vms);
 
-DeviceState *virt_acpi_init(qemu_irq *gsi, PCIBus *pci_bus);
+DeviceState *virt_acpi_init(PCIBus *pci_bus);
+
+#ifdef CONFIG_GED_IOAPIC
+void virt_acpi_init_gsi(DeviceState *dev, qemu_irq *gsi);
+#endif
 
 #endif

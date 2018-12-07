@@ -49,7 +49,9 @@ typedef struct VirtAcpiState {
 
     GEDState ged_state;
 
+#if defined CONFIG_GED_IOAPIC
     qemu_irq *gsi;
+#endif
 
     AcpiPciHpState pcihp_state;
     PCIBus *pci_bus;
@@ -145,10 +147,14 @@ static void virt_send_ged(AcpiDeviceIf *adev, AcpiEventStatusBits ev)
         return;
     }
 
-    /* We inject the hotplug interrupt.
+    acpi_ged_set_event(&s->ged_state, sel);
+
+#ifdef CONFIG_GED_IOAPIC
+    /* We inject the hotplug interrupt by IOAPIC IRQ.
      * The IRQ selector will make the difference from the ACPI table.
      */
-    acpi_ged_event(&s->ged_state, s->gsi, sel);
+    acpi_ged_irq(&s->ged_state, s->gsi);
+#endif
 }
 
 static int virt_device_sysbus_init(SysBusDevice *dev)
@@ -213,6 +219,12 @@ static void virt_device_realize(DeviceState *dev, Error **errp)
 {
     VirtAcpiState *s = VIRT_ACPI(dev);
     SysBusDevice *sys = SYS_BUS_DEVICE(dev);
+#ifdef CONFIG_GED_IOAPIC
+    uint32_t ged_ioapic_irq = VIRT_ACPI_GED_IRQ;
+
+    acpi_ged_init(get_system_io(), OBJECT(dev), &s->ged_state,
+                  ACPI_GED_EVENT_IO_BASE, &ged_ioapic_irq);
+#endif
 
     s->cpuhp.device = OBJECT(s);
 
@@ -221,9 +233,6 @@ static void virt_device_realize(DeviceState *dev, Error **errp)
 
     acpi_memory_hotplug_init(get_system_io(), OBJECT(dev),
                              &s->memhp_state, ACPI_MEMORY_HOTPLUG_BASE);
-
-    acpi_ged_init(get_system_io(), OBJECT(dev), &s->ged_state,
-                  ACPI_GED_EVENT_IO_BASE, VIRT_ACPI_GED_IRQ);
 
     memory_region_init_io(&s->sleep_iomem, OBJECT(dev),
                           &virt_sleep_cnt_ops, s, TYPE_VIRT_ACPI, 1);
@@ -238,7 +247,7 @@ static void virt_device_realize(DeviceState *dev, Error **errp)
     sysbus_add_io(sys, ACPI_REDUCED_RESET_IOPORT, &s->reset_iomem);
 }
 
-DeviceState *virt_acpi_init(qemu_irq *gsi, PCIBus *pci_bus)
+DeviceState *virt_acpi_init(PCIBus *pci_bus)
 {
     DeviceState *dev;
     VirtAcpiState *s;
@@ -246,7 +255,6 @@ DeviceState *virt_acpi_init(qemu_irq *gsi, PCIBus *pci_bus)
     dev = sysbus_create_simple(TYPE_VIRT_ACPI, -1, NULL);
 
     s = VIRT_ACPI(dev);
-    s->gsi = gsi;
     s->pci_bus = pci_bus;
 
     if (pci_bus) {
@@ -260,6 +268,15 @@ DeviceState *virt_acpi_init(qemu_irq *gsi, PCIBus *pci_bus)
 
     return dev;
 }
+
+#ifdef CONFIG_GED_IOAPIC
+void virt_acpi_init_gsi(DeviceState *dev, qemu_irq *gsi)
+{
+    VirtAcpiState *s = VIRT_ACPI(dev);
+
+    s->gsi = gsi;
+}
+#endif
 
 static Property virt_acpi_properties[] = {
     DEFINE_PROP_END_OF_LIST(),

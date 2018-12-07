@@ -471,6 +471,7 @@ gcrypt_kdf="no"
 vte=""
 virglrenderer=""
 tpm="yes"
+ged_ioapic="yes"
 libssh2=""
 live_block_migration="yes"
 numa=""
@@ -1405,6 +1406,10 @@ for opt do
   ;;
   --enable-tpm) tpm="yes"
   ;;
+  --disable-ged-ioapic) ged_ioapic="no"
+  ;;
+  --enable-ged-ioapic) ged_ioapic="yes"
+  ;;
   --disable-libssh2) libssh2="no"
   ;;
   --enable-libssh2) libssh2="yes"
@@ -1731,6 +1736,7 @@ disabled with --disable-FEATURE, default is enabled if available:
   dmg             DMG block backend
   glusterfs       GlusterFS backend
   tpm             TPM support
+  ged-ioapic      GED IOAPIC support
   libssh2         ssh block device support
   numa            libnuma support
   libxml2         for Parallels image format
@@ -6044,6 +6050,7 @@ echo "GlusterFS support $glusterfs"
 echo "gcov              $gcov_tool"
 echo "gcov enabled      $gcov"
 echo "TPM support       $tpm"
+echo "GED IOAPIC support $ged_ioapic"
 echo "libssh2 support   $libssh2"
 echo "TPM passthrough   $tpm_passthrough"
 echo "TPM emulator      $tpm_emulator"
@@ -6734,6 +6741,12 @@ if test "$tpm" = "yes"; then
   # TPM emulator support?
   if test "$tpm_emulator" = "yes"; then
     echo "CONFIG_TPM_EMULATOR=y" >> $config_host_mak
+  fi
+fi
+
+if test "$ged_ioapic" = "yes"; then
+  if test "$ARCH" = "x86_64" || test "$ARCH" = "x86_64_virt"; then
+    echo 'CONFIG_GED_IOAPIC=y' >> $config_host_mak
   fi
 fi
 
