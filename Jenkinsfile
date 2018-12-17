@@ -97,7 +97,7 @@ stage ("Analyse") {
 			}
 			stage ('Remove unused files') {
 				sh "cat $WORKSPACE/used-aarch64.txt $WORKSPACE/used-x86-64.txt | sort | uniq > $WORKSPACE/used-c-files.txt"
-				sh "find . | grep \\\\.[ch]\$ | sed 's#^./##' | sort | uniq > $WORKSPACE/all-c-files.txt"
+				sh "find . | grep '\\\\.\\(c\\|h\\|cpp\\)\$' | sed 's#^./##' | sort | uniq > $WORKSPACE/all-c-files.txt"
 				sh "comm -23 $WORKSPACE/all-c-files.txt $WORKSPACE/used-c-files.txt | tee $WORKSPACE/unused-files.txt"
 				sh "git branch -D tmp-branch || true"
 				sh "git checkout -b tmp-branch"
