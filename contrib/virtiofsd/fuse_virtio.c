@@ -500,7 +500,25 @@ static void *fv_queue_thread(void *opaque)
                                        __func__, elem->index);
                                assert(0); // TODO
                        }
-                       copy_from_iov(&fbuf, out_num, out_sg);
+                       // Copy just the first element and look at it
+                       copy_from_iov(&fbuf, 1, out_sg);
+
+                       if (out_num > 2 &&
+                           out_sg[0].iov_len == sizeof(struct fuse_in_header) &&
+                           ((struct fuse_in_header *)fbuf.mem)->opcode ==
+                               FUSE_WRITE &&
+                           out_sg[1].iov_len == sizeof(struct fuse_write_in)) {
+                               // For a write we don't actually need to copy the
+                               // data, we can just do it straight out of guest memory
+                               // but we must sitll copy the headers in case the guest
+                               // was nasty and changed them while we were using them.
+                               if (se->debug)
+                                       fprintf(stderr, "%s: Write special case\n", __func__);
+                       }
+                       // Copy the rest of the buffer
+                       fbuf.mem += out_sg->iov_len;
+                       copy_from_iov(&fbuf, out_num - 1, out_sg + 1);
+                       fbuf.mem -= out_sg->iov_len;
                        fbuf.size = out_len;
 
                        // TODO! Endianness of header
