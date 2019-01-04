@@ -462,6 +462,10 @@ static void *fv_queue_thread(void *opaque)
                        continue;
                }
                while (1) {
+                       bool allocated_bufv = false;
+                       struct fuse_bufvec bufv;
+                       struct fuse_bufvec *pbufv;
+
                        /* An element contains one request and the space to send our response
                         * They're spread over multiple descriptors in a scatter/gather set
                         * and we can't trust the guest to keep them still; so copy in/out.
@@ -514,18 +518,53 @@ static void *fv_queue_thread(void *opaque)
                                // was nasty and changed them while we were using them.
                                if (se->debug)
                                        fprintf(stderr, "%s: Write special case\n", __func__);
+
+                               // copy the fuse_write_in header afte rthe fuse_in_header
+                               fbuf.mem += out_sg->iov_len;
+                               copy_from_iov(&fbuf, 1, out_sg + 1);
+                               fbuf.mem -= out_sg->iov_len;
+                               fbuf.size = out_sg[0].iov_len + out_sg[1].iov_len;
+
+                               // Allocate the bufv, with space for the rest of the iov
+                               allocated_bufv = true;
+                               pbufv = malloc(sizeof(struct fuse_bufvec) +
+                                              sizeof(struct fuse_buf) * (out_num - 2));
+
+                               pbufv->count = 1;
+                               pbufv->buf[0] = fbuf;
+
+                               size_t iovindex, pbufvindex;
+                               iovindex = 2; // 2 headers, separate iovs
+                               pbufvindex = 1; // 2 headers, 1 fusebuf
+
+                               for(; iovindex < out_num; iovindex++, pbufvindex++) {
+                                       pbufv->count++;
+                                       pbufv->buf[pbufvindex].pos = ~0; // Dummy
+                                       pbufv->buf[pbufvindex].flags = 0;
+                                       pbufv->buf[pbufvindex].mem = out_sg[iovindex].iov_base;
+                                       pbufv->buf[pbufvindex].size = out_sg[iovindex].iov_len;
+                               }
+                       } else {
+                               // Normal (non fast write) path
+
+                               // Copy the rest of the buffer
+                               fbuf.mem += out_sg->iov_len;
+                               copy_from_iov(&fbuf, out_num - 1, out_sg + 1);
+                               fbuf.mem -= out_sg->iov_len;
+                               fbuf.size = out_len;
+
+                               // TODO! Endianness of header
+
+                               // TODO: Add checks for fuse_session_exited
+                               bufv.buf[0] = fbuf;
+                               bufv.count = 1;
+                               pbufv = &bufv;
                        }
-                       // Copy the rest of the buffer
-                       fbuf.mem += out_sg->iov_len;
-                       copy_from_iov(&fbuf, out_num - 1, out_sg + 1);
-                       fbuf.mem -= out_sg->iov_len;
-                       fbuf.size = out_len;
+                       pbufv->idx = 0;
+                       pbufv->off = 0;
+                       fuse_session_process_buf_int(se, pbufv, &ch);
 
-                       // TODO! Endianness of header
-
-                       // TODO: Add checks for fuse_session_exited
-                       struct fuse_bufvec bufv = { .buf[0] = fbuf, .count = 1 };
-                       fuse_session_process_buf_int(se, &bufv, &ch);
+                       if (allocated_bufv) free(pbufv);
 
                        if (!qi->reply_sent) {
 			       if (se->debug) {
