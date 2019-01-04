@@ -2047,15 +2047,23 @@ static int fuse_ll_copy_from_pipe(struct fuse_bufvec *dst,
 void fuse_session_process_buf(struct fuse_session *se,
 			      const struct fuse_buf *buf)
 {
-	fuse_session_process_buf_int(se, buf, NULL);
+        struct fuse_bufvec bufv = { .buf[0] = *buf, .count = 1 };
+	fuse_session_process_buf_int(se, &bufv, NULL);
 }
 
+// Restriction:
+//   bufv is normally a single entry buffer, except for a write
+//   where (if it's in memory) then the bufv may be multiple entries,
+//   where the first entry contains all headers and subsequent entries
+//   contain data
+//   bufv shall not use any offsets etc to make the data anything
+//   other than contiguous starting from 0.
 void fuse_session_process_buf_int(struct fuse_session *se,
-				  const struct fuse_buf *buf, struct fuse_chan *ch)
+				  struct fuse_bufvec *bufv, struct fuse_chan *ch)
 {
 	const size_t write_header_size = sizeof(struct fuse_in_header) +
 		sizeof(struct fuse_write_in);
-	struct fuse_bufvec bufv = { .buf[0] = *buf, .count = 1 };
+	const struct fuse_buf *buf = bufv->buf;
 	struct fuse_bufvec tmpbuf = FUSE_BUFVEC_INIT(write_header_size);
 	struct fuse_in_header *in;
 	const void *inarg;
@@ -2156,7 +2164,7 @@ void fuse_session_process_buf_int(struct fuse_session *se,
 		tmpbuf = FUSE_BUFVEC_INIT(buf->size - write_header_size);
 		tmpbuf.buf[0].mem = mbuf + write_header_size;
 
-		res = fuse_ll_copy_from_pipe(&tmpbuf, &bufv);
+		res = fuse_ll_copy_from_pipe(&tmpbuf, bufv);
 		err = -res;
 		if (res < 0)
 			goto reply_err;
