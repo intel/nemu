@@ -55,8 +55,8 @@
 #include <sys/file.h>
 #include <sys/xattr.h>
 
-/* We are re-using pointers to our `struct lo_inode` and `struct
-   lo_dirp` elements as inodes. This means that we must be able to
+/* We are re-using pointers to our `struct lo_dirp`
+   elements as inodes. This means that we must be able to
    store uintptr_t values in a fuse_ino_t variable. The following
    incantation checks this condition at compile time. */
 #if defined(__GNUC__) && (__GNUC__ > 4 || __GNUC__ == 4 && __GNUC_MINOR__ >= 6) && !defined __cplusplus
@@ -70,7 +70,7 @@ struct _uintptr_to_must_hold_fuse_ino_t_dummy_struct \
 
 struct lo_map_elem {
 	union {
-		/* Element values will go here... */
+		struct lo_inode *inode;
 		ssize_t freelist;
 	};
 	bool in_use;
@@ -91,6 +91,7 @@ struct lo_inode {
 	ino_t ino;
 	dev_t dev;
 	uint64_t refcount; /* protected by lo->mutex */
+	fuse_ino_t fuse_ino;
 };
 
 struct lo_cred {
@@ -117,6 +118,7 @@ struct lo_data {
 	int readdirplus_set;
 	int readdirplus_clear;
 	struct lo_inode root; /* protected by lo->mutex */
+	struct lo_map ino_map; /* protected by lo->mutex */
 };
 
 static const struct fuse_opt lo_opts[] = {
@@ -254,17 +256,38 @@ static void lo_map_remove(struct lo_map *map, size_t key)
 	map->freelist = key;
 }
 
+/* Assumes lo->mutex is held */
+static ssize_t lo_add_inode_mapping(fuse_req_t req, struct lo_inode *inode)
+{
+	struct lo_map_elem *elem;
+
+	elem = lo_map_alloc_elem(&lo_data(req)->ino_map);
+	if (!elem)
+		return -1;
+
+	elem->inode = inode;
+	return elem - lo_data(req)->ino_map.elems;
+}
+
 static struct lo_inode *lo_inode(fuse_req_t req, fuse_ino_t ino)
 {
-	if (ino == FUSE_ROOT_ID)
-		return &lo_data(req)->root;
-	else
-		return (struct lo_inode *) (uintptr_t) ino;
+	struct lo_data *lo = lo_data(req);
+	struct lo_map_elem *elem;
+
+	pthread_mutex_lock(&lo->mutex);
+	elem = lo_map_get(&lo->ino_map, ino);
+	pthread_mutex_unlock(&lo->mutex);
+
+	if (!elem)
+		return NULL;
+
+	return elem->inode;
 }
 
 static int lo_fd(fuse_req_t req, fuse_ino_t ino)
 {
-	return lo_inode(req, ino)->fd;
+	struct lo_inode *inode = lo_inode(req, ino);
+	return inode ? inode->fd : -1;
 }
 
 static bool lo_debug(fuse_req_t req)
@@ -341,9 +364,17 @@ static void lo_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
 {
 	int saverr;
 	char procname[64];
-	struct lo_inode *inode = lo_inode(req, ino);
-	int ifd = inode->fd;
+	struct lo_inode *inode;
+	int ifd;
 	int res;
+
+	inode = lo_inode(req, ino);
+	if (!inode) {
+		fuse_reply_err(req, EBADF);
+		return;
+	}
+
+	ifd = inode->fd;
 
 	if (valid & FUSE_SET_ATTR_MODE) {
 		if (fi) {
@@ -467,6 +498,7 @@ static int lo_do_lookup(fuse_req_t req, fuse_ino_t parent, const char *name,
 		inode->dev = e->attr.st_dev;
 
 		pthread_mutex_lock(&lo->mutex);
+		inode->fuse_ino = lo_add_inode_mapping(req, inode);
 		prev = &lo->root;
 		next = prev->next;
 		next->prev = inode;
@@ -475,7 +507,7 @@ static int lo_do_lookup(fuse_req_t req, fuse_ino_t parent, const char *name,
 		prev->next = inode;
 		pthread_mutex_unlock(&lo->mutex);
 	}
-	e->ino = (uintptr_t) inode;
+	e->ino = inode->fuse_ino;
 
 	if (lo_debug(req))
 		fprintf(stderr, "  %lli/%s -> %lli\n",
@@ -554,9 +586,15 @@ static void lo_mknod_symlink(fuse_req_t req, fuse_ino_t parent,
 	int newfd = -1;
 	int res;
 	int saverr;
-	struct lo_inode *dir = lo_inode(req, parent);
+	struct lo_inode *dir;
 	struct fuse_entry_param e;
 	struct lo_cred old = {};
+
+	dir = lo_inode(req, parent);
+	if (!dir) {
+		fuse_reply_err(req, EBADF);
+		return;
+	}
 
 	saverr = ENOMEM;
 
@@ -637,9 +675,15 @@ static void lo_link(fuse_req_t req, fuse_ino_t ino, fuse_ino_t parent,
 {
 	int res;
 	struct lo_data *lo = lo_data(req);
-	struct lo_inode *inode = lo_inode(req, ino);
+	struct lo_inode *inode;
 	struct fuse_entry_param e;
 	int saverr;
+
+	inode = lo_inode(req, ino);
+	if (!inode) {
+		fuse_reply_err(req, EBADF);
+		return;
+	}
 
 	memset(&e, 0, sizeof(struct fuse_entry_param));
 	e.attr_timeout = lo->timeout;
@@ -656,7 +700,7 @@ static void lo_link(fuse_req_t req, fuse_ino_t ino, fuse_ino_t parent,
 	pthread_mutex_lock(&lo->mutex);
 	inode->refcount++;
 	pthread_mutex_unlock(&lo->mutex);
-	e.ino = (uintptr_t) inode;
+	e.ino = inode->fuse_ino;
 
 	if (lo_debug(req))
 		fprintf(stderr, "  %lli/%s -> %lli\n",
@@ -731,10 +775,10 @@ static void unref_inode(struct lo_data *lo, struct lo_inode *inode, uint64_t n)
 		next->prev = prev;
 		prev->next = next;
 
+		lo_map_remove(&lo->ino_map, inode->fuse_ino);
 		pthread_mutex_unlock(&lo->mutex);
 		close(inode->fd);
 		free(inode);
-
 	} else {
 		pthread_mutex_unlock(&lo->mutex);
 	}
@@ -743,7 +787,11 @@ static void unref_inode(struct lo_data *lo, struct lo_inode *inode, uint64_t n)
 static void lo_forget_one(fuse_req_t req, fuse_ino_t ino, uint64_t nlookup)
 {
 	struct lo_data *lo = lo_data(req);
-	struct lo_inode *inode = lo_inode(req, ino);
+	struct lo_inode *inode;
+
+	inode = lo_inode(req, ino);
+	if (!inode)
+		return;
 
 	if (lo_debug(req)) {
 		fprintf(stderr, "  forget %lli %lli -%lli\n",
@@ -1178,9 +1226,15 @@ static void lo_getxattr(fuse_req_t req, fuse_ino_t ino, const char *name,
 {
 	char *value = NULL;
 	char procname[64];
-	struct lo_inode *inode = lo_inode(req, ino);
+	struct lo_inode *inode;
 	ssize_t ret;
 	int saverr;
+
+	inode = lo_inode(req, ino);
+	if (!inode) {
+		fuse_reply_err(req, EBADF);
+		return;
+	}
 
 	saverr = ENOSYS;
 	if (!lo_data(req)->xattr)
@@ -1234,9 +1288,15 @@ static void lo_listxattr(fuse_req_t req, fuse_ino_t ino, size_t size)
 {
 	char *value = NULL;
 	char procname[64];
-	struct lo_inode *inode = lo_inode(req, ino);
+	struct lo_inode *inode;
 	ssize_t ret;
 	int saverr;
+
+	inode = lo_inode(req, ino);
+	if (!inode) {
+		fuse_reply_err(req, EBADF);
+		return;
+	}
 
 	saverr = ENOSYS;
 	if (!lo_data(req)->xattr)
@@ -1290,9 +1350,15 @@ static void lo_setxattr(fuse_req_t req, fuse_ino_t ino, const char *name,
 			const char *value, size_t size, int flags)
 {
 	char procname[64];
-	struct lo_inode *inode = lo_inode(req, ino);
+	struct lo_inode *inode;
 	ssize_t ret;
 	int saverr;
+
+	inode = lo_inode(req, ino);
+	if (!inode) {
+		fuse_reply_err(req, EBADF);
+		return;
+	}
 
 	saverr = ENOSYS;
 	if (!lo_data(req)->xattr)
@@ -1321,9 +1387,15 @@ out:
 static void lo_removexattr(fuse_req_t req, fuse_ino_t ino, const char *name)
 {
 	char procname[64];
-	struct lo_inode *inode = lo_inode(req, ino);
+	struct lo_inode *inode;
 	ssize_t ret;
 	int saverr;
+
+	inode = lo_inode(req, ino);
+	if (!inode) {
+		fuse_reply_err(req, EBADF);
+		return;
+	}
 
 	saverr = ENOSYS;
 	if (!lo_data(req)->xattr)
@@ -1507,6 +1579,7 @@ int main(int argc, char *argv[])
 	struct fuse_cmdline_opts opts;
 	struct lo_data lo = { .debug = 0,
 	                      .writeback = 0 };
+	struct lo_map_elem *root_elem;
 	int ret = -1;
 
 	/* Don't mask creation mode, kernel already did that */
@@ -1515,7 +1588,17 @@ int main(int argc, char *argv[])
 	pthread_mutex_init(&lo.mutex, NULL);
 	lo.root.next = lo.root.prev = &lo.root;
 	lo.root.fd = -1;
+	lo.root.fuse_ino = FUSE_ROOT_ID;
 	lo.cache = CACHE_NORMAL;
+
+	/* Set up the ino map like this:
+	 * [0] Reserved (will not be used)
+	 * [1] Root inode
+	 */
+	lo_map_init(&lo.ino_map);
+	lo_map_reserve(&lo.ino_map, 0)->in_use = false;
+	root_elem = lo_map_reserve(&lo.ino_map, lo.root.fuse_ino);
+	root_elem->inode = &lo.root;
 
 	if (fuse_parse_cmdline(&args, &opts) != 0)
 		return 1;
@@ -1595,6 +1678,8 @@ err_out2:
 	fuse_session_destroy(se);
 err_out1:
 	fuse_opt_free_args(&args);
+
+	lo_map_destroy(&lo.ino_map);
 
 	if (lo.root.fd >= 0)
 		close(lo.root.fd);
