@@ -34,8 +34,6 @@
  * \include passthrough_ll.c
  */
 
-#define FUSE_USE_VERSION 31
-
 #include "fuse_virtio.h"
 #include "fuse_lowlevel.h"
 #include <unistd.h>
@@ -1887,7 +1885,6 @@ static void lo_destroy(void *userdata, struct fuse_session *se)
         }
 	unref_all_inodes(lo);
 }
-
 
 static struct fuse_lowlevel_ops lo_oper = {
 	.init		= lo_init,
