@@ -120,6 +120,7 @@ vhost-user-scsi.o-libs := $(LIBISCSI_LIBS)
 vhost-user-scsi-obj-y = contrib/vhost-user-scsi/
 vhost-user-blk-obj-y = contrib/vhost-user-blk/
 rdmacm-mux-obj-y = contrib/rdmacm-mux/
+virtiofsd-obj-y = contrib/virtiofsd/
 
 ######################################################################
 trace-events-subdirs =
