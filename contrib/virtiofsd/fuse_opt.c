@@ -9,7 +9,6 @@
   See the file COPYING.LIB
 */
 
-#include "config.h"
 #include "fuse_opt.h"
 #include "fuse_misc.h"
 
