@@ -8,9 +8,8 @@
   See the file COPYING.LIB
 */
 
-#include "config.h"
-#include "fuse_lowlevel.h"
 #include "fuse_i.h"
+#include "fuse_lowlevel.h"
 
 #include <stdio.h>
 #include <string.h>

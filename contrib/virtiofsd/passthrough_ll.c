@@ -34,12 +34,9 @@
  * \include passthrough_ll.c
  */
 
-#define _GNU_SOURCE
 #define FUSE_USE_VERSION 31
 
-#include "config.h"
-
-#include <fuse_lowlevel.h>
+#include "fuse_lowlevel.h"
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -1223,7 +1220,6 @@ int main(int argc, char *argv[])
 		ret = 0;
 		goto err_out1;
 	} else if (opts.show_version) {
-		printf("FUSE library version %s\n", fuse_pkgversion());
 		fuse_lowlevel_version();
 		ret = 0;
 		goto err_out1;
