@@ -276,88 +276,6 @@ int fuse_daemonize(int foreground)
 	return 0;
 }
 
-int fuse_main_real(int argc, char *argv[], const struct fuse_operations *op,
-		   size_t op_size, void *user_data)
-{
-	struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
-	struct fuse *fuse;
-	struct fuse_cmdline_opts opts;
-	int res;
-
-	if (fuse_parse_cmdline(&args, &opts) != 0)
-		return 1;
-
-	if (opts.show_version) {
-		printf("FUSE library version %s\n", PACKAGE_VERSION);
-		fuse_lowlevel_version();
-		res = 0;
-		goto out1;
-	}
-
-	if (opts.show_help) {
-		if(args.argv[0][0] != '\0')
-			printf("usage: %s [options] <mountpoint>\n\n",
-			       args.argv[0]);
-		printf("FUSE options:\n");
-		fuse_cmdline_help();
-		fuse_lib_help(&args);
-		res = 0;
-		goto out1;
-	}
-
-	if (!opts.show_help &&
-	    !opts.mountpoint) {
-		fprintf(stderr, "error: no mountpoint specified\n");
-		res = 2;
-		goto out1;
-	}
-
-
-	fuse = fuse_new_31(&args, op, op_size, user_data);
-	if (fuse == NULL) {
-		res = 3;
-		goto out1;
-	}
-
-	if (fuse_mount(fuse,opts.mountpoint) != 0) {
-		res = 4;
-		goto out2;
-	}
-
-	if (fuse_daemonize(opts.foreground) != 0) {
-		res = 5;
-		goto out3;
-	}
-
-	struct fuse_session *se = fuse_get_session(fuse);
-	if (fuse_set_signal_handlers(se) != 0) {
-		res = 6;
-		goto out3;
-	}
-
-	if (opts.singlethread)
-		res = fuse_loop(fuse);
-	else {
-		struct fuse_loop_config loop_config;
-		loop_config.clone_fd = opts.clone_fd;
-		loop_config.max_idle_threads = opts.max_idle_threads;
-		res = fuse_loop_mt_32(fuse, &loop_config);
-	}
-	if (res)
-		res = 7;
-
-	fuse_remove_signal_handlers(se);
-out3:
-	fuse_unmount(fuse);
-out2:
-	fuse_destroy(fuse);
-out1:
-	free(opts.mountpoint);
-	fuse_opt_free_args(&args);
-	return res;
-}
-
-
 void fuse_apply_conn_info_opts(struct fuse_conn_info_opts *opts,
 			       struct fuse_conn_info *conn)
 {
@@ -419,22 +337,4 @@ struct fuse_conn_info_opts* fuse_parse_conn_info_opts(struct fuse_args *args)
 		return NULL;
 	}
 	return opts;
-}
-
-int fuse_open_channel(const char *mountpoint, const char* options)
-{
-	struct mount_opts *opts = NULL;
-	int fd = -1;
-	const char *argv[] = { "", "-o", options };
-	int argc = sizeof(argv) / sizeof(argv[0]);
-	struct fuse_args args = FUSE_ARGS_INIT(argc, (char**) argv);
-
-	opts = parse_mount_opts(&args);
-	if (opts == NULL)
-		return -1;
-
-	fd = fuse_kern_mount(mountpoint, opts);
-	destroy_mount_opts(opts);
-
-	return fd;
 }
