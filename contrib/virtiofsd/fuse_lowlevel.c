@@ -9,14 +9,10 @@
   See the file COPYING.LIB
 */
 
-#define _GNU_SOURCE
-
-#include "config.h"
 #include "fuse_i.h"
 #include "fuse_kernel.h"
 #include "fuse_opt.h"
 #include "fuse_misc.h"
-#include "mount_util.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -1938,7 +1934,6 @@ static struct {
 	[FUSE_READDIRPLUS] = { do_readdirplus,	"READDIRPLUS"},
 	[FUSE_RENAME2]     = { do_rename2,      "RENAME2"    },
 	[FUSE_COPY_FILE_RANGE] = { do_copy_file_range, "COPY_FILE_RANGE" },
-	[CUSE_INIT]	   = { cuse_lowlevel_init, "CUSE_INIT"   },
 };
 
 #define FUSE_MAXOP (sizeof(fuse_ll_ops) / sizeof(fuse_ll_ops[0]))
@@ -2102,7 +2097,6 @@ void fuse_lowlevel_version(void)
 {
 	printf("using FUSE kernel interface version %i.%i\n",
 	       FUSE_KERNEL_VERSION, FUSE_KERNEL_MINOR_VERSION);
-	fuse_mount_version();
 }
 
 void fuse_lowlevel_help(void)
@@ -2184,9 +2178,6 @@ struct fuse_session *fuse_session_new(struct fuse_args *args,
 		fprintf(stderr, "%s'\n", args->argv[i]);
 		goto out4;
 	}
-
-	if (se->debug)
-		fprintf(stderr, "FUSE library version: %s\n", PACKAGE_VERSION);
 
 	se->bufsize = KERNEL_BUF_PAGES * getpagesize() + HEADER_SIZE;
 
