@@ -28,12 +28,6 @@
 #include <assert.h>
 #include <sys/file.h>
 
-#ifndef F_LINUX_SPECIFIC_BASE
-#define F_LINUX_SPECIFIC_BASE       1024
-#endif
-#ifndef F_SETPIPE_SZ
-#define F_SETPIPE_SZ	(F_LINUX_SPECIFIC_BASE + 7)
-#endif
 
 
 #define PARAM(inarg) (((char *)(inarg)) + sizeof(*(inarg)))
@@ -184,19 +178,7 @@ static int fuse_send_msg(struct fuse_session *se, struct fuse_chan *ch,
 		}
 	}
 
-	ssize_t res = writev(ch ? ch->fd : se->fd,
-			     iov, count);
-	int err = errno;
-
-	if (res == -1) {
-		assert(se != NULL);
-
-		/* ENOENT means the operation was interrupted */
-		if (!fuse_session_exited(se) && err != ENOENT)
-			perror("fuse: writing device");
-		return -err;
-	}
-
+        abort(); /* virtio should have taken it before here */
 	return 0;
 }
 
@@ -478,8 +460,6 @@ static int fuse_send_data_iov_fallback(struct fuse_session *se,
 				       struct fuse_bufvec *buf,
 				       size_t len)
 {
-	struct fuse_bufvec mem_buf = FUSE_BUFVEC_INIT(len);
-	void *mbuf;
 	int res;
 
 	/* Optimize common case */
@@ -494,318 +474,10 @@ static int fuse_send_data_iov_fallback(struct fuse_session *se,
 		return fuse_send_msg(se, ch, iov, iov_count);
 	}
 
-	res = posix_memalign(&mbuf, pagesize, len);
-	if (res != 0)
-		return res;
-
-	mem_buf.buf[0].mem = mbuf;
-	res = fuse_buf_copy(&mem_buf, buf, 0);
-	if (res < 0) {
-		free(mbuf);
-		return -res;
-	}
-	len = res;
-
-	iov[iov_count].iov_base = mbuf;
-	iov[iov_count].iov_len = len;
-	iov_count++;
-	res = fuse_send_msg(se, ch, iov, iov_count);
-	free(mbuf);
-
-	return res;
-}
-
-struct fuse_ll_pipe {
-	size_t size;
-	int can_grow;
-	int pipe[2];
-};
-
-static void fuse_ll_pipe_free(struct fuse_ll_pipe *llp)
-{
-	close(llp->pipe[0]);
-	close(llp->pipe[1]);
-	free(llp);
-}
-
-#ifdef HAVE_SPLICE
-#if !defined(HAVE_PIPE2) || !defined(O_CLOEXEC)
-static int fuse_pipe(int fds[2])
-{
-	int rv = pipe(fds);
-
-	if (rv == -1)
-		return rv;
-
-	if (fcntl(fds[0], F_SETFL, O_NONBLOCK) == -1 ||
-	    fcntl(fds[1], F_SETFL, O_NONBLOCK) == -1 ||
-	    fcntl(fds[0], F_SETFD, FD_CLOEXEC) == -1 ||
-	    fcntl(fds[1], F_SETFD, FD_CLOEXEC) == -1) {
-		close(fds[0]);
-		close(fds[1]);
-		rv = -1;
-	}
-	return rv;
-}
-#else
-static int fuse_pipe(int fds[2])
-{
-	return pipe2(fds, O_CLOEXEC | O_NONBLOCK);
-}
-#endif
-
-static struct fuse_ll_pipe *fuse_ll_get_pipe(struct fuse_session *se)
-{
-	struct fuse_ll_pipe *llp = pthread_getspecific(se->pipe_key);
-	if (llp == NULL) {
-		int res;
-
-		llp = malloc(sizeof(struct fuse_ll_pipe));
-		if (llp == NULL)
-			return NULL;
-
-		res = fuse_pipe(llp->pipe);
-		if (res == -1) {
-			free(llp);
-			return NULL;
-		}
-
-		/*
-		 *the default size is 16 pages on linux
-		 */
-		llp->size = pagesize * 16;
-		llp->can_grow = 1;
-
-		pthread_setspecific(se->pipe_key, llp);
-	}
-
-	return llp;
-}
-#endif
-
-static void fuse_ll_clear_pipe(struct fuse_session *se)
-{
-	struct fuse_ll_pipe *llp = pthread_getspecific(se->pipe_key);
-	if (llp) {
-		pthread_setspecific(se->pipe_key, NULL);
-		fuse_ll_pipe_free(llp);
-	}
-}
-
-#if defined(HAVE_SPLICE) && defined(HAVE_VMSPLICE)
-static int read_back(int fd, char *buf, size_t len)
-{
-	int res;
-
-	res = read(fd, buf, len);
-	if (res == -1) {
-		fprintf(stderr, "fuse: internal error: failed to read back from pipe: %s\n", strerror(errno));
-		return -EIO;
-	}
-	if (res != len) {
-		fprintf(stderr, "fuse: internal error: short read back from pipe: %i from %zi\n", res, len);
-		return -EIO;
-	}
+        abort(); /* Will have taken vhost path */
 	return 0;
 }
 
-static int fuse_send_data_iov(struct fuse_session *se, struct fuse_chan *ch,
-			       struct iovec *iov, int iov_count,
-			       struct fuse_bufvec *buf, unsigned int flags)
-{
-	int res;
-	size_t len = fuse_buf_size(buf);
-	struct fuse_out_header *out = iov[0].iov_base;
-	struct fuse_ll_pipe *llp;
-	int splice_flags;
-	size_t pipesize;
-	size_t total_fd_size;
-	size_t idx;
-	size_t headerlen;
-	struct fuse_bufvec pipe_buf = FUSE_BUFVEC_INIT(len);
-
-	if (se->broken_splice_nonblock)
-		goto fallback;
-
-	if (flags & FUSE_BUF_NO_SPLICE)
-		goto fallback;
-
-	total_fd_size = 0;
-	for (idx = buf->idx; idx < buf->count; idx++) {
-		if (buf->buf[idx].flags & FUSE_BUF_IS_FD) {
-			total_fd_size = buf->buf[idx].size;
-			if (idx == buf->idx)
-				total_fd_size -= buf->off;
-		}
-	}
-	if (total_fd_size < 2 * pagesize)
-		goto fallback;
-
-	if (se->conn.proto_minor < 14 ||
-	    !(se->conn.want & FUSE_CAP_SPLICE_WRITE))
-		goto fallback;
-
-	llp = fuse_ll_get_pipe(se);
-	if (llp == NULL)
-		goto fallback;
-
-
-	headerlen = iov_length(iov, iov_count);
-
-	out->len = headerlen + len;
-
-	/*
-	 * Heuristic for the required pipe size, does not work if the
-	 * source contains less than page size fragments
-	 */
-	pipesize = pagesize * (iov_count + buf->count + 1) + out->len;
-
-	if (llp->size < pipesize) {
-		if (llp->can_grow) {
-			res = fcntl(llp->pipe[0], F_SETPIPE_SZ, pipesize);
-			if (res == -1) {
-				llp->can_grow = 0;
-				goto fallback;
-			}
-			llp->size = res;
-		}
-		if (llp->size < pipesize)
-			goto fallback;
-	}
-
-
-	res = vmsplice(llp->pipe[1], iov, iov_count, SPLICE_F_NONBLOCK);
-	if (res == -1)
-		goto fallback;
-
-	if (res != headerlen) {
-		res = -EIO;
-		fprintf(stderr, "fuse: short vmsplice to pipe: %u/%zu\n", res,
-			headerlen);
-		goto clear_pipe;
-	}
-
-	pipe_buf.buf[0].flags = FUSE_BUF_IS_FD;
-	pipe_buf.buf[0].fd = llp->pipe[1];
-
-	res = fuse_buf_copy(&pipe_buf, buf,
-			    FUSE_BUF_FORCE_SPLICE | FUSE_BUF_SPLICE_NONBLOCK);
-	if (res < 0) {
-		if (res == -EAGAIN || res == -EINVAL) {
-			/*
-			 * Should only get EAGAIN on kernels with
-			 * broken SPLICE_F_NONBLOCK support (<=
-			 * 2.6.35) where this error or a short read is
-			 * returned even if the pipe itself is not
-			 * full
-			 *
-			 * EINVAL might mean that splice can't handle
-			 * this combination of input and output.
-			 */
-			if (res == -EAGAIN)
-				se->broken_splice_nonblock = 1;
-
-			pthread_setspecific(se->pipe_key, NULL);
-			fuse_ll_pipe_free(llp);
-			goto fallback;
-		}
-		res = -res;
-		goto clear_pipe;
-	}
-
-	if (res != 0 && res < len) {
-		struct fuse_bufvec mem_buf = FUSE_BUFVEC_INIT(len);
-		void *mbuf;
-		size_t now_len = res;
-		/*
-		 * For regular files a short count is either
-		 *  1) due to EOF, or
-		 *  2) because of broken SPLICE_F_NONBLOCK (see above)
-		 *
-		 * For other inputs it's possible that we overflowed
-		 * the pipe because of small buffer fragments.
-		 */
-
-		res = posix_memalign(&mbuf, pagesize, len);
-		if (res != 0)
-			goto clear_pipe;
-
-		mem_buf.buf[0].mem = mbuf;
-		mem_buf.off = now_len;
-		res = fuse_buf_copy(&mem_buf, buf, 0);
-		if (res > 0) {
-			char *tmpbuf;
-			size_t extra_len = res;
-			/*
-			 * Trickiest case: got more data.  Need to get
-			 * back the data from the pipe and then fall
-			 * back to regular write.
-			 */
-			tmpbuf = malloc(headerlen);
-			if (tmpbuf == NULL) {
-				free(mbuf);
-				res = ENOMEM;
-				goto clear_pipe;
-			}
-			res = read_back(llp->pipe[0], tmpbuf, headerlen);
-			free(tmpbuf);
-			if (res != 0) {
-				free(mbuf);
-				goto clear_pipe;
-			}
-			res = read_back(llp->pipe[0], mbuf, now_len);
-			if (res != 0) {
-				free(mbuf);
-				goto clear_pipe;
-			}
-			len = now_len + extra_len;
-			iov[iov_count].iov_base = mbuf;
-			iov[iov_count].iov_len = len;
-			iov_count++;
-			res = fuse_send_msg(se, ch, iov, iov_count);
-			free(mbuf);
-			return res;
-		}
-		free(mbuf);
-		res = now_len;
-	}
-	len = res;
-	out->len = headerlen + len;
-
-	if (se->debug) {
-		fprintf(stderr,
-			"   unique: %llu, success, outsize: %i (splice)\n",
-			(unsigned long long) out->unique, out->len);
-	}
-
-	splice_flags = 0;
-	if ((flags & FUSE_BUF_SPLICE_MOVE) &&
-	    (se->conn.want & FUSE_CAP_SPLICE_MOVE))
-		splice_flags |= SPLICE_F_MOVE;
-
-	res = splice(llp->pipe[0], NULL, ch ? ch->fd : se->fd,
-		     NULL, out->len, splice_flags);
-	if (res == -1) {
-		res = -errno;
-		perror("fuse: splice from pipe");
-		goto clear_pipe;
-	}
-	if (res != out->len) {
-		res = -EIO;
-		fprintf(stderr, "fuse: short splice from pipe: %u/%u\n",
-			res, out->len);
-		goto clear_pipe;
-	}
-	return 0;
-
-clear_pipe:
-	fuse_ll_clear_pipe(se);
-	return res;
-
-fallback:
-	return fuse_send_data_iov_fallback(se, ch, iov, iov_count, buf, len);
-}
-#else
 static int fuse_send_data_iov(struct fuse_session *se, struct fuse_chan *ch,
 			       struct iovec *iov, int iov_count,
 			       struct fuse_bufvec *buf, unsigned int flags)
@@ -815,7 +487,6 @@ static int fuse_send_data_iov(struct fuse_session *se, struct fuse_chan *ch,
 
 	return fuse_send_data_iov_fallback(se, ch, iov, iov_count, buf, len);
 }
-#endif
 
 int fuse_reply_data(fuse_req_t req, struct fuse_bufvec *bufv,
 		    enum fuse_buf_copy_flags flags)
@@ -1364,16 +1035,11 @@ static void do_write_buf(fuse_req_t req, fuse_ino_t nodeid, const void *inarg,
 	if (bufv.buf[0].size < arg->size) {
 		fprintf(stderr, "fuse: do_write_buf: buffer size too small\n");
 		fuse_reply_err(req, EIO);
-		goto out;
+		return;
 	}
 	bufv.buf[0].size = arg->size;
 
 	se->op.write_buf(req, nodeid, &bufv, arg->offset, &fi);
-
-out:
-	/* Need to reset the pipe if ->write_buf() didn't consume all data */
-	if ((ibuf->flags & FUSE_BUF_IS_FD) && bufv.idx < bufv.count)
-		fuse_ll_clear_pipe(se);
 }
 
 static void do_flush(fuse_req_t req, fuse_ino_t nodeid, const void *inarg)
@@ -1968,17 +1634,6 @@ static void do_init(fuse_req_t req, fuse_ino_t nodeid, const void *inarg)
 		return;
 	}
 
-	unsigned max_read_mo = get_max_read(se->mo);
-	if (se->conn.max_read != max_read_mo) {
-		fprintf(stderr, "fuse: error: init() and fuse_session_new() "
-			"requested different maximum read size (%u vs %u)\n",
-			se->conn.max_read, max_read_mo);
-		fuse_reply_err(req, EPROTO);
-		se->error = -EPROTO;
-		fuse_session_exit(se);
-		return;
-	}
-
 	/* Always enable big writes, this is superseded
 	   by the max_write option */
 	outarg.flags |= FUSE_BIG_WRITES;
@@ -2286,8 +1941,6 @@ static void fuse_ll_retrieve_reply(struct fuse_notify_req *nreq,
 	}
 out:
 	free(rreq);
-	if ((ibuf->flags & FUSE_BUF_IS_FD) && bufv.idx < bufv.count)
-		fuse_ll_clear_pipe(se);
 }
 
 int fuse_lowlevel_notify_retrieve(struct fuse_session *se, fuse_ino_t ino,
@@ -2465,25 +2118,7 @@ void fuse_session_process_buf_int(struct fuse_session *se,
 	int err;
 	int res;
 
-	if (buf->flags & FUSE_BUF_IS_FD) {
-		if (buf->size < tmpbuf.buf[0].size)
-			tmpbuf.buf[0].size = buf->size;
-
-		mbuf = malloc(tmpbuf.buf[0].size);
-		if (mbuf == NULL) {
-			fprintf(stderr, "fuse: failed to allocate header\n");
-			goto clear_pipe;
-		}
-		tmpbuf.buf[0].mem = mbuf;
-
-		res = fuse_ll_copy_from_pipe(&tmpbuf, &bufv);
-		if (res < 0)
-			goto clear_pipe;
-
-		in = mbuf;
-	} else {
-		in = buf->mem;
-	}
+	in = buf->mem;
 
 	if (se->debug) {
 		fprintf(stderr,
@@ -2505,7 +2140,7 @@ void fuse_session_process_buf_int(struct fuse_session *se,
 		};
 
 		fuse_send_msg(se, ch, &iov, 1);
-		goto clear_pipe;
+		goto out_free;
 	}
 
 	req->unique = in->unique;
@@ -2584,10 +2219,6 @@ out_free:
 
 reply_err:
 	fuse_reply_err(req, err);
-clear_pipe:
-	if (buf->flags & FUSE_BUF_IS_FD)
-		fuse_ll_clear_pipe(se);
-	goto out_free;
 }
 
 #define LL_OPTION(n,o,v) \
@@ -2620,186 +2251,17 @@ void fuse_lowlevel_help(void)
 
 void fuse_session_destroy(struct fuse_session *se)
 {
-	struct fuse_ll_pipe *llp;
-
 	if (se->got_init && !se->got_destroy) {
 		if (se->op.destroy)
 			se->op.destroy(se->userdata);
 	}
-	llp = pthread_getspecific(se->pipe_key);
-	if (llp != NULL)
-		fuse_ll_pipe_free(llp);
-	pthread_key_delete(se->pipe_key);
 	pthread_mutex_destroy(&se->lock);
 	free(se->cuse_data);
 	if (se->fd != -1)
 		close(se->fd);
-	destroy_mount_opts(se->mo);
 	free(se);
 }
 
-
-static void fuse_ll_pipe_destructor(void *data)
-{
-	struct fuse_ll_pipe *llp = data;
-	fuse_ll_pipe_free(llp);
-}
-
-int fuse_session_receive_buf(struct fuse_session *se, struct fuse_buf *buf)
-{
-	return fuse_session_receive_buf_int(se, buf, NULL);
-}
-
-int fuse_session_receive_buf_int(struct fuse_session *se, struct fuse_buf *buf,
-				 struct fuse_chan *ch)
-{
-	int err;
-	ssize_t res;
-#ifdef HAVE_SPLICE
-	size_t bufsize = se->bufsize;
-	struct fuse_ll_pipe *llp;
-	struct fuse_buf tmpbuf;
-
-	if (se->conn.proto_minor < 14 || !(se->conn.want & FUSE_CAP_SPLICE_READ))
-		goto fallback;
-
-	llp = fuse_ll_get_pipe(se);
-	if (llp == NULL)
-		goto fallback;
-
-	if (llp->size < bufsize) {
-		if (llp->can_grow) {
-			res = fcntl(llp->pipe[0], F_SETPIPE_SZ, bufsize);
-			if (res == -1) {
-				llp->can_grow = 0;
-				goto fallback;
-			}
-			llp->size = res;
-		}
-		if (llp->size < bufsize)
-			goto fallback;
-	}
-
-	res = splice(ch ? ch->fd : se->fd,
-		     NULL, llp->pipe[1], NULL, bufsize, 0);
-	err = errno;
-
-	if (fuse_session_exited(se))
-		return 0;
-
-	if (res == -1) {
-		if (err == ENODEV) {
-			/* Filesystem was unmounted, or connection was aborted
-			   via /sys/fs/fuse/connections */
-			fuse_session_exit(se);
-			return 0;
-		}
-		if (err != EINTR && err != EAGAIN)
-			perror("fuse: splice from device");
-		return -err;
-	}
-
-	if (res < sizeof(struct fuse_in_header)) {
-		fprintf(stderr, "short splice from fuse device\n");
-		return -EIO;
-	}
-
-	tmpbuf = (struct fuse_buf) {
-		.size = res,
-		.flags = FUSE_BUF_IS_FD,
-		.fd = llp->pipe[0],
-	};
-
-	/*
-	 * Don't bother with zero copy for small requests.
-	 * fuse_loop_mt() needs to check for FORGET so this more than
-	 * just an optimization.
-	 */
-	if (res < sizeof(struct fuse_in_header) +
-	    sizeof(struct fuse_write_in) + pagesize) {
-		struct fuse_bufvec src = { .buf[0] = tmpbuf, .count = 1 };
-		struct fuse_bufvec dst = { .count = 1 };
-
-		if (!buf->mem) {
-			buf->mem = malloc(se->bufsize);
-			if (!buf->mem) {
-				fprintf(stderr,
-					"fuse: failed to allocate read buffer\n");
-				return -ENOMEM;
-			}
-		}
-		buf->size = se->bufsize;
-		buf->flags = 0;
-		dst.buf[0] = *buf;
-
-		res = fuse_buf_copy(&dst, &src, 0);
-		if (res < 0) {
-			fprintf(stderr, "fuse: copy from pipe: %s\n",
-				strerror(-res));
-			fuse_ll_clear_pipe(se);
-			return res;
-		}
-		if (res < tmpbuf.size) {
-			fprintf(stderr, "fuse: copy from pipe: short read\n");
-			fuse_ll_clear_pipe(se);
-			return -EIO;
-		}
-		assert(res == tmpbuf.size);
-
-	} else {
-		/* Don't overwrite buf->mem, as that would cause a leak */
-		buf->fd = tmpbuf.fd;
-		buf->flags = tmpbuf.flags;
-	}
-	buf->size = tmpbuf.size;
-
-	return res;
-
-fallback:
-#endif
-	if (!buf->mem) {
-		buf->mem = malloc(se->bufsize);
-		if (!buf->mem) {
-			fprintf(stderr,
-				"fuse: failed to allocate read buffer\n");
-			return -ENOMEM;
-		}
-	}
-
-restart:
-	res = read(ch ? ch->fd : se->fd, buf->mem, se->bufsize);
-	err = errno;
-
-	if (fuse_session_exited(se))
-		return 0;
-	if (res == -1) {
-		/* ENOENT means the operation was interrupted, it's safe
-		   to restart */
-		if (err == ENOENT)
-			goto restart;
-
-		if (err == ENODEV) {
-			/* Filesystem was unmounted, or connection was aborted
-			   via /sys/fs/fuse/connections */
-			fuse_session_exit(se);
-			return 0;
-		}
-		/* Errors occurring during normal operation: EINTR (read
-		   interrupted), EAGAIN (nonblocking I/O), ENODEV (filesystem
-		   umounted) */
-		if (err != EINTR && err != EAGAIN)
-			perror("fuse: reading device");
-		return -err;
-	}
-	if ((size_t) res < sizeof(struct fuse_in_header)) {
-		fprintf(stderr, "short read on fuse device\n");
-		return -EIO;
-	}
-
-	buf->size = res;
-
-	return res;
-}
 
 #define KERNEL_BUF_PAGES 32
 
@@ -2810,9 +2272,7 @@ struct fuse_session *fuse_session_new(struct fuse_args *args,
 				      const struct fuse_lowlevel_ops *op,
 				      size_t op_size, void *userdata)
 {
-	int err;
 	struct fuse_session *se;
-	struct mount_opts *mo;
 
 	if (sizeof(struct fuse_lowlevel_ops) < op_size) {
 		fprintf(stderr, "fuse: warning: library too old, some operations may not work\n");
@@ -2846,10 +2306,6 @@ struct fuse_session *fuse_session_new(struct fuse_args *args,
 		if(fuse_opt_add_arg(args, "-oallow_other") == -1)
 			goto out2;
 	}
-	mo = parse_mount_opts(args);
-	if (mo == NULL)
-		goto out3;
-
 	if(args->argc == 1 &&
 	   args->argv[0][0] == '-') {
 		fprintf(stderr, "fuse: warning: argv[0] looks like an option, but "
@@ -2874,26 +2330,14 @@ struct fuse_session *fuse_session_new(struct fuse_args *args,
 	se->notify_ctr = 1;
 	fuse_mutex_init(&se->lock);
 
-	err = pthread_key_create(&se->pipe_key, fuse_ll_pipe_destructor);
-	if (err) {
-		fprintf(stderr, "fuse: failed to create thread specific key: %s\n",
-			strerror(err));
-		goto out5;
-	}
-
 	memcpy(&se->op, op, op_size);
 	se->owner = getuid();
 	se->userdata = userdata;
 
-	se->mo = mo;
 	return se;
 
-out5:
-	pthread_mutex_destroy(&se->lock);
 out4:
 	fuse_opt_free_args(args);
-out3:
-	free(mo);
 out2:
 	free(se);
 out1:
@@ -2957,11 +2401,6 @@ int fuse_session_fd(struct fuse_session *se)
 
 void fuse_session_unmount(struct fuse_session *se)
 {
-	if (se->mountpoint != NULL) {
-		fuse_kern_unmount(se->mountpoint, se->fd);
-		free(se->mountpoint);
-		se->mountpoint = NULL;
-	}
 }
 
 #ifdef linux
