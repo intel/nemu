@@ -171,34 +171,6 @@ static int fuse_helper_opt_proc(void *data, const char *arg, int key,
 	}
 }
 
-/* Under FreeBSD, there is no subtype option so this
-   function actually sets the fsname */
-static int add_default_subtype(const char *progname, struct fuse_args *args)
-{
-	int res;
-	char *subtype_opt;
-
-	const char *basename = strrchr(progname, '/');
-	if (basename == NULL)
-		basename = progname;
-	else if (basename[1] != '\0')
-		basename++;
-
-	subtype_opt = (char *) malloc(strlen(basename) + 64);
-	if (subtype_opt == NULL) {
-		fprintf(stderr, "fuse: memory allocation failed\n");
-		return -1;
-	}
-#ifdef __FreeBSD__
-	sprintf(subtype_opt, "-ofsname=%s", basename);
-#else
-	sprintf(subtype_opt, "-osubtype=%s", basename);
-#endif
-	res = fuse_opt_add_arg(args, subtype_opt);
-	free(subtype_opt);
-	return res;
-}
-
 int fuse_parse_cmdline(struct fuse_args *args,
 		       struct fuse_cmdline_opts *opts)
 {
@@ -209,14 +181,6 @@ int fuse_parse_cmdline(struct fuse_args *args,
 	if (fuse_opt_parse(args, opts, fuse_helper_opts,
 			   fuse_helper_opt_proc) == -1)
 		return -1;
-
-	/* *Linux*: if neither -o subtype nor -o fsname are specified,
-	   set subtype to program's basename.
-	   *FreeBSD*: if fsname is not specified, set to program's
-	   basename. */
-	if (!opts->nodefault_subtype)
-		if (add_default_subtype(args->argv[0], args) == -1)
-			return -1;
 
 	return 0;
 }
