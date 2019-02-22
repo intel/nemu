@@ -970,6 +970,27 @@ static void unref_inode(struct lo_data *lo, struct lo_inode *inode, uint64_t n)
 	}
 }
 
+static int unref_all_inodes_cb(gpointer key, gpointer value,
+			       gpointer user_data)
+{
+	struct lo_inode *inode  = value;
+	struct lo_data *lo = user_data;
+
+	inode->refcount = 0;
+	lo_map_remove(&lo->ino_map, inode->fuse_ino);
+	close(inode->fd);
+
+	return TRUE;
+}
+
+static void unref_all_inodes(struct lo_data *lo)
+{
+	pthread_mutex_lock(&lo->mutex);
+	g_hash_table_foreach_remove(lo->inodes, unref_all_inodes_cb, lo);
+	pthread_mutex_unlock(&lo->mutex);
+
+}
+
 static void lo_forget_one(fuse_req_t req, fuse_ino_t ino, uint64_t nlookup)
 {
 	struct lo_data *lo = lo_data(req);
@@ -1788,6 +1809,8 @@ static void lo_removemapping(fuse_req_t req, struct fuse_session *se,
 
 static void lo_destroy(void *userdata, struct fuse_session *se)
 {
+	struct lo_data *lo = (struct lo_data*) userdata;
+
         if (fuse_lowlevel_is_virtio(se)) {
                 VhostUserFSSlaveMsg msg = { 0 };
 
@@ -1797,6 +1820,7 @@ static void lo_destroy(void *userdata, struct fuse_session *se)
                         fprintf(stderr, "%s: unmap during destroy failed\n", __func__);
                 }
         }
+	unref_all_inodes(lo);
 }
 
 
