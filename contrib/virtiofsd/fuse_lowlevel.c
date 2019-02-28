@@ -1026,7 +1026,8 @@ static void do_write(fuse_req_t req, fuse_ino_t nodeid, const void *inarg)
 		fuse_reply_err(req, ENOSYS);
 }
 
-static void do_write_buf(fuse_req_t req, fuse_ino_t nodeid, const void *inarg,
+static void do_write_buf(fuse_req_t req, fuse_ino_t nodeid,
+			 struct fuse_mbuf_iter *iter,
 			 struct fuse_bufvec *ibufv)
 {
 	struct fuse_session *se = req->se;
@@ -1035,40 +1036,48 @@ static void do_write_buf(fuse_req_t req, fuse_ino_t nodeid, const void *inarg,
 		.buf[0] = ibufv->buf[0],
 		.count = 1,
 	};
-	struct fuse_write_in *arg = (struct fuse_write_in *) inarg;
+	struct fuse_write_in *arg;
+	size_t arg_size = sizeof(*arg);
 	struct fuse_file_info fi;
 
 	memset(&fi, 0, sizeof(fi));
+
+	if (se->conn.proto_minor < 9) {
+		arg_size = FUSE_COMPAT_WRITE_IN_SIZE;
+	}
+
+	arg = fuse_mbuf_iter_advance(iter, arg_size);
+	if (!arg) {
+		fuse_reply_err(req, EINVAL);
+		return;
+	}
+
+	/* Only access non-compat fields here! */
+	if (se->conn.proto_minor >= 9) {
+		fi.lock_owner = arg->lock_owner;
+		fi.flags = arg->flags;
+	}
+
 	fi.fh = arg->fh;
 	fi.writepage = arg->write_flags & 1;
 
         if (ibufv->count == 1) {
-        	if (se->conn.proto_minor < 9) {
-        		tmpbufv.buf[0].mem = ((char *) arg) + FUSE_COMPAT_WRITE_IN_SIZE;
-        		tmpbufv.buf[0].size -= sizeof(struct fuse_in_header) +
-        			FUSE_COMPAT_WRITE_IN_SIZE;
-        		assert(!(tmpbufv.buf[0].flags & FUSE_BUF_IS_FD));
-        	} else {
-        		fi.lock_owner = arg->lock_owner;
-        		fi.flags = arg->flags;
-        		if (!(tmpbufv.buf[0].flags & FUSE_BUF_IS_FD))
-        			tmpbufv.buf[0].mem = PARAM(arg);
-
-        		tmpbufv.buf[0].size -= sizeof(struct fuse_in_header) +
-        			sizeof(struct fuse_write_in);
-        	}
-        	if (tmpbufv.buf[0].size < arg->size) {
-        		fprintf(stderr, "fuse: do_write_buf: buffer size too small\n");
-        		fuse_reply_err(req, EIO);
-        		return;
-        	}
-        	tmpbufv.buf[0].size = arg->size;
+		assert(!(tmpbufv.buf[0].flags & FUSE_BUF_IS_FD));
+		tmpbufv.buf[0].mem = ((char *) arg) + arg_size;
+		tmpbufv.buf[0].size -= sizeof(struct fuse_in_header) +
+				       arg_size;
                 pbufv = &tmpbufv;
         } else {
                 // Input bufv contains the headers in the first element
                 // and the data in the rest, we need to skip that first element
                 ibufv->buf[0].size = 0;
         }
+
+	if (fuse_buf_size(pbufv) != arg->size) {
+		fprintf(stderr, "fuse: do_write_buf: buffer size doesn't match arg->size\n");
+		fuse_reply_err(req, EIO);
+		return;
+	}
 
 	se->op.write_buf(req, nodeid, pbufv, arg->offset, &fi);
 }
@@ -2055,12 +2064,17 @@ void fuse_session_process_buf_int(struct fuse_session *se,
 				  struct fuse_bufvec *bufv, struct fuse_chan *ch)
 {
 	const struct fuse_buf *buf = bufv->buf;
+	struct fuse_mbuf_iter iter = FUSE_MBUF_ITER_INIT(buf);
 	struct fuse_in_header *in;
 	const void *inarg;
 	struct fuse_req *req;
 	int err;
 
-	in = buf->mem;
+	/* The first buffer must be a memory buffer */
+	assert(!(buf->flags & FUSE_BUF_IS_FD));
+
+	in = fuse_mbuf_iter_advance(&iter, sizeof(*in));
+	assert(in); /* caller guarantees the input buffer is large enough */
 
 	if (se->debug) {
 		fprintf(stderr,
@@ -2140,7 +2154,7 @@ void fuse_session_process_buf_int(struct fuse_session *se,
 
 	inarg = (void *) &in[1];
 	if (in->opcode == FUSE_WRITE && se->op.write_buf)
-		do_write_buf(req, in->nodeid, inarg, bufv);
+		do_write_buf(req, in->nodeid, &iter, bufv);
 	else
 		fuse_ll_ops[in->opcode].func(req, in->nodeid, inarg);
 	return;
