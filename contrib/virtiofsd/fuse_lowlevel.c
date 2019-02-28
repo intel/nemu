@@ -2037,21 +2037,6 @@ static const char *opname(enum fuse_opcode opcode)
 		return fuse_ll_ops[opcode].name;
 }
 
-static int fuse_ll_copy_from_pipe(struct fuse_bufvec *dst,
-				  struct fuse_bufvec *src)
-{
-	ssize_t res = fuse_buf_copy(dst, src, 0);
-	if (res < 0) {
-		fprintf(stderr, "fuse: copy from pipe: %s\n", strerror(-res));
-		return res;
-	}
-	if ((size_t)res < fuse_buf_size(dst)) {
-		fprintf(stderr, "fuse: copy from pipe: short read\n");
-		return -1;
-	}
-	return 0;
-}
-
 void fuse_session_process_buf(struct fuse_session *se,
 			      const struct fuse_buf *buf)
 {
@@ -2069,16 +2054,11 @@ void fuse_session_process_buf(struct fuse_session *se,
 void fuse_session_process_buf_int(struct fuse_session *se,
 				  struct fuse_bufvec *bufv, struct fuse_chan *ch)
 {
-	const size_t write_header_size = sizeof(struct fuse_in_header) +
-		sizeof(struct fuse_write_in);
 	const struct fuse_buf *buf = bufv->buf;
-	struct fuse_bufvec tmpbuf = FUSE_BUFVEC_INIT(write_header_size);
 	struct fuse_in_header *in;
 	const void *inarg;
 	struct fuse_req *req;
-	void *mbuf = NULL;
 	int err;
-	int res;
 
 	in = buf->mem;
 
@@ -2102,7 +2082,7 @@ void fuse_session_process_buf_int(struct fuse_session *se,
 		};
 
 		fuse_send_msg(se, ch, &iov, 1);
-		goto out_free;
+		return;
 	}
 
 	req->unique = in->unique;
@@ -2158,36 +2138,11 @@ void fuse_session_process_buf_int(struct fuse_session *se,
 			fuse_reply_err(intr, EAGAIN);
 	}
 
-	if ((buf->flags & FUSE_BUF_IS_FD) && write_header_size < buf->size &&
-	    (in->opcode != FUSE_WRITE || !se->op.write_buf) &&
-	    in->opcode != FUSE_NOTIFY_REPLY) {
-		void *newmbuf;
-
-		err = ENOMEM;
-		newmbuf = realloc(mbuf, buf->size);
-		if (newmbuf == NULL)
-			goto reply_err;
-		mbuf = newmbuf;
-
-		tmpbuf = FUSE_BUFVEC_INIT(buf->size - write_header_size);
-		tmpbuf.buf[0].mem = mbuf + write_header_size;
-
-		res = fuse_ll_copy_from_pipe(&tmpbuf, bufv);
-		err = -res;
-		if (res < 0)
-			goto reply_err;
-
-		in = mbuf;
-	}
-
 	inarg = (void *) &in[1];
 	if (in->opcode == FUSE_WRITE && se->op.write_buf)
 		do_write_buf(req, in->nodeid, inarg, bufv);
 	else
 		fuse_ll_ops[in->opcode].func(req, in->nodeid, inarg);
-
-out_free:
-	free(mbuf);
 	return;
 
 reply_err:
