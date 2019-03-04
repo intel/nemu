@@ -626,6 +626,11 @@ static int lo_do_lookup(fuse_req_t req, fuse_ino_t parent, const char *name,
 	e->attr_timeout = lo->timeout;
 	e->entry_timeout = lo->timeout;
 
+	/* Do not allow escaping root directory */
+	if (dir == &lo->root && strcmp(name, "..") == 0) {
+		name = ".";
+	}
+
 	newfd = openat(dir->fd, name, O_PATH | O_NOFOLLOW);
 	if (newfd == -1)
 		goto out_err;
