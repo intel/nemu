@@ -2344,7 +2344,7 @@ out1:
 	return NULL;
 }
 
-int fuse_session_mount(struct fuse_session *se, const char *mountpoint)
+int fuse_session_mount(struct fuse_session *se)
 {
 	int fd;
 
