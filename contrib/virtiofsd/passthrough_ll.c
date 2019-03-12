@@ -114,6 +114,9 @@ struct lo_data {
 	struct lo_map ino_map; /* protected by lo->mutex */
 	struct lo_map dirp_map; /* protected by lo->mutex */
 	struct lo_map fd_map; /* protected by lo->mutex */
+
+	/* An O_PATH file descriptor to /proc/self/fd/ */
+	int proc_self_fd;
 };
 
 static const struct fuse_opt lo_opts[] = {
@@ -392,9 +395,9 @@ static int lo_parent_and_name(struct lo_data *lo, struct lo_inode *inode,
 	int res;
 
 retry:
-	sprintf(procname, "/proc/self/fd/%i", inode->fd);
+	sprintf(procname, "%i", inode->fd);
 
-	res = readlink(procname, path, PATH_MAX);
+	res = readlinkat(lo->proc_self_fd, procname, path, PATH_MAX);
 	if (res < 0) {
 		warn("lo_parent_and_name: readlink failed");
 		goto fail_noretry;
@@ -479,9 +482,9 @@ static int utimensat_empty(struct lo_data *lo, struct lo_inode *inode,
 		}
 		return res;
 	}
-	sprintf(path, "/proc/self/fd/%i", inode->fd);
+	sprintf(path, "%i", inode->fd);
 
-	return utimensat(AT_FDCWD, path, tv, 0);
+	return utimensat(lo->proc_self_fd, path, tv, 0);
 
 fallback:
 	res = lo_parent_and_name(lo, inode, path, &parent);
@@ -511,6 +514,7 @@ static void lo_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
 {
 	int saverr;
 	char procname[64];
+	struct lo_data *lo = lo_data(req);
 	struct lo_inode *inode;
 	int ifd;
 	int res;
@@ -532,8 +536,9 @@ static void lo_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
 		if (fi) {
 			res = fchmod(fd, attr->st_mode);
 		} else {
-			sprintf(procname, "/proc/self/fd/%i", ifd);
-			res = chmod(procname, attr->st_mode);
+			sprintf(procname, "%i", ifd);
+			res = fchmodat(lo->proc_self_fd, procname,
+				       attr->st_mode, 0);
 		}
 		if (res == -1)
 			goto out_err;
@@ -550,11 +555,23 @@ static void lo_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
 			goto out_err;
 	}
 	if (valid & FUSE_SET_ATTR_SIZE) {
+		int truncfd;
+
 		if (fi) {
-			res = ftruncate(fd, attr->st_size);
+			truncfd = fd;
 		} else {
-			sprintf(procname, "/proc/self/fd/%i", ifd);
-			res = truncate(procname, attr->st_size);
+			sprintf(procname, "%i", ifd);
+			truncfd = openat(lo->proc_self_fd, procname, O_RDWR);
+			if (truncfd < 0) {
+				goto out_err;
+			}
+		}
+
+		res = ftruncate(truncfd, attr->st_size);
+		if (!fi) {
+			saverr = errno;
+			close(truncfd);
+			errno = saverr;
 		}
 		if (res == -1)
 			goto out_err;
@@ -842,9 +859,9 @@ static int linkat_empty_nofollow(struct lo_data *lo, struct lo_inode *inode,
 		return res;
 	}
 
-	sprintf(path, "/proc/self/fd/%i", inode->fd);
+	sprintf(path, "%i", inode->fd);
 
-	return linkat(AT_FDCWD, path, dfd, name, AT_SYMLINK_FOLLOW);
+	return linkat(lo->proc_self_fd, path, dfd, name, AT_SYMLINK_FOLLOW);
 
 fallback:
 	res = lo_parent_and_name(lo, inode, path, &parent);
@@ -1415,8 +1432,8 @@ static void lo_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 	if (lo->writeback && (fi->flags & O_APPEND))
 		fi->flags &= ~O_APPEND;
 
-	sprintf(buf, "/proc/self/fd/%i", lo_fd(req, ino));
-	fd = open(buf, fi->flags & ~O_NOFOLLOW);
+	sprintf(buf, "%i", lo_fd(req, ino));
+	fd = openat(lo->proc_self_fd, buf, fi->flags & ~O_NOFOLLOW);
 	if (fd == -1)
 		return (void) fuse_reply_err(req, errno);
 
@@ -1463,8 +1480,8 @@ static void lo_flush(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 static void lo_fsync(fuse_req_t req, fuse_ino_t ino, int datasync,
 		     struct fuse_file_info *fi)
 {
+	struct lo_data *lo = lo_data(req);
 	int res;
-	(void) ino;
 	int fd;
 	char *buf;
 
@@ -1473,11 +1490,11 @@ static void lo_fsync(fuse_req_t req, fuse_ino_t ino, int datasync,
 				(void *)fi);
 
 	if (!fi) {
-		res = asprintf(&buf, "/proc/self/fd/%i", lo_fd(req, ino));
+		res = asprintf(&buf, "%i", lo_fd(req, ino));
 		if (res == -1)
 			return (void) fuse_reply_err(req, errno);
 
-		fd = open(buf, O_RDWR);
+		fd = openat(lo->proc_self_fd, buf, O_RDWR);
 		free(buf);
 		if (fd == -1)
 			return (void) fuse_reply_err(req, errno);
@@ -1575,11 +1592,13 @@ static void lo_flock(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi,
 static void lo_getxattr(fuse_req_t req, fuse_ino_t ino, const char *name,
 			size_t size)
 {
+	struct lo_data *lo = lo_data(req);
 	char *value = NULL;
 	char procname[64];
 	struct lo_inode *inode;
 	ssize_t ret;
 	int saverr;
+	int fd = -1;
 
 	inode = lo_inode(req, ino);
 	if (!inode) {
@@ -1602,14 +1621,18 @@ static void lo_getxattr(fuse_req_t req, fuse_ino_t ino, const char *name,
 		goto out;
 	}
 
-	sprintf(procname, "/proc/self/fd/%i", inode->fd);
+	sprintf(procname, "%i", inode->fd);
+	fd = openat(lo->proc_self_fd, procname, O_RDONLY);
+	if (fd < 0) {
+		goto out_err;
+	}
 
 	if (size) {
 		value = malloc(size);
 		if (!value)
 			goto out_err;
 
-		ret = getxattr(procname, name, value, size);
+		ret = fgetxattr(fd, name, value, size);
 		if (ret == -1)
 			goto out_err;
 		saverr = 0;
@@ -1618,7 +1641,7 @@ static void lo_getxattr(fuse_req_t req, fuse_ino_t ino, const char *name,
 
 		fuse_reply_buf(req, value, ret);
 	} else {
-		ret = getxattr(procname, name, NULL, 0);
+		ret = fgetxattr(fd, name, NULL, 0);
 		if (ret == -1)
 			goto out_err;
 
@@ -1626,6 +1649,10 @@ static void lo_getxattr(fuse_req_t req, fuse_ino_t ino, const char *name,
 	}
 out_free:
 	free(value);
+
+	if (fd >= 0) {
+		close(fd);
+	}
 	return;
 
 out_err:
@@ -1637,11 +1664,13 @@ out:
 
 static void lo_listxattr(fuse_req_t req, fuse_ino_t ino, size_t size)
 {
+	struct lo_data *lo = lo_data(req);
 	char *value = NULL;
 	char procname[64];
 	struct lo_inode *inode;
 	ssize_t ret;
 	int saverr;
+	int fd = -1;
 
 	inode = lo_inode(req, ino);
 	if (!inode) {
@@ -1664,14 +1693,18 @@ static void lo_listxattr(fuse_req_t req, fuse_ino_t ino, size_t size)
 		goto out;
 	}
 
-	sprintf(procname, "/proc/self/fd/%i", inode->fd);
+	sprintf(procname, "%i", inode->fd);
+	fd = openat(lo->proc_self_fd, procname, O_RDONLY);
+	if (fd < 0) {
+		goto out_err;
+	}
 
 	if (size) {
 		value = malloc(size);
 		if (!value)
 			goto out_err;
 
-		ret = listxattr(procname, value, size);
+		ret = flistxattr(fd, value, size);
 		if (ret == -1)
 			goto out_err;
 		saverr = 0;
@@ -1680,7 +1713,7 @@ static void lo_listxattr(fuse_req_t req, fuse_ino_t ino, size_t size)
 
 		fuse_reply_buf(req, value, ret);
 	} else {
-		ret = listxattr(procname, NULL, 0);
+		ret = flistxattr(fd, NULL, 0);
 		if (ret == -1)
 			goto out_err;
 
@@ -1688,6 +1721,10 @@ static void lo_listxattr(fuse_req_t req, fuse_ino_t ino, size_t size)
 	}
 out_free:
 	free(value);
+
+	if (fd >= 0) {
+		close(fd);
+	}
 	return;
 
 out_err:
@@ -1701,9 +1738,11 @@ static void lo_setxattr(fuse_req_t req, fuse_ino_t ino, const char *name,
 			const char *value, size_t size, int flags)
 {
 	char procname[64];
+	struct lo_data *lo = lo_data(req);
 	struct lo_inode *inode;
 	ssize_t ret;
 	int saverr;
+	int fd = -1;
 
 	inode = lo_inode(req, ino);
 	if (!inode) {
@@ -1726,21 +1765,31 @@ static void lo_setxattr(fuse_req_t req, fuse_ino_t ino, const char *name,
 		goto out;
 	}
 
-	sprintf(procname, "/proc/self/fd/%i", inode->fd);
+	sprintf(procname, "%i", inode->fd);
+	fd = openat(lo->proc_self_fd, procname, O_RDWR);
+	if (fd < 0) {
+		saverr = errno;
+		goto out;
+	}
 
-	ret = setxattr(procname, name, value, size, flags);
+	ret = fsetxattr(fd, name, value, size, flags);
 	saverr = ret == -1 ? errno : 0;
 
 out:
+	if (fd >= 0) {
+		close(fd);
+	}
 	fuse_reply_err(req, saverr);
 }
 
 static void lo_removexattr(fuse_req_t req, fuse_ino_t ino, const char *name)
 {
 	char procname[64];
+	struct lo_data *lo = lo_data(req);
 	struct lo_inode *inode;
 	ssize_t ret;
 	int saverr;
+	int fd = -1;
 
 	inode = lo_inode(req, ino);
 	if (!inode) {
@@ -1763,12 +1812,20 @@ static void lo_removexattr(fuse_req_t req, fuse_ino_t ino, const char *name)
 		goto out;
 	}
 
-	sprintf(procname, "/proc/self/fd/%i", inode->fd);
+	sprintf(procname, "%i", inode->fd);
+	fd = openat(lo->proc_self_fd, procname, O_RDWR);
+	if (fd < 0) {
+		saverr = errno;
+		goto out;
+	}
 
-	ret = removexattr(procname, name);
+	ret = fremovexattr(fd, name);
 	saverr = ret == -1 ? errno : 0;
 
 out:
+	if (fd >= 0) {
+		close(fd);
+	}
 	fuse_reply_err(req, saverr);
 }
 
@@ -1804,6 +1861,7 @@ static void lo_setupmapping(fuse_req_t req, fuse_ino_t ino, uint64_t foffset,
                             uint64_t len, uint64_t moffset, uint64_t flags,
                             struct fuse_file_info *fi)
 {
+	struct lo_data *lo = lo_data(req);
         int ret = 0, fd, res;
         VhostUserFSSlaveMsg msg = { 0 };
         uint64_t vhu_flags;
@@ -1825,7 +1883,7 @@ static void lo_setupmapping(fuse_req_t req, fuse_ino_t ino, uint64_t foffset,
 	if (fi)
 		fd = lo_fi_fd(req, fi);
 	else {
-		res = asprintf(&buf, "/proc/self/fd/%i", lo_fd(req, ino));
+		res = asprintf(&buf, "%i", lo_fd(req, ino));
 		if (res == -1)
 			return (void) fuse_reply_err(req, errno);
 
@@ -1833,7 +1891,7 @@ static void lo_setupmapping(fuse_req_t req, fuse_ino_t ino, uint64_t foffset,
 		 * TODO: O_RDWR might not be allowed if file is read only or
 		 * write only. Fix it.
 		 */
-		fd = open(buf, O_RDWR);
+		fd = openat(lo->proc_self_fd, buf, O_RDWR);
 		free(buf);
 		if (fd == -1)
 			return (void) fuse_reply_err(req, errno);
@@ -1947,6 +2005,14 @@ static void setup_root(struct lo_data *lo, struct lo_inode *root)
 	root->refcount = 2;
 }
 
+static void setup_proc_self_fd(struct lo_data *lo)
+{
+	lo->proc_self_fd = open("/proc/self/fd", O_PATH);
+	if (lo->proc_self_fd == -1) {
+		err(1, "open(/proc/self/fd, O_PATH)");
+	}
+}
+
 static guint lo_key_hash(gconstpointer key)
 {
         const struct lo_key *lkey = key;
@@ -1974,7 +2040,9 @@ int main(int argc, char *argv[])
 	struct fuse_session *se;
 	struct fuse_cmdline_opts opts;
 	struct lo_data lo = { .debug = 0,
-	                      .writeback = 0 };
+	                      .writeback = 0,
+	                      .proc_self_fd = -1,
+	};
 	struct lo_map_elem *root_elem;
 	int ret = -1;
 
@@ -2064,6 +2132,9 @@ int main(int argc, char *argv[])
 
 	fuse_daemonize(opts.foreground);
 
+	/* Must be after daemonize to get the right /proc/self/fd */
+	setup_proc_self_fd(&lo);
+
 	/* Block until ctrl+c or fusermount -u */
         ret = virtio_loop(se);
 
@@ -2078,6 +2149,10 @@ err_out1:
 	lo_map_destroy(&lo.fd_map);
 	lo_map_destroy(&lo.dirp_map);
 	lo_map_destroy(&lo.ino_map);
+
+	if (lo.proc_self_fd >= 0) {
+		close(lo.proc_self_fd);
+	}
 
 	if (lo.root.fd >= 0)
 		close(lo.root.fd);
