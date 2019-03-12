@@ -52,6 +52,7 @@
 #include <sys/syscall.h>
 #include <sys/file.h>
 #include <sys/xattr.h>
+#include <sys/mount.h>
 
 #include <gmodule.h>
 
@@ -1986,12 +1987,133 @@ static struct fuse_lowlevel_ops lo_oper = {
         .removemapping  = lo_removemapping,
 };
 
+/* Remount with MS_SLAVE so our mounts don't affect the outside world */
+static void setup_remount_slave(void)
+{
+	gchar *mountinfo = NULL;
+	gchar *line;
+	gchar *nextline;
+
+	if (!g_file_get_contents("/proc/self/mountinfo", &mountinfo, NULL, NULL)) {
+		fprintf(stderr, "unable to read /proc/self/mountinfo\n");
+		exit(EXIT_FAILURE);
+	}
+
+	for (line = mountinfo; line; line = nextline) {
+		gchar **fields = NULL;
+		char *eol;
+
+		nextline = NULL;
+
+		eol = strchr(line, '\n');
+		if (eol) {
+			*eol = '\0';
+			nextline = eol + 1;
+		}
+
+		/*
+		 * The line format is:
+		 * 442 441 253:4 / / rw,relatime shared:1 - xfs /dev/sda1 rw
+		 */
+		fields = g_strsplit(line, " ", -1);
+		if (!fields[0] || !fields[1] || !fields[2] || !fields[3] ||
+		    !fields[4] || !fields[5] || !fields[6]) {
+			goto next; /* parsing failed, skip line */
+		}
+
+		if (!strstr(fields[6], "shared")) {
+			goto next; /* not shared, skip line */
+		}
+
+		if (mount(NULL, fields[4], NULL, MS_SLAVE, NULL) < 0) {
+			err(1, "mount(%s, MS_SLAVE)", fields[4]);
+		}
+
+next:
+		g_strfreev(fields);
+	}
+
+	g_free(mountinfo);
+}
+
+/* This magic is based on lxc's lxc_pivot_root() */
+static void setup_pivot_root(const char *source)
+{
+	int oldroot;
+	int newroot;
+
+	oldroot = open("/", O_DIRECTORY | O_RDONLY | O_CLOEXEC);
+	if (oldroot < 0) {
+		err(1, "open(/)");
+	}
+
+	newroot = open(source, O_DIRECTORY | O_RDONLY | O_CLOEXEC);
+	if (newroot < 0) {
+		err(1, "open(%s)", source);
+	}
+
+	if (fchdir(newroot) < 0) {
+		err(1, "fchdir(newroot)");
+	}
+
+	if (syscall(__NR_pivot_root, ".", ".") < 0){
+		err(1, "pivot_root(., .)");
+	}
+
+	if (fchdir(oldroot) < 0) {
+		err(1, "fchdir(oldroot)");
+	}
+
+	if (mount("", ".", "", MS_SLAVE | MS_REC, NULL) < 0) {
+		err(1, "mount(., MS_SLAVE | MS_REC)");
+	}
+
+	if (umount2(".", MNT_DETACH) < 0) {
+		err(1, "umount2(., MNT_DETACH)");
+	}
+
+	if (fchdir(newroot) < 0) {
+		err(1, "fchdir(newroot)");
+	}
+
+	close(newroot);
+	close(oldroot);
+}
+
+/*
+ * Make the source directory our root so symlinks cannot escape and no other
+ * files are accessible.
+ */
+static void setup_mount_namespace(const char *source)
+{
+	if (unshare(CLONE_NEWNS) != 0) {
+		err(1, "unshare(CLONE_NEWNS)");
+	}
+
+	setup_remount_slave();
+
+	if (mount(source, source, NULL, MS_BIND, NULL) < 0) {
+		err(1, "mount(%s, %s, MS_BIND)", source, source);
+	}
+
+	setup_pivot_root(source);
+}
+
+/*
+ * Lock down this process to prevent access to other processes or files outside
+ * source directory.  This reduces the impact of arbitrary code execution bugs.
+ */
+static void setup_sandbox(struct lo_data *lo)
+{
+	setup_mount_namespace(lo->source);
+}
+
 static void setup_root(struct lo_data *lo, struct lo_inode *root)
 {
 	int fd, res;
 	struct stat stat;
 
-	fd = open(lo->source, O_PATH);
+	fd = open("/", O_PATH);
 	if (fd == -1)
 		err(1, "open(%s, O_PATH)", lo->source);
 
@@ -2118,8 +2240,6 @@ int main(int argc, char *argv[])
 		errx(1, "timeout is negative (%lf)", lo.timeout);
 	}
 
-	setup_root(&lo, &lo.root);
-
 	se = fuse_session_new(&args, &lo_oper, sizeof(lo_oper), &lo);
 	if (se == NULL)
 	    goto err_out1;
@@ -2134,6 +2254,10 @@ int main(int argc, char *argv[])
 
 	/* Must be after daemonize to get the right /proc/self/fd */
 	setup_proc_self_fd(&lo);
+
+	setup_sandbox(&lo);
+
+	setup_root(&lo, &lo.root);
 
 	/* Block until ctrl+c or fusermount -u */
         ret = virtio_loop(se);
