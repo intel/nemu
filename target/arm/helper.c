@@ -18,8 +18,6 @@
 #include "qemu/bitops.h"
 #include "qemu/crc32c.h"
 #include "exec/exec-all.h"
-#include "exec/cpu_ldst.h"
-#include "arm_ldst.h"
 #include <zlib.h> /* For crc32 */
 #include "exec/semihost.h"
 #include "sysemu/cpus.h"
