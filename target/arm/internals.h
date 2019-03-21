@@ -1020,12 +1020,4 @@ bool pmsav8_mpu_lookup(CPUARMState *env, uint32_t address,
                        int *prot, bool *is_subpage,
                        ARMMMUFaultInfo *fi, uint32_t *mregion);
 
-void write_v7m_control_spsel_for_secstate(CPUARMState *env,
-                                          bool new_spsel,
-                                          bool secstate);
-
-void write_v7m_control_spsel(CPUARMState *env, bool new_spsel);
-
-void switch_v7m_security_state(CPUARMState *env, bool new_secstate);
-
 #endif
