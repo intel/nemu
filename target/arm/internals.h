@@ -983,4 +983,49 @@ static inline int exception_target_el(CPUARMState *env)
     return target_el;
 }
 
+void arm_log_exception(int idx);
+
+/* Cacheability and shareability attributes for a memory access */
+typedef struct ARMCacheAttrs {
+    unsigned int attrs:8; /* as in the MAIR register encoding */
+    unsigned int shareability:2; /* as in the SH field of the VMSAv8-64 PTEs */
+} ARMCacheAttrs;
+
+bool get_phys_addr(CPUARMState *env, target_ulong address,
+                   MMUAccessType access_type, ARMMMUIdx mmu_idx,
+                   hwaddr *phys_ptr, MemTxAttrs *attrs, int *prot,
+                   target_ulong *page_size,
+                   ARMMMUFaultInfo *fi, ARMCacheAttrs *cacheattrs);
+
+/* Security attributes for an address, as returned by v8m_security_lookup. */
+typedef struct V8M_SAttributes {
+    bool subpage; /* true if these attrs don't cover the whole TARGET_PAGE */
+    bool ns;
+    bool nsc;
+    uint8_t sregion;
+    bool srvalid;
+    uint8_t iregion;
+    bool irvalid;
+} V8M_SAttributes;
+
+void v8m_security_lookup(CPUARMState *env, uint32_t address,
+                         MMUAccessType access_type, ARMMMUIdx mmu_idx,
+                         V8M_SAttributes *sattrs);
+
+void switch_mode(CPUARMState *, int);
+
+bool pmsav8_mpu_lookup(CPUARMState *env, uint32_t address,
+                       MMUAccessType access_type, ARMMMUIdx mmu_idx,
+                       hwaddr *phys_ptr, MemTxAttrs *txattrs,
+                       int *prot, bool *is_subpage,
+                       ARMMMUFaultInfo *fi, uint32_t *mregion);
+
+void write_v7m_control_spsel_for_secstate(CPUARMState *env,
+                                          bool new_spsel,
+                                          bool secstate);
+
+void write_v7m_control_spsel(CPUARMState *env, bool new_spsel);
+
+void switch_v7m_security_state(CPUARMState *env, bool new_secstate);
+
 #endif
