@@ -1014,6 +1014,12 @@ bool pmsav8_mpu_lookup(CPUARMState *env, uint32_t address,
                        hwaddr *phys_ptr, MemTxAttrs *txattrs,
                        int *prot, bool *is_subpage,
                        ARMMMUFaultInfo *fi, uint32_t *mregion);
+/*
+ * Returns true when the current CPU execution context matches
+ * the watchpoint or the breakpoint pointed at by n.
+ */
+bool bp_wp_matches(ARMCPU *cpu, int n, bool is_wp);
+
 #ifdef TARGET_AARCH64
 void aarch64_cpu_dump_state(CPUState *cs, FILE *f,
                             fprintf_function cpu_fprintf, int flags);
