@@ -219,6 +219,8 @@ static inline void update_spsel(CPUARMState *env, uint32_t imm)
     aarch64_restore_sp(env, cur_el);
 }
 
+void arm_cpu_do_interrupt_aarch64(CPUState *cs);
+
 /*
  * arm_pamax
  * @cpu: ARMCPU
