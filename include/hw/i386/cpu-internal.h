@@ -28,5 +28,6 @@ const CPUArchIdList *cpu_possible_cpu_arch_ids(MachineState *ms);
 
 void cpu_hot_add(const int64_t id, Error **errp);
 uint32_t cpus_init(MachineState *ms, bool compat);
+CPUArchId *cpu_find_slot(MachineState *ms, uint32_t id, int *idx);
 
 #endif
