@@ -15,31 +15,18 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef QEMU_I386_VIRT_H
-#define QEMU_I386_VIRT_H
+#ifndef QEMU_I386_CPU_H
+#define QEMU_I386_CPU_H
 
-#include "qemu-common.h"
-#include "exec/hwaddr.h"
-#include "qemu/notify.h"
 #include "hw/boards.h"
 
-typedef struct {
-    MachineClass parent;
-} VirtMachineClass;
+uint32_t cpu_apicid_from_index(unsigned int cpu_index, bool compat);
 
-typedef struct {
-    MachineState parent;
-    unsigned apic_id_limit;
-} VirtMachineState;
+CpuInstanceProperties cpu_index_to_props(MachineState *ms, unsigned cpu_index);
+int64_t cpu_get_default_cpu_node_id(const MachineState *ms, int idx);
+const CPUArchIdList *cpu_possible_cpu_arch_ids(MachineState *ms);
 
-#define TYPE_VIRT_MACHINE   MACHINE_TYPE_NAME("virt")
-#define VIRT_MACHINE(obj) \
-    OBJECT_CHECK(VirtMachineState, (obj), TYPE_VIRT_MACHINE)
-#define VIRT_MACHINE_GET_CLASS(obj) \
-    OBJECT_GET_CLASS(VirtMachineClass, obj, TYPE_VIRT_MACHINE)
-#define VIRT_MACHINE_CLASS(class) \
-    OBJECT_CLASS_CHECK(VirtMachineClass, class, TYPE_VIRT_MACHINE)
-
-MemoryRegion *virt_memory_init(VirtMachineState *vms);
+void cpu_hot_add(const int64_t id, Error **errp);
+uint32_t cpus_init(MachineState *ms, bool compat);
 
 #endif

@@ -27,6 +27,7 @@
 #include "qemu/units.h"
 #include "hw/hw.h"
 #include "hw/loader.h"
+#include "hw/i386/cpu-internal.h"
 #include "hw/i386/pc.h"
 #include "hw/i386/apic.h"
 #include "hw/display/ramfb.h"
@@ -150,7 +151,7 @@ static void pc_init1(MachineState *machine,
         }
     }
 
-    pc_cpus_init(pcms);
+    pcms->apic_id_limit = cpus_init(machine, compat_apic_id_mode);
 
     if (kvm_enabled() && pcmc->kvmclock_enabled) {
         kvmclock_create();
