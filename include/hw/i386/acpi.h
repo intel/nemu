@@ -26,6 +26,8 @@ struct AcpiConfiguration {
     int legacy_acpi_table_size;
     bool legacy_cpu_hotplug;
     bool rsdp_in_ram;
+    unsigned acpi_data_size;
+    bool linuxboot_dma_enabled;
 
     /* Machine state settings */
     FWCfgState *fw_cfg;
