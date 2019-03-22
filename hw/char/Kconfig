@@ -40,3 +40,6 @@ config SCLPCONSOLE
 
 config TERMINAL3270
     bool
+
+config SYS_BUS_DEBUG
+    bool
