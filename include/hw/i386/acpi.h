@@ -28,6 +28,8 @@ struct AcpiConfiguration {
     bool rsdp_in_ram;
     unsigned acpi_data_size;
     bool linuxboot_dma_enabled;
+    /* use PVH to load kernels that support this feature */
+    bool pvh_enabled;
 
     /* Machine state settings */
     FWCfgState *fw_cfg;
