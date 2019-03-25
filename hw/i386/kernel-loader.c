@@ -26,7 +26,11 @@
 
 #include "elf.h"
 #include "multiboot.h"
+#include "qemu/error-report.h"
 #include "standard-headers/asm-x86/bootparam.h"
+
+/* Physical Address of PVH entry point read from kernel ELF NOTE */
+static size_t pvh_start_addr;
 
 static long get_file_size(FILE *f)
 {
@@ -153,8 +157,7 @@ static bool load_elfboot(const char *kernel_filename,
     return true;
 }
 
-static void load_linux(PCMachineState *pcms,
-                       FWCfgState *fw_cfg)
+void load_linux(MachineState *machine, AcpiConfiguration *conf, FWCfgState *fw_cfg)
 {
     uint16_t protocol;
     int setup_size, kernel_size, cmdline_size;
@@ -164,8 +167,6 @@ static void load_linux(PCMachineState *pcms,
     hwaddr real_addr, prot_addr, cmdline_addr, initrd_addr = 0;
     FILE *f;
     char *vmode;
-    MachineState *machine = MACHINE(pcms);
-    PCMachineClass *pcmc = PC_MACHINE_GET_CLASS(pcms);
     struct setup_data *setup_data;
     const char *kernel_filename = machine->kernel_filename;
     const char *initrd_filename = machine->initrd_filename;
@@ -208,7 +209,7 @@ static void load_linux(PCMachineState *pcms,
          * saving the PVH entry point used by the x86/HVM direct boot ABI.
          * If load_elfboot() is successful, populate the fw_cfg info.
          */
-        if (pcmc->pvh_enabled &&
+        if (conf->pvh_enabled &&
             load_elfboot(kernel_filename, kernel_size,
                          header, pvh_start_addr, fw_cfg)) {
             fclose(f);
@@ -234,7 +235,7 @@ static void load_linux(PCMachineState *pcms,
                     exit(1);
                 }
 
-                initrd_max = pcms->below_4g_mem_size - pcmc->acpi_data_size - 1;
+                initrd_max = conf->below_4g_mem_size - conf->acpi_data_size - 1;
                 if (initrd_size >= initrd_max) {
                     fprintf(stderr, "qemu: initrd is too large, cannot support."
                             "(max: %"PRIu32", need %"PRId64")\n",
@@ -310,8 +311,8 @@ static void load_linux(PCMachineState *pcms,
         initrd_max = 0x37ffffff;
     }
 
-    if (initrd_max >= pcms->below_4g_mem_size - pcmc->acpi_data_size) {
-        initrd_max = pcms->below_4g_mem_size - pcmc->acpi_data_size - 1;
+    if (initrd_max >= conf->below_4g_mem_size - conf->acpi_data_size) {
+        initrd_max = conf->below_4g_mem_size - conf->acpi_data_size - 1;
     }
 
     fw_cfg_add_i32(fw_cfg, FW_CFG_CMDLINE_ADDR, cmdline_addr);
@@ -455,7 +456,7 @@ static void load_linux(PCMachineState *pcms,
 
     option_rom[nb_option_roms].bootindex = 0;
     option_rom[nb_option_roms].name = "linuxboot.bin";
-    if (pcmc->linuxboot_dma_enabled && fw_cfg_dma_enabled(fw_cfg)) {
+    if (conf->linuxboot_dma_enabled && fw_cfg_dma_enabled(fw_cfg)) {
         option_rom[nb_option_roms].name = "linuxboot_dma.bin";
     }
     nb_option_roms++;

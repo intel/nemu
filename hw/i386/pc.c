@@ -93,9 +93,6 @@
 #define DPRINTF(fmt, ...)
 #endif
 
-/* Physical Address of PVH entry point read from kernel ELF NOTE */
-static size_t pvh_start_addr;
-
 GlobalProperty pc_compat_3_1[] = {
     { "intel-iommu", "dma-drain", "off" },
     { "Opteron_G3" "-" TYPE_X86_CPU, "rdtscp", "off" },
@@ -926,6 +923,7 @@ static void acpi_conf_pc_init(MachineState *machine)
     conf->rsdp_in_ram = pcmc->rsdp_in_ram;
     conf->acpi_data_size = pcmc->acpi_data_size;
     conf->linuxboot_dma_enabled = pcmc->linuxboot_dma_enabled;
+    conf->pvh_enabled = pcmc->pvh_enabled;
 
     /* Machine state settings */
     conf->fw_cfg = pcms->fw_cfg;
