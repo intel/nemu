@@ -28,6 +28,7 @@
 #include "hw/kvm/clock.h"
 
 #include "hw/acpi/acpi.h"
+#include "hw/acpi/reduced.h"
 
 #include "hw/i386/virt.h"
 #include "hw/i386/cpu-internal.h"
@@ -98,7 +99,7 @@ static void virt_machine_done(Notifier *notifier, void *data)
 {
     VirtMachineState *vms = container_of(notifier,
                                           VirtMachineState, machine_done);
-    acpi_setup(MACHINE(vms), vms->acpi_configuration);
+    acpi_reduced_setup(MACHINE(vms), vms->acpi_configuration);
 }
 
 static void virt_gsi_handler(void *opaque, int n, int level)
