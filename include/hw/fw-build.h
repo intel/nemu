@@ -23,6 +23,7 @@
 
 typedef struct AcpiConfiguration AcpiConfiguration;
 typedef struct AcpiBuildState AcpiBuildState;
+typedef struct AcpiMcfgInfo AcpiMcfgInfo;
 
 typedef struct FirmwareBuildMethods {
     union {
@@ -31,6 +32,7 @@ typedef struct FirmwareBuildMethods {
             void    (*rsdp)(GArray *tbl, BIOSLinker *linker, AcpiRsdpData *rsdp_data);
             GArray *(*madt)(GArray *table_data, BIOSLinker *linker, MachineState *ms, AcpiConfiguration *conf);
             void    (*setup)(MachineState *ms, AcpiConfiguration *conf);
+            void    (*mcfg)(GArray *table_data, BIOSLinker *linker, AcpiMcfgInfo *info);
         } acpi;
     };
 } FirmwareBuildMethods;
