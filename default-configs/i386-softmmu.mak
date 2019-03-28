@@ -28,3 +28,4 @@ CONFIG_Q35=y
 
 # Temp postion for virt platform, and will be moved to hw/i386/Kconfig
 CONFIG_SYS_BUS_DEBUG=y
+CONFIG_PCI_LITE=y
