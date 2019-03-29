@@ -5,6 +5,7 @@
 
 #include "sysemu/blockdev.h"
 #include "sysemu/accel.h"
+#include "hw/fw-build.h"
 #include "hw/qdev.h"
 #include "qom/object.h"
 #include "qom/cpu.h"
@@ -218,6 +219,8 @@ struct MachineClass {
                                                          unsigned cpu_index);
     const CPUArchIdList *(*possible_cpu_arch_ids)(MachineState *machine);
     int64_t (*get_default_cpu_node_id)(const MachineState *ms, int idx);
+
+    FirmwareBuildMethods firmware_build_methods;
 };
 
 /**
@@ -274,6 +277,8 @@ struct MachineState {
     AccelState *accelerator;
     CPUArchIdList *possible_cpus;
     struct NVDIMMState *nvdimms_state;
+
+    FirmwareBuildState firmware_build_state;
 };
 
 #define DEFINE_MACHINE(namestr, machine_initfn) \
