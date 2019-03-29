@@ -97,8 +97,9 @@ static void build_fadt_reduced(GArray *table_data, BIOSLinker *linker,
     build_fadt(table_data, linker, &fadt, NULL, NULL);
 }
 
-static void acpi_reduced_build(AcpiBuildTables *tables)
+static void acpi_reduced_build(MachineState *ms, AcpiBuildTables *tables, AcpiConfiguration *conf)
 {
+    MachineClass *mc = MACHINE_GET_CLASS(ms);
     GArray *table_offsets;
     unsigned dsdt, xsdt;
     GArray *tables_blob = tables->table_data;
@@ -129,7 +130,7 @@ static void acpi_reduced_build(AcpiBuildTables *tables)
         .rsdt_tbl_offset = NULL,
     };
     /* RSDP is in FSEG memory, so allocate it separately */
-    build_rsdp(tables->rsdp, tables->linker, &rsdp_data);
+    mc->firmware_build_methods.acpi.rsdp(tables->rsdp, tables->linker, &rsdp_data);
     acpi_align_size(tables->linker->cmd_blob, ACPI_BUILD_ALIGN_SIZE);
 
     /* Cleanup memory that's no longer used. */
@@ -150,8 +151,15 @@ static void acpi_ram_update(MemoryRegion *mr, GArray *data)
 
 static void acpi_reduced_build_update(void *build_opaque)
 {
-    AcpiBuildState *build_state = build_opaque;
+    MachineState *ms = MACHINE(build_opaque);
+    AcpiBuildState *build_state = ms->firmware_build_state.acpi.state;
+    AcpiConfiguration *conf = ms->firmware_build_state.acpi.conf;
     AcpiBuildTables tables;
+
+    /* No ACPI configuration? Nothing to do. */
+    if (!conf) {
+        return;
+    }
 
     /* No state to update or already patched? Nothing to do. */
     if (!build_state || build_state->patched) {
@@ -161,7 +169,7 @@ static void acpi_reduced_build_update(void *build_opaque)
 
     acpi_build_tables_init(&tables);
 
-    acpi_reduced_build(&tables);
+    acpi_reduced_build(ms, &tables, conf);
 
     acpi_ram_update(build_state->table_mr, tables.table_data);
     acpi_ram_update(build_state->rsdp_mr, tables.rsdp);
@@ -172,7 +180,8 @@ static void acpi_reduced_build_update(void *build_opaque)
 
 static void acpi_reduced_build_reset(void *build_opaque)
 {
-    AcpiBuildState *build_state = build_opaque;
+    MachineState *ms = MACHINE(build_opaque);
+    AcpiBuildState *build_state = ms->firmware_build_state.acpi.state;
 
     build_state->patched = false;
 }
@@ -190,7 +199,7 @@ static const VMStateDescription vmstate_acpi_reduced_build = {
     .version_id = 1,
     .minimum_version_id = 1,
     .fields = (VMStateField[]) {
-        VMSTATE_BOOL(patched, AcpiBuildState),
+        VMSTATE_UINT8(patched, AcpiBuildState),
         VMSTATE_END_OF_LIST()
     },
 };
@@ -201,9 +210,11 @@ void acpi_reduced_setup(MachineState *machine, AcpiConfiguration *conf)
     AcpiBuildState *build_state;
 
     build_state = g_malloc0(sizeof(*build_state));
+    machine->firmware_build_state.acpi.state = build_state;
+    machine->firmware_build_state.acpi.conf = conf;
 
     acpi_build_tables_init(&tables);
-    acpi_reduced_build(&tables);
+    acpi_reduced_build(machine, &tables, conf);
 
     if (conf->fw_cfg) {
         /* Now expose it all to Guest */
@@ -223,9 +234,9 @@ void acpi_reduced_setup(MachineState *machine, AcpiConfiguration *conf)
                                                  ACPI_BUILD_RSDP_FILE, 0);
     }
 
-    qemu_register_reset(acpi_reduced_build_reset, build_state);
-    acpi_reduced_build_reset(build_state);
-    vmstate_register(NULL, 0, &vmstate_acpi_reduced_build, build_state);
+    qemu_register_reset(acpi_reduced_build_reset, machine);
+    acpi_reduced_build_reset(machine);
+    vmstate_register(NULL, 0, &vmstate_acpi_reduced_build, machine);
 
     /* Cleanup tables but don't free the memory: we track it
      * in build_state.

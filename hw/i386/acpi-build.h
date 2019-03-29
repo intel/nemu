@@ -4,6 +4,10 @@
 
 #include "hw/acpi/acpi.h"
 
+/* Build methods */
+GArray *build_madt(GArray *table_data, BIOSLinker *linker, MachineState *ms, AcpiConfiguration *conf);
+
+/* ACPI setup */
 void acpi_setup(MachineState *machine, AcpiConfiguration *conf);
 
 #endif
