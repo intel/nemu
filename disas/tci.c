@@ -20,7 +20,7 @@
 #include "qemu/osdep.h"
 #include "qemu-common.h"
 #include "disas/bfd.h"
-#include "tcg/tcg.h"
+#include "exec/tcg-wrapper.h"
 
 /* Disassemble TCI bytecode. */
 int print_insn_tci(bfd_vma addr, disassemble_info *info)
