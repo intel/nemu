@@ -30,6 +30,7 @@
 #include "sysemu/sysemu.h"
 #include "exec/gdbstub.h"
 #include "hw/cpu/cluster.h"
+#include "exec/tcg-wrapper.h"
 #endif
 
 #define MAX_PACKET_LENGTH 4096
