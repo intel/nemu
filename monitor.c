@@ -84,7 +84,10 @@
 #include "sysemu/cpus.h"
 #include "sysemu/iothread.h"
 #include "qemu/cutils.h"
+
+#if defined(TARGET_TCG)
 #include "tcg/tcg.h"
+#endif
 
 #if defined(TARGET_S390X)
 #include "hw/s390x/storage-keys.h"
