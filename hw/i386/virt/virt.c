@@ -754,9 +754,15 @@ static void virt_machine_class_init(MachineClass *mc)
     mc->firmware_build_methods.acpi.slit = build_slit;
 }
 
+GlobalProperty virt_compat_4_0[] = {
+    { "apic-common", "vapic", "off" },
+};
+const size_t virt_compat_4_0_len = G_N_ELEMENTS(virt_compat_4_0);
+
 static void virt_4_0_machine_class_init(MachineClass *mc)
 {
     virt_machine_class_init(mc);
+    compat_props_add(mc->compat_props, virt_compat_4_0, virt_compat_4_0_len);
 }
 DEFINE_VIRT_MACHINE_AS_LATEST(4, 0)
 
