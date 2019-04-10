@@ -14,5 +14,6 @@
 #define FW_CFG_HPET (FW_CFG_ARCH_LOCAL + 4)
 
 FWCfgState *fw_cfg_init(MachineState *ms, uint16_t boot_cpus, const CPUArchIdList *cpus, unsigned apic_id_limit);
+void pc_system_rom_init(MemoryRegion *rom_memory, bool isapc_ram_fw);
 
 #endif
