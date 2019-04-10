@@ -1143,7 +1143,7 @@ build_dsdt(GArray *table_data, BIOSLinker *linker,
             aml_append(scope, method);
         }
 
-        if (conf->nvdimms_state->is_enabled) {
+        if (machine->nvdimms_state->is_enabled) {
             method = aml_method("_E04", 0, AML_NOTSERIALIZED);
             aml_append(method, aml_notify(aml_name("\\_SB.NVDR"),
                                           aml_int(0x80)));
@@ -1693,9 +1693,9 @@ void acpi_build(AcpiBuildTables *tables, MachineState *machine, AcpiConfiguratio
             build_dmar_q35(tables_blob, tables->linker);
         }
     }
-    if (conf->nvdimms_state->is_enabled) {
+    if (machine->nvdimms_state->is_enabled) {
         nvdimm_build_acpi(table_offsets, tables_blob, tables->linker,
-                          conf->nvdimms_state, machine->ram_slots);
+                          machine->nvdimms_state, machine->ram_slots);
     }
 
     /* Add tables supplied by user (if any) */
