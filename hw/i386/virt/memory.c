@@ -20,6 +20,7 @@
 #include "hw/boards.h"
 #include "hw/i386/virt.h"
 #include "hw/i386/memory.h"
+#include "hw/i386/fw.h"
 
 #define VIRT_LOWMEM 0x80000000
 
@@ -51,6 +52,8 @@ MemoryRegion *virt_memory_init(VirtMachineState *vms)
         memory_region_add_subregion(system_memory, 0x100000000ULL, highmem);
         e820_add_entry(0x100000000ULL, highmem_size, E820_RAM);
     }
+
+    pc_system_rom_init(system_memory, false);
 
     return ram;
 }
