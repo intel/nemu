@@ -187,9 +187,9 @@ static void acpi_reduced_build(MachineState *ms, AcpiBuildTables *tables, AcpiCo
         acpi_add_table(table_offsets, tables_blob);
         mc->firmware_build_methods.acpi.mcfg(tables_blob, tables->linker, &mcfg);
     }
-    if (conf->nvdimms_state->is_enabled) {
+    if (ms->nvdimms_state->is_enabled) {
         nvdimm_build_acpi(table_offsets, tables_blob, tables->linker,
-                          conf->nvdimms_state, ms->ram_slots);
+                          ms->nvdimms_state, ms->ram_slots);
     }
 
     /* RSDT is pointed to by RSDP */
