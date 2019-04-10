@@ -220,7 +220,6 @@ struct AcpiConfiguration {
     uint64_t *node_mem;
     bool apic_xrupt_override;
     unsigned apic_id_limit;
-    struct NVDIMMState *nvdimms_state;
     uint16_t cpu_hotplug_io_base;
     GedEvent *ged_events;
     uint8_t ged_events_size;
