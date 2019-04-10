@@ -37,6 +37,7 @@
 #include "sysemu/sysemu.h"
 #include "hw/block/flash.h"
 #include "sysemu/kvm.h"
+#include "hw/i386/fw.h"
 
 #define BIOS_FILENAME "bios.bin"
 
@@ -211,7 +212,7 @@ static void pc_system_flash_map(PCMachineState *pcms,
     }
 }
 
-static void old_pc_system_rom_init(MemoryRegion *rom_memory, bool isapc_ram_fw)
+void pc_system_rom_init(MemoryRegion *rom_memory, bool isapc_ram_fw)
 {
     char *filename;
     MemoryRegion *bios, *isa_bios;
@@ -274,7 +275,7 @@ void pc_system_firmware_init(PCMachineState *pcms,
     Location loc;
 
     if (!pcmc->pci_enabled) {
-        old_pc_system_rom_init(rom_memory, true);
+        pc_system_rom_init(rom_memory, true);
         return;
     }
 
@@ -307,7 +308,7 @@ void pc_system_firmware_init(PCMachineState *pcms,
 
     if (!pflash_blk[0]) {
         /* Machine property pflash0 not set, use ROM mode */
-        old_pc_system_rom_init(rom_memory, false);
+        pc_system_rom_init(rom_memory, false);
     } else {
         if (kvm_enabled() && !kvm_readonly_mem_enabled()) {
             /*
