@@ -40,6 +40,7 @@
 #include "hw/i386/amd_iommu.h"
 #include "hw/i386/intel_iommu.h"
 #include "hw/mem/pc-dimm.h"
+#include "hw/mem/memory-device.h"
 
 #include "hw/pci-host/pci-lite.h"
 
@@ -99,6 +100,7 @@ static void acpi_conf_virt_init(MachineState *machine)
     conf->apic_id_limit = vms->apic_id_limit;
     conf->acpi_dev = vms->acpi_dev;
     conf->cpu_hotplug_io_base = VIRT_CPU_HOTPLUG_IO_BASE;
+    conf->nvdimms_state = vms->nvdimms_state;
 
     /* GED events */
     GedEvent events[] = {
@@ -109,6 +111,10 @@ static void acpi_conf_virt_init(MachineState *machine)
         {
             .irq   = VIRT_GED_MEMORY_HOTPLUG_IRQ,
             .event = GED_MEMORY_HOTPLUG,
+        },
+        {
+            .irq   = VIRT_GED_NVDIMM_HOTPLUG_IRQ,
+            .event = GED_NVDIMM_HOTPLUG,
         },
     };
 
@@ -216,6 +222,7 @@ static void virt_machine_state_init(MachineState *machine)
     fw_cfg = fw_cfg_init(machine, smp_cpus, mc->possible_cpu_arch_ids(machine), vms->apic_id_limit);
     rom_set_fw(fw_cfg);
 
+
     if (machine->device_memory->base) {
         uint64_t *val = g_malloc(sizeof(*val));
         uint64_t res_mem_end = machine->device_memory->base;
@@ -226,6 +233,11 @@ static void virt_machine_state_init(MachineState *machine)
                         val, sizeof(*val));
     }
 
+    if (vms->nvdimms_state->is_enabled) {
+        nvdimm_init_acpi_state(vms->nvdimms_state, get_system_io(),
+                               fw_cfg, OBJECT(vms));
+    }
+
     vms->fw_cfg = fw_cfg;
     acpi_conf_virt_init(machine);
 
@@ -234,8 +246,25 @@ static void virt_machine_state_init(MachineState *machine)
     }
 }
 
+static bool virt_machine_get_nvdimm(Object *obj, Error **errp)
+{
+    VirtMachineState *vms = VIRT_MACHINE(obj);
+
+    return vms->nvdimms_state->is_enabled;
+}
+
+static void virt_machine_set_nvdimm(Object *obj, bool value, Error **errp)
+{
+    VirtMachineState *vms = VIRT_MACHINE(obj);
+
+    vms->nvdimms_state->is_enabled = value;
+}
+
 static void virt_machine_instance_init(Object *obj)
 {
+    VirtMachineState *vms = VIRT_MACHINE(obj);
+
+    vms->nvdimms_state->is_enabled = false;
 }
 
 static void virt_machine_reset(void)
@@ -278,6 +307,12 @@ static void virt_class_init(ObjectClass *oc, void *data)
 
     /* NMI handler */
     nc->nmi_monitor_handler = x86_nmi;
+
+    /* NVDIMM property */
+    object_class_property_add_bool(oc, VIRT_MACHINE_NVDIMM,
+                                   virt_machine_get_nvdimm,
+                                   virt_machine_set_nvdimm,
+                                   &error_abort);
 }
 
 static const TypeInfo virt_machine_info = {
@@ -511,23 +546,15 @@ static void virt_dimm_plug(HotplugHandler *hotplug_dev,
     Error *local_err = NULL;
     VirtMachineState *vms = VIRT_MACHINE(hotplug_dev);
     PCDIMMDevice *dimm = PC_DIMM(dev);
-    PCDIMMDeviceClass *ddc = PC_DIMM_GET_CLASS(dimm);
-    MemoryRegion *mr;
-    uint64_t align = TARGET_PAGE_SIZE;
+    bool is_nvdimm = object_dynamic_cast(OBJECT(dev), TYPE_NVDIMM);
 
-    assert(vms->acpi);
-    mr = ddc->get_memory_region(dimm, &local_err);
+    pc_dimm_plug(dimm, MACHINE(vms), &local_err);
     if (local_err) {
         goto out;
     }
 
-    if (memory_region_get_alignment(mr)) {
-        align = memory_region_get_alignment(mr);
-    }
-
-    pc_dimm_plug(dev, MACHINE(vms), align, &local_err);
-    if (local_err) {
-        goto out;
+    if (is_nvdimm) {
+        nvdimm_plug(vms->nvdimms_state);
     }
 
     hhc = HOTPLUG_HANDLER_GET_CLASS(vms->acpi);
@@ -536,6 +563,27 @@ out:
     error_propagate(errp, local_err);
 }
 
+static void virt_dimm_pre_plug(HotplugHandler *hotplug_dev,
+                         DeviceState *dev, Error **errp)
+{
+    VirtMachineState *vms = VIRT_MACHINE(hotplug_dev);
+    const uint64_t legacy_align = TARGET_PAGE_SIZE;
+    const bool is_nvdimm = object_dynamic_cast(OBJECT(dev), TYPE_NVDIMM);
+    Error *local_err = NULL;
+
+    assert(vms->acpi);
+
+    if (is_nvdimm && !vms->acpi_configuration->nvdimms_state->is_enabled) {
+        error_setg(&local_err,
+                   "nvdimm is not enabled: missing 'nvdimm' in '-M'");
+        goto out;
+    }
+
+    pc_dimm_pre_plug(PC_DIMM(dev), MACHINE(hotplug_dev),
+                     &legacy_align, errp);
+out:
+    error_propagate(errp, local_err);
+}
 
 static void virt_dimm_unplug(HotplugHandler *hotplug_dev,
                            DeviceState *dev, Error **errp)
@@ -551,7 +599,7 @@ static void virt_dimm_unplug(HotplugHandler *hotplug_dev,
         goto out;
     }
 
-    pc_dimm_unplug(dev, MACHINE(vms));
+    pc_dimm_unplug(PC_DIMM(dev), MACHINE(vms));
     object_unparent(OBJECT(dev));
 
  out:
@@ -576,6 +624,9 @@ static void virt_machine_device_pre_plug_cb(HotplugHandler *hotplug_dev,
 {
     if (object_dynamic_cast(OBJECT(dev), TYPE_CPU)) {
         virt_cpu_pre_plug(hotplug_dev, dev, errp);
+    }
+    if (object_dynamic_cast(OBJECT(dev), TYPE_PC_DIMM)) {
+        virt_dimm_pre_plug(hotplug_dev, dev, errp);
     }
 }
 
