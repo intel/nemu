@@ -228,8 +228,8 @@ static void virt_machine_state_init(MachineState *machine)
                         val, sizeof(*val));
     }
 
-    if (vms->acpi_conf.nvdimms_state->is_enabled) {
-        nvdimm_init_acpi_state(vms->acpi_conf.nvdimms_state, get_system_io(),
+    if (machine->nvdimms_state->is_enabled) {
+        nvdimm_init_acpi_state(machine->nvdimms_state, get_system_io(),
                                fw_cfg, OBJECT(vms));
     }
 
@@ -239,20 +239,6 @@ static void virt_machine_state_init(MachineState *machine)
     if (linux_boot) {
         load_linux(MACHINE(vms), &vms->acpi_conf, fw_cfg);
     }
-}
-
-static bool virt_machine_get_nvdimm(Object *obj, Error **errp)
-{
-    VirtMachineState *vms = VIRT_MACHINE(obj);
-
-    return vms->acpi_conf.nvdimms_state->is_enabled;
-}
-
-static void virt_machine_set_nvdimm(Object *obj, bool value, Error **errp)
-{
-    VirtMachineState *vms = VIRT_MACHINE(obj);
-
-    vms->acpi_conf.nvdimms_state->is_enabled = value;
 }
 
 static void
@@ -268,9 +254,6 @@ virt_machine_get_device_memory_region_size(Object *obj, Visitor *v,
 
 static void virt_machine_instance_init(Object *obj)
 {
-    VirtMachineState *vms = VIRT_MACHINE(obj);
-
-    vms->acpi_conf.nvdimms_state->is_enabled = false;
 }
 
 static void virt_machine_reset(void)
@@ -314,11 +297,6 @@ static void virt_class_init(ObjectClass *oc, void *data)
     /* NMI handler */
     nc->nmi_monitor_handler = x86_nmi;
 
-    /* NVDIMM property */
-    object_class_property_add_bool(oc, VIRT_MACHINE_NVDIMM,
-                                   virt_machine_get_nvdimm,
-                                   virt_machine_set_nvdimm,
-                                   &error_abort);
     /* MEMHP setting */
     object_class_property_add(oc, PC_MACHINE_DEVMEM_REGION_SIZE, "int",
                               virt_machine_get_device_memory_region_size, NULL,
@@ -568,7 +546,7 @@ static void virt_dimm_plug(HotplugHandler *hotplug_dev,
     }
 
     if (is_nvdimm) {
-        nvdimm_plug(vms->acpi_conf.nvdimms_state);
+        nvdimm_plug(MACHINE(vms)->nvdimms_state);
     }
 
     hhc = HOTPLUG_HANDLER_GET_CLASS(vms->acpi);
@@ -587,7 +565,7 @@ static void virt_dimm_pre_plug(HotplugHandler *hotplug_dev,
 
     assert(vms->acpi);
 
-    if (is_nvdimm && !vms->acpi_conf.nvdimms_state->is_enabled) {
+    if (is_nvdimm && !MACHINE(vms)->nvdimms_state->is_enabled) {
         error_setg(&local_err,
                    "nvdimm is not enabled: missing 'nvdimm' in '-M'");
         goto out;
@@ -719,6 +697,7 @@ static void virt_machine_class_init(MachineClass *mc)
     mc->has_hotpluggable_cpus = true;
     mc->auto_enable_numa_with_memhp = true;
     mc->default_cpu_type = X86_CPU_TYPE_NAME ("host");
+    mc->nvdimm_supported = true;
 
     /* Machine class handlers */
     mc->cpu_index_to_instance_props = cpu_index_to_props;
