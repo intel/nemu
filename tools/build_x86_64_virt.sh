@@ -42,6 +42,10 @@ $SRCDIR/configure \
  --disable-sdl \
  --disable-rdma \
  --disable-vxhs \
+ --disable-parallels \
+ --disable-dmg \
+ --disable-gnutls \
+ --disable-nettle \
  --enable-attr \
  --enable-cap-ng \
  --enable-kvm \
