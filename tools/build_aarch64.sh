@@ -44,6 +44,8 @@ $SRCDIR/configure \
  --disable-parallels \
  --disable-dmg \
  --disable-tcg \
+ --disable-gnutls \
+ --disable-nettle \
  --enable-attr \
  --enable-cap-ng \
  --enable-fdt \
