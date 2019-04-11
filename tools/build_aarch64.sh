@@ -27,9 +27,7 @@ $SRCDIR/configure \
  --disable-capstone \
  --disable-xen \
  --disable-xen-pci-passthrough \
- --disable-wdt \
  --disable-audio \
- --disable-bluetooth \
  --disable-usb-redir \
  --disable-spice \
  --disable-vnc \
