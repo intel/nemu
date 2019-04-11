@@ -179,11 +179,8 @@ soread(struct socket *so)
 	DEBUG_CALL("soread");
 	DEBUG_ARG("so = %p", so);
 
-	/*
-	 * No need to check if there's enough room to read.
-	 * soread wouldn't have been called if there weren't
-	 */
-	sopreprbuf(so, iov, &n);
+	if (sopreprbuf(so, iov, &n) < 1)
+		return -1;
 
 	nn = recv(so->s, iov[0].iov_base, iov[0].iov_len,0);
 	if (nn <= 0) {
