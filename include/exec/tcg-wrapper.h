@@ -58,12 +58,12 @@ int page_unprotect(target_ulong address, uintptr_t pc);
 struct page_collection {
 };
 
-inline struct page_collection * page_collection_lock(tb_page_addr_t start, tb_page_addr_t end)
+static inline struct page_collection * page_collection_lock(tb_page_addr_t start, tb_page_addr_t end)
 {
     return NULL;
 }
 
-inline void page_collection_unlock(struct page_collection *set)
+static inline void page_collection_unlock(struct page_collection *set)
 { }
 
 static inline void tb_invalidate_phys_page_fast(struct page_collection *pages,
@@ -85,11 +85,11 @@ static inline void flush_icache_range(uintptr_t start, uintptr_t stop)
 {
 }
 
-inline void tb_flush(CPUState *cpu)
+static inline void tb_flush(CPUState *cpu)
 {
 }
 
-inline void tlb_set_dirty(CPUState *cpu, target_ulong vaddr)
+static inline void tlb_set_dirty(CPUState *cpu, target_ulong vaddr)
 {
 }
 
@@ -101,11 +101,11 @@ static inline void tb_unlock(void)
 {
 }
 
-inline void tcg_register_thread(void)
+static inline void tcg_register_thread(void)
 {
 }
 
-inline void tcg_region_init(void)
+static inline void tcg_region_init(void)
 {
 }
 
