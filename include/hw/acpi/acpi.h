@@ -195,7 +195,7 @@ struct AcpiBuildState {
     /* Copy of table in RAM (for patching). */
     MemoryRegion *table_mr;
     /* Is table patched? */
-    uint8_t patched;
+    bool patched;
     void *rsdp;
     MemoryRegion *rsdp_mr;
     MemoryRegion *linker_mr;
