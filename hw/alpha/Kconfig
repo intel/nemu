@@ -11,3 +11,5 @@ config DP264
     select PCI
     select PCKBD
     select SMC37C669
+    select HID_DEV
+    select PS2_DEV

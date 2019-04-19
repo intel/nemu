@@ -1,5 +1,6 @@
 config USB
     bool
+    select HID_DEV
 
 config USB_UHCI
     bool
