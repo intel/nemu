@@ -26,7 +26,8 @@
 #undef __NetBSD__
 #undef __DragonFly__
 #undef __MINGW32__
-#undef CONFIG_BLUEZ
+#undef CONFIG_BT
+#undef CONFIG_BT_BLUEZ
 #undef _ARCH_PPC64
 #undef __alpha__
 #undef __APPLE__
