@@ -25,7 +25,7 @@
 #ifndef _WIN32
 # include <sys/ioctl.h>
 # include <sys/uio.h>
-# ifdef CONFIG_BLUEZ
+# ifdef CONFIG_BT_BLUEZ
 #  include <bluetooth/bluetooth.h>
 #  include <bluetooth/hci.h>
 #  include <bluetooth/hci_lib.h>
@@ -146,7 +146,7 @@ struct HCIInfo *bt_host_hci(const char *id)
 {
     struct bt_host_hci_s *s;
     int fd = -1;
-# ifdef CONFIG_BLUEZ
+# ifdef CONFIG_BT_BLUEZ
     int dev_id = hci_devid(id);
     struct hci_filter flt;
 
@@ -166,7 +166,7 @@ struct HCIInfo *bt_host_hci(const char *id)
         return NULL;
     }
 
-# ifdef CONFIG_BLUEZ
+# ifdef CONFIG_BT_BLUEZ
     hci_filter_clear(&flt);
     hci_filter_all_ptypes(&flt);
     hci_filter_all_events(&flt);
