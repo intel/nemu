@@ -1,6 +1,9 @@
 config ADB
     bool
 
+config HID_DEV
+    bool
+
 config LM832X
     bool
     depends on I2C
@@ -11,6 +14,9 @@ config PCKBD
     depends on ISA_BUS
 
 config PL050
+    bool
+
+config PS2_DEV
     bool
 
 config STELLARIS_INPUT
