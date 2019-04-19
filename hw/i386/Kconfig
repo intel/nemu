@@ -30,6 +30,8 @@ config PC
     # For ACPI builder:
     select SERIAL_ISA
     select ACPI_VMGENID
+    select PS2_DEV
+    select HID_DEV
 
 config PC_PCI
     bool
