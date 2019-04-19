@@ -1,2 +1,3 @@
 config BLUETOOTH
     bool
+    select HID_DEV
