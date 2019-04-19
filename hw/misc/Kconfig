@@ -40,6 +40,9 @@ config PCA9552
     bool
     depends on I2C
 
+config UNIMPLEMENTED
+    bool
+
 config PL310
     bool
 
