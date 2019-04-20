@@ -8,6 +8,13 @@ config ACPI_X86
     select ACPI_CPU_HOTPLUG
     select ACPI_MEMORY_HOTPLUG
 
+config ACPI_X86_PIIX
+    bool
+    select ACPI_X86
+
+config ACPI_PCI_HOTPLUG
+    bool
+
 config ACPI_X86_ICH
     bool
     select ACPI_X86
