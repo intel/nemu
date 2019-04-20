@@ -1,5 +1,7 @@
+devices-dirs-$(CONFIG_SOFTMMU) += quirks/
+obj-y += quirks/
 obj-y += common.o spapr.o
-obj-$(CONFIG_PCI) += pci.o pci-quirks.o
+obj-$(CONFIG_PCI) += pci.o
 obj-$(CONFIG_VFIO_VGA) += display.o
 obj-$(CONFIG_VFIO_CCW) += ccw.o
 obj-$(CONFIG_VFIO_PLATFORM) += platform.o
