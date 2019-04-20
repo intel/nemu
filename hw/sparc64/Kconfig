@@ -12,6 +12,7 @@ config SUN4U
     select PARALLEL
     select PCKBD
     select SIMBA
+    select CHRP_NVRAM
 
 config NIAGARA
     bool
