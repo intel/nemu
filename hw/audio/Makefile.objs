@@ -1,4 +1,9 @@
 # Sound
+
+ifeq ($(CONFIG_AUDIO), y)
+
+common-obj-y += soundhw.o
+
 common-obj-$(CONFIG_SB16) += sb16.o
 common-obj-$(CONFIG_ES1370) += es1370.o
 common-obj-$(CONFIG_AC97) += ac97.o
@@ -15,4 +20,8 @@ common-obj-$(CONFIG_CS4231) += cs4231.o
 common-obj-$(CONFIG_MARVELL_88W8618) += marvell_88w8618.o
 common-obj-$(CONFIG_MILKYMIST) += milkymist-ac97.o
 
-common-obj-y += soundhw.o
+else
+
+common-obj-y += stub.o
+
+endif
