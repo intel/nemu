@@ -25,9 +25,4 @@
 CONFIG_ISAPC=y
 CONFIG_I440FX=y
 CONFIG_Q35=y
-
-# Temp postion for virt platform, and will be moved to hw/i386/Kconfig
-CONFIG_SYS_BUS_DEBUG=y
-CONFIG_PCI_LITE=y
-CONFIG_ACPI_HW_REDUCED=y
-CONFIG_ACPI_PCI_HOTPLUG=y
+CONFIG_VIRT=y
