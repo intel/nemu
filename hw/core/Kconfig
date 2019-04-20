@@ -7,5 +7,8 @@ config PTIMER
 config FITLOADER
     bool
 
+config GPIO_IRQ
+    bool
+
 config PLATFORM_BUS
     bool
