@@ -32,6 +32,9 @@ config PC
     select ACPI_VMGENID
     select PS2_DEV
     select HID_DEV
+    select MULTIBOOT
+    select X86_COMMON
+    select KVM_VAPIC
 
 config PC_PCI
     bool
@@ -91,6 +94,15 @@ config Q35
     select VMMOUSE
     select FW_CFG_DMA
 
+config VIRT
+    bool
+
+config MULTIBOOT
+    bool
+
+config X86_COMMON
+    bool
+
 config VTD
     bool
 
@@ -103,3 +115,6 @@ config VMPORT
 config VMMOUSE
     bool
     depends on VMPORT
+
+config KVM_VAPIC
+    bool
