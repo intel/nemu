@@ -2,6 +2,12 @@ config VFIO
     bool
     depends on LINUX
 
+config VFIO_VGA
+    bool
+    select VFIO_PCI
+    select VGA
+    select EDID
+
 config VFIO_PCI
     bool
     default y
