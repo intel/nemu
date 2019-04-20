@@ -33,17 +33,20 @@ config PCI_PIIX
     select PAM
     select ISA_BUS
     select PCI_BRIDGE
+    select PCI_SHPC
 
 config PCI_EXPRESS_Q35
     bool
     select PCI_EXPRESS
     select PAM
     select PCI_BRIDGE
+    select PCI_SHPC
 
 config PCI_LITE
     bool
     select PCI_EXPRESS
     select PCI_BRIDGE
+    select PCI_SHPC
 
 config PCI_EXPRESS_GENERIC_BRIDGE
     bool
