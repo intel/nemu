@@ -96,6 +96,11 @@ config Q35
 
 config VIRT
     bool
+    select SYS_BUS_DEBUG
+    select PCI_LITE
+    select ACPI_HW_REDUCED
+    select ACPI_PCI_HOTPLUG
+    select X86_COMMON
 
 config MULTIBOOT
     bool
