@@ -9,3 +9,7 @@ config VFIO_PCI_QUIRKS_ATI
 config VFIO_PCI_QUIRKS_NVIDIA
     bool
     depends on PCI
+
+config VFIO_PCI_QUIRKS_REALTEK
+    bool
+    depends on PCI
