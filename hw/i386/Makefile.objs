@@ -1,9 +1,10 @@
 obj-$(CONFIG_KVM) += kvm/
-obj-y += cpu.o memory.o multiboot.o fw.o kernel-loader.o
-obj-y += pc.o
+obj-$(CONFIG_MULTIBOOT) += multiboot.o
+obj-y += cpu.o fw.o memory.o kernel-loader.o
+obj-$(CONFIG_X86_COMMON) += pc.o
 obj-$(CONFIG_I440FX) += pc_piix.o
 obj-$(CONFIG_Q35) += pc_q35.o
-obj-y += virt/
+obj-$(CONFIG_VIRT) += virt/
 obj-y += pc_sysfw.o
 obj-y += x86-iommu.o
 obj-$(CONFIG_VTD) += intel_iommu.o
@@ -12,5 +13,5 @@ obj-$(CONFIG_XEN) += ../xenpv/ xen/
 obj-$(CONFIG_VMPORT) += vmport.o
 obj-$(CONFIG_VMMOUSE) += vmmouse.o
 
-obj-y += kvmvapic.o
+obj-$(CONFIG_KVM_VAPIC) += kvmvapic.o
 obj-y += acpi-build.o
