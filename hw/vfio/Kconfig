@@ -41,3 +41,5 @@ config VFIO_AP
     default y
     select VFIO
     depends on LINUX && S390_CCW_VIRTIO
+
+source quirks/Kconfig
