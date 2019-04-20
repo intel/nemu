@@ -5,3 +5,7 @@ config VFIO_PCI_QUIRKS_IGD
 config VFIO_PCI_QUIRKS_ATI
     bool
     depends on PCI
+
+config VFIO_PCI_QUIRKS_NVIDIA
+    bool
+    depends on PCI
