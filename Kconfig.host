@@ -34,3 +34,6 @@ config VIRTFS
 
 config AUDIO
     bool
+
+config WDT
+    bool
