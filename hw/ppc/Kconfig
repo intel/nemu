@@ -9,6 +9,7 @@ config PSERIES
     select XICS_SPAPR
     select XIVE_SPAPR
     select CHRP_NVRAM
+    select CPU_DEVICE
 
 config SPAPR_RNG
     bool
@@ -25,6 +26,7 @@ config POWERNV
     select MC146818RTC
     select XICS
     select XIVE
+    select CPU_DEVICE
 
 config PPC405
     bool

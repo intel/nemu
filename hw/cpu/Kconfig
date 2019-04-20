@@ -6,3 +6,9 @@ config A9MPCORE
 
 config A15MPCORE
     bool
+
+config CPU_DEVICE
+    bool
+
+config CPU_CLUSTER
+    bool
