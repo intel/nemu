@@ -37,3 +37,6 @@ config PVRDMA
 
 config AUDIO
     bool
+
+config WDT
+    bool
