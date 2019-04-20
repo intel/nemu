@@ -7,6 +7,7 @@ source block/Kconfig
 source bt/Kconfig
 source char/Kconfig
 source core/Kconfig
+source cpu/Kconfig
 source display/Kconfig
 source dma/Kconfig
 source gpio/Kconfig
