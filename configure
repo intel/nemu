@@ -283,6 +283,7 @@ iasl="iasl"
 interp_prefix="/usr/gnemul/qemu-%M"
 static="no"
 cross_prefix=""
+audio="yes"
 audio_drv_list=""
 block_drv_rw_whitelist=""
 block_drv_ro_whitelist=""
@@ -1076,6 +1077,10 @@ for opt do
   ;;
   --enable-vnc) vnc="yes"
   ;;
+  --disable-audio) audio="no"
+  ;;
+  --enable-audio) audio="yes"
+  ;;
   --oss-lib=*) oss_lib="$optarg"
   ;;
   --audio-drv-list=*) audio_drv_list="$optarg"
@@ -1200,7 +1205,9 @@ for opt do
   ;;
   --enable-cocoa)
       cocoa="yes" ;
-      audio_drv_list="coreaudio $(echo $audio_drv_list | sed s,coreaudio,,g)"
+      if test "$audio" = "yes"; then
+	  audio_drv_list="coreaudio $(echo $audio_drv_list | sed s,coreaudio,,g)"
+      fi
   ;;
   --disable-system) softmmu="no"
   ;;
@@ -3377,77 +3384,81 @@ fi
 ##########################################
 # Sound support libraries probe
 
-audio_drv_list=$(echo "$audio_drv_list" | sed -e 's/,/ /g')
-for drv in $audio_drv_list; do
-    case $drv in
-    alsa | try-alsa)
-    if $pkg_config alsa --exists; then
-        alsa_libs=$($pkg_config alsa --libs)
-        if test "$drv" = "try-alsa"; then
-            audio_drv_list=$(echo "$audio_drv_list" | sed -e 's/try-alsa/alsa/')
-        fi
-    else
-        if test "$drv" = "try-alsa"; then
-            audio_drv_list=$(echo "$audio_drv_list" | sed -e 's/try-alsa//')
+if test "$audio" = "yes"; then
+    audio_drv_list=$(echo "$audio_drv_list" | sed -e 's/,/ /g')
+    for drv in $audio_drv_list; do
+        case $drv in
+        alsa | try-alsa)
+        if $pkg_config alsa --exists; then
+            alsa_libs=$($pkg_config alsa --libs)
+            if test "$drv" = "try-alsa"; then
+                audio_drv_list=$(echo "$audio_drv_list" | sed -e 's/try-alsa/alsa/')
+            fi
         else
-            error_exit "$drv check failed" \
-                "Make sure to have the $drv libs and headers installed."
+            if test "$drv" = "try-alsa"; then
+                audio_drv_list=$(echo "$audio_drv_list" | sed -e 's/try-alsa//')
+            else
+                error_exit "$drv check failed" \
+                    "Make sure to have the $drv libs and headers installed."
+            fi
         fi
-    fi
-    ;;
+        ;;
 
-    pa | try-pa)
-    if $pkg_config libpulse --exists; then
-        pulse_libs=$($pkg_config libpulse --libs)
-        audio_pt_int="yes"
-        if test "$drv" = "try-pa"; then
-            audio_drv_list=$(echo "$audio_drv_list" | sed -e 's/try-pa/pa/')
-        fi
-    else
-        if test "$drv" = "try-pa"; then
-            audio_drv_list=$(echo "$audio_drv_list" | sed -e 's/try-pa//')
+        pa | try-pa)
+        if $pkg_config libpulse --exists; then
+            pulse_libs=$($pkg_config libpulse --libs)
+            audio_pt_int="yes"
+            if test "$drv" = "try-pa"; then
+                audio_drv_list=$(echo "$audio_drv_list" | sed -e 's/try-pa/pa/')
+            fi
         else
-            error_exit "$drv check failed" \
-                "Make sure to have the $drv libs and headers installed."
+            if test "$drv" = "try-pa"; then
+                audio_drv_list=$(echo "$audio_drv_list" | sed -e 's/try-pa//')
+            else
+                error_exit "$drv check failed" \
+                    "Make sure to have the $drv libs and headers installed."
+            fi
         fi
-    fi
-    ;;
+        ;;
 
-    sdl)
-    if test "$sdl" = "no"; then
-        error_exit "sdl not found or disabled, can not use sdl audio driver"
-    fi
-    ;;
+        sdl)
+        if test "$sdl" = "no"; then
+            error_exit "sdl not found or disabled, can not use sdl audio driver"
+        fi
+        ;;
 
-    try-sdl)
-    if test "$sdl" = "no"; then
-        audio_drv_list=$(echo "$audio_drv_list" | sed -e 's/try-sdl//')
-    else
-        audio_drv_list=$(echo "$audio_drv_list" | sed -e 's/try-sdl/sdl/')
-    fi
-    ;;
+        try-sdl)
+        if test "$sdl" = "no"; then
+            audio_drv_list=$(echo "$audio_drv_list" | sed -e 's/try-sdl//')
+        else
+            audio_drv_list=$(echo "$audio_drv_list" | sed -e 's/try-sdl/sdl/')
+        fi
+        ;;
 
-    coreaudio)
-      coreaudio_libs="-framework CoreAudio"
-    ;;
+        coreaudio)
+          coreaudio_libs="-framework CoreAudio"
+          ;;
 
-    dsound)
-      dsound_libs="-lole32 -ldxguid"
-      audio_win_int="yes"
-    ;;
+        dsound)
+          dsound_libs="-lole32 -ldxguid"
+          audio_win_int="yes"
+          ;;
 
-    oss)
-      oss_libs="$oss_lib"
-    ;;
+        oss)
+          oss_libs="$oss_lib"
+          ;;
 
-    *)
-    echo "$audio_possible_drivers" | grep -q "\<$drv\>" || {
-        error_exit "Unknown driver '$drv' selected" \
-            "Possible drivers are: $audio_possible_drivers"
-    }
-    ;;
-    esac
-done
+        *)
+        echo "$audio_possible_drivers" | grep -q "\<$drv\>" || {
+            error_exit "Unknown driver '$drv' selected" \
+                "Possible drivers are: $audio_possible_drivers"
+        }
+        ;;
+        esac
+    done
+else
+    audio_drv_list=""
+fi
 
 ##########################################
 # BrlAPI probe
@@ -6597,16 +6608,19 @@ fi
 if test "$cap_ng" = "yes" ; then
   echo "CONFIG_LIBCAP=y" >> $config_host_mak
 fi
-echo "CONFIG_AUDIO_DRIVERS=$audio_drv_list" >> $config_host_mak
-for drv in $audio_drv_list; do
-    def=CONFIG_AUDIO_$(echo $drv | LC_ALL=C tr '[a-z]' '[A-Z]')
-    case "$drv" in
-	alsa | oss | pa | sdl)
-	    echo "$def=m" >> $config_host_mak ;;
-	*)
-	    echo "$def=y" >> $config_host_mak ;;
-    esac
-done
+if test "$audio" = "yes"; then
+    echo "CONFIG_AUDIO=y" >> $config_host_mak
+    echo "CONFIG_AUDIO_DRIVERS=$audio_drv_list" >> $config_host_mak
+    for drv in $audio_drv_list; do
+	def=CONFIG_AUDIO_$(echo $drv | LC_ALL=C tr '[a-z]' '[A-Z]')
+	case "$drv" in
+	    alsa | oss | pa | sdl)
+		echo "$def=m" >> $config_host_mak ;;
+	    *)
+		echo "$def=y" >> $config_host_mak ;;
+	esac
+    done
+fi
 echo "ALSA_LIBS=$alsa_libs" >> $config_host_mak
 echo "PULSE_LIBS=$pulse_libs" >> $config_host_mak
 echo "COREAUDIO_LIBS=$coreaudio_libs" >> $config_host_mak

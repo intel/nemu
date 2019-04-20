@@ -34,3 +34,6 @@ config VIRTFS
 
 config PVRDMA
     bool
+
+config AUDIO
+    bool
