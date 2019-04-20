@@ -1,6 +1,9 @@
 config EDID
     bool
 
+config RAMFB
+    bool
+
 config FW_CFG_DMA
     bool
 
