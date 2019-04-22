@@ -48,6 +48,8 @@
 #include "hw/i386/amd_iommu.h"
 #include "hw/i386/intel_iommu.h"
 #include "hw/i386/pci.h"
+#include "hw/i386/smm.h"
+#include "hw/i386/apic.h"
 #include "hw/display/ramfb.h"
 #include "hw/firmware/smbios.h"
 #include "hw/ide/pci.h"
@@ -282,7 +284,7 @@ static void pc_q35_init(MachineState *machine)
         ioapic_init_gsi(gsi_state, "q35");
     }
 
-    pc_register_ferr_irq(pcms->gsi[13]);
+    register_ferr_irq(pcms->gsi[13]);
 
     assert(pcms->vmport != ON_OFF_AUTO__MAX);
     if (pcms->vmport == ON_OFF_AUTO_AUTO) {
@@ -295,7 +297,7 @@ static void pc_q35_init(MachineState *machine)
                          0xff0104);
 
     /* connect pm stuff to lpc */
-    ich9_lpc_pm_init(lpc, pc_machine_is_smm_enabled(pcms));
+    ich9_lpc_pm_init(lpc, is_smm_enabled(pcms->smm));
 
     if (pcms->sata_enabled) {
         /* ahci and SATA device, for q35 1 ahci controller is built-in */
