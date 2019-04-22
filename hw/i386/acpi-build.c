@@ -1036,7 +1036,7 @@ build_dsdt(GArray *table_data, BIOSLinker *linker,
     }
 
     if (conf->legacy_cpu_hotplug) {
-        build_legacy_cpu_hotplug_aml(dsdt, machine, pm->cpu_hp_io_base);
+        build_legacy_cpu_hotplug_aml(dsdt, machine, pm->cpu_hp_io_base, conf->apic_id_limit);
     } else {
         CPUHotplugFeatures opts = {
             .acpi_1_compatible = true, .has_legacy_cphp = true
