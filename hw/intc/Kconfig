@@ -22,6 +22,9 @@ config OPENPIC
 config APIC
     bool
 
+config APIC_COMMON
+    bool
+
 config ARM_GIC_KVM
     bool
     default y
