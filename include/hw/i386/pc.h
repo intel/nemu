@@ -194,13 +194,6 @@ void pc_hot_add_cpu(const int64_t id, Error **errp);
 
 void pc_guest_info_init(PCMachineState *pcms);
 
-#define PCI_HOST_BELOW_4G_MEM_SIZE     "below-4g-mem-size"
-#define PCI_HOST_ABOVE_4G_MEM_SIZE     "above-4g-mem-size"
-
-
-void pc_pci_as_mapping_init(Object *owner, MemoryRegion *system_memory,
-                            MemoryRegion *pci_address_space);
-
 void xen_load_linux(PCMachineState *pcms);
 void pc_memory_init(PCMachineState *pcms,
                     MemoryRegion *system_memory,
