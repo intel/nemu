@@ -23,17 +23,18 @@
  */
 
 #include "qemu/osdep.h"
-#include "hw/i386/pc.h"
 #include "hw/i386/pci.h"
+#include "hw/i386/smm.h"
 #include "hw/i386/apic.h"
 #include "sysemu/qtest.h"
 #include "kvm_i386.h"
+#include "qemu/timer.h"
 #include "qemu/error-report.h"
 
 /* MSDOS compatibility mode FPU exception support */
 qemu_irq ferr_irq;
 
-void pc_register_ferr_irq(qemu_irq irq)
+void register_ferr_irq(qemu_irq irq)
 {
     ferr_irq = irq;
 }
@@ -98,11 +99,11 @@ void pc_pci_as_mapping_init(Object *owner, MemoryRegion *system_memory,
                                         pci_address_space, -1);
 }
 
-bool pc_machine_is_smm_enabled(PCMachineState *pcms)
+bool is_smm_enabled(OnOffAuto smm)
 {
     bool smm_available = false;
 
-    if (pcms->smm == ON_OFF_AUTO_OFF) {
+    if (smm == ON_OFF_AUTO_OFF) {
         return false;
     }
 
@@ -116,7 +117,7 @@ bool pc_machine_is_smm_enabled(PCMachineState *pcms)
         return true;
     }
 
-    if (pcms->smm == ON_OFF_AUTO_ON) {
+    if (smm == ON_OFF_AUTO_ON) {
         error_report("System Management Mode not supported by this hypervisor.");
         exit(1);
     }

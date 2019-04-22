@@ -40,6 +40,7 @@
 #include "hw/i386/intel_iommu.h"
 #include "hw/i386/memory.h"
 #include "hw/i386/x86-iommu.h"
+#include "hw/i386/smm.h"
 
 #include "hw/pci/pci.h"
 #include "hw/pci/msi.h"
@@ -1630,7 +1631,7 @@ int kvm_arch_init(MachineState *ms, KVMState *s)
 
     if (kvm_check_extension(s, KVM_CAP_X86_SMM) &&
         object_dynamic_cast(OBJECT(ms), TYPE_PC_MACHINE) &&
-        pc_machine_is_smm_enabled(PC_MACHINE(ms))) {
+        is_smm_enabled(PC_MACHINE(ms)->smm)) {
         smram_machine_done.notify = register_smram_listener;
         qemu_add_machine_init_done_notifier(&smram_machine_done);
     }
