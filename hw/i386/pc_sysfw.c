@@ -212,7 +212,7 @@ static void pc_system_flash_map(PCMachineState *pcms,
     }
 }
 
-void pc_system_rom_init(MemoryRegion *rom_memory, bool isapc_ram_fw)
+void pc_system_rom_init(MemoryRegion *rom_memory, bool rw_fw)
 {
     char *filename;
     MemoryRegion *bios, *isa_bios;
@@ -235,7 +235,7 @@ void pc_system_rom_init(MemoryRegion *rom_memory, bool isapc_ram_fw)
     }
     bios = g_malloc(sizeof(*bios));
     memory_region_init_ram(bios, NULL, "pc.bios", bios_size, &error_fatal);
-    if (!isapc_ram_fw) {
+    if (!rw_fw) {
         memory_region_set_readonly(bios, true);
     }
     ret = rom_add_file_fixed(bios_name, (uint32_t)(-bios_size), -1);
@@ -255,7 +255,7 @@ void pc_system_rom_init(MemoryRegion *rom_memory, bool isapc_ram_fw)
                                         0x100000 - isa_bios_size,
                                         isa_bios,
                                         1);
-    if (!isapc_ram_fw) {
+    if (!rw_fw) {
         memory_region_set_readonly(isa_bios, true);
     }
 
