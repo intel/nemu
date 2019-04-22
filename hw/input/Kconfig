@@ -27,12 +27,12 @@ config TSC2005
 
 config VIRTIO_INPUT
     bool
-    default y
+    default y if !VIRT
     depends on VIRTIO
 
 config VIRTIO_INPUT_HOST
     bool
-    default y
+    default y if !VIRT
     depends on VIRTIO && LINUX
 
 config TSC210X
