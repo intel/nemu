@@ -97,7 +97,7 @@ MemoryRegion *virt_memory_init(VirtMachineState *vms)
                                     &machine->device_memory->mr);
     }
 
-    pc_system_rom_init(system_memory, false);
+    pc_system_rom_init(system_memory, true);
 
     return ram;
 }
