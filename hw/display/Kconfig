@@ -97,7 +97,7 @@ config QXL
 
 config VIRTIO_GPU
     bool
-    default y
+    default y if !VIRT
     depends on VIRTIO
     select EDID
 
