@@ -298,7 +298,7 @@ static void virt_class_init(ObjectClass *oc, void *data)
     nc->nmi_monitor_handler = x86_nmi;
 
     /* MEMHP setting */
-    object_class_property_add(oc, PC_MACHINE_DEVMEM_REGION_SIZE, "int",
+    object_class_property_add(oc, MEMORY_DEVICE_REGION_SIZE, "int",
                               virt_machine_get_device_memory_region_size, NULL,
                               NULL, NULL, &error_abort);
 }
