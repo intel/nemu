@@ -10,6 +10,9 @@ config PL190
 config IOAPIC
     bool
 
+config IOAPIC_COMMON
+    bool
+
 config ARM_GIC
     bool
     select MSI_NONBROKEN
