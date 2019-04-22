@@ -3644,7 +3644,9 @@ int kvm_arch_handle_exit(CPUState *cs, struct kvm_run *run)
         ret = kvm_hv_handle_exit(cpu, &run->hyperv);
         break;
     case KVM_EXIT_IOAPIC_EOI:
+#ifdef CONFIG_IOAPIC
         ioapic_eoi_broadcast(run->eoi.vector);
+#endif
         ret = 0;
         break;
     default:
