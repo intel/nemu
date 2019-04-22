@@ -39,6 +39,7 @@ config PC_PCI
     bool
     select APIC
     select IOAPIC
+    select IOAPIC_COMMON
     select APM
     select PC
 
@@ -99,6 +100,7 @@ config VIRT
     select PCI_LITE
     select ACPI_HW_REDUCED
     select ACPI_PCI_HOTPLUG
+    select IOAPIC_COMMON
 
 config MULTIBOOT
     bool
