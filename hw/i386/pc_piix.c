@@ -30,6 +30,7 @@
 #include "hw/i386/cpu-internal.h"
 #include "hw/i386/pc.h"
 #include "hw/i386/apic.h"
+#include "hw/i386/smm.h"
 #include "hw/display/ramfb.h"
 #include "hw/firmware/smbios.h"
 #include "hw/pci/pci.h"
@@ -229,7 +230,7 @@ static void pc_init1(MachineState *machine,
         ioapic_init_gsi(gsi_state, "i440fx");
     }
 
-    pc_register_ferr_irq(pcms->gsi[13]);
+    register_ferr_irq(pcms->gsi[13]);
 
     pc_vga_init(isa_bus, pcmc->pci_enabled ? pci_bus : NULL);
 
@@ -285,7 +286,7 @@ static void pc_init1(MachineState *machine,
         /* TODO: Populate SPD eeprom data.  */
         smbus = piix4_pm_init(pci_bus, piix3_devfn + 3, 0xb100,
                               pcms->gsi[9], smi_irq,
-                              pc_machine_is_smm_enabled(pcms),
+                              is_smm_enabled(pcms->smm),
                               &piix4_pm);
         smbus_eeprom_init(smbus, 8, NULL, 0);
 

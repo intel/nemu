@@ -3,6 +3,8 @@
 
 #include "qemu-common.h"
 
+#include "hw/irq.h"
+
 /* apic.c */
 void apic_deliver_irq(uint8_t dest, uint8_t dest_mode, uint8_t delivery_mode,
                       uint8_t vector_num, uint8_t trigger_mode);
@@ -24,5 +26,13 @@ int apic_get_highest_priority_irr(DeviceState *dev);
 
 /* pc.c */
 DeviceState *cpu_get_current_apic(void);
+
+/* PIC */
+extern DeviceState *isa_pic;
+int pic_read_irq(DeviceState *d);
+int pic_get_output(DeviceState *d);
+
+/* MSDOS compatibility mode FPU exception support */
+void register_ferr_irq(qemu_irq irq);
 
 #endif
