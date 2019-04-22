@@ -98,12 +98,15 @@ config Q35
 
 config VIRT
     bool
+    select ACPI_X86
+    select DIMM
     select SYS_BUS_DEBUG
     select PCI_LITE
     select ACPI_HW_REDUCED
     select ACPI_PCI_HOTPLUG
     select IOAPIC_COMMON
     select APIC_COMMON
+    select VIRTIO_PCI
 
 config MULTIBOOT
     bool

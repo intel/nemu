@@ -10,7 +10,7 @@ config VFIO_VGA
 
 config VFIO_PCI
     bool
-    default y
+    default y if Q35 || PC
     select VFIO
     depends on LINUX && PCI
 
