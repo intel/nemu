@@ -48,12 +48,6 @@ static void apic_update_irq(APICCommonState *s);
 static void apic_get_delivery_bitmask(uint32_t *deliver_bitmask,
                                       uint8_t dest, uint8_t dest_mode);
 
-/* Find first bit starting from msb */
-static int apic_fls_bit(uint32_t value)
-{
-    return 31 - clz32(value);
-}
-
 /* Find first bit starting from lsb */
 static int apic_ffs_bit(uint32_t value)
 {
@@ -66,18 +60,6 @@ static inline void apic_reset_bit(uint32_t *tab, int index)
     i = index >> 5;
     mask = 1 << (index & 0x1f);
     tab[i] &= ~mask;
-}
-
-/* return -1 if no bit is set */
-static int get_highest_priority_int(uint32_t *tab)
-{
-    int i;
-    for (i = 7; i >= 0; i--) {
-        if (tab[i] != 0) {
-            return i * 32 + apic_fls_bit(tab[i]);
-        }
-    }
-    return -1;
 }
 
 static void apic_sync_vapic(APICCommonState *s, int sync_type)
@@ -322,22 +304,6 @@ static uint8_t apic_get_tpr(APICCommonState *s)
 {
     apic_sync_vapic(s, SYNC_FROM_VAPIC);
     return s->tpr >> 4;
-}
-
-int apic_get_ppr(APICCommonState *s)
-{
-    int tpr, isrv, ppr;
-
-    tpr = (s->tpr >> 4);
-    isrv = get_highest_priority_int(s->isr);
-    if (isrv < 0)
-        isrv = 0;
-    isrv >>= 4;
-    if (tpr >= isrv)
-        ppr = s->tpr;
-    else
-        ppr = isrv << 4;
-    return ppr;
 }
 
 static int apic_get_arb_pri(APICCommonState *s)
