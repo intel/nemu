@@ -149,11 +149,8 @@ typedef struct PCMachineClass {
 
 /* i8259.c */
 
-extern DeviceState *isa_pic;
 qemu_irq *i8259_init(ISABus *bus, qemu_irq parent_irq);
 qemu_irq *kvm_i8259_init(ISABus *bus);
-int pic_read_irq(DeviceState *d);
-int pic_get_output(DeviceState *d);
 
 /* ioapic.c */
 
@@ -185,8 +182,6 @@ void vmmouse_set_data(const uint32_t *data);
 extern int fd_bootchk;
 extern bool compat_apic_id_mode;
 
-bool pc_machine_is_smm_enabled(PCMachineState *pcms);
-void pc_register_ferr_irq(qemu_irq irq);
 void pc_acpi_smi_interrupt(void *opaque, int irq, int level);
 
 void pc_cpus_init(PCMachineState *pcms);
