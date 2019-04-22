@@ -215,8 +215,8 @@ static void virt_machine_state_init(MachineState *machine)
                              "acpi-device", &error_abort);
 
     fw_cfg = fw_cfg_init(machine, smp_cpus, mc->possible_cpu_arch_ids(machine), vms->apic_id_limit);
+    fw_cfg_add_i16(fw_cfg, FW_CFG_MACHINE_ID, X86_VIRT);
     rom_set_fw(fw_cfg);
-
 
     if (machine->device_memory->base) {
         uint64_t *val = g_malloc(sizeof(*val));
