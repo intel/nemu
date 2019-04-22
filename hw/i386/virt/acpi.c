@@ -210,7 +210,7 @@ DeviceState *virt_acpi_init(qemu_irq *gsi, PCIBus *pci_bus)
         qbus_set_hotplug_handler(BUS(pci_bus), OBJECT(dev), NULL);
 
         acpi_pcihp_init(OBJECT(s), &s->pcihp_state, s->pci_bus,
-                        get_system_io(), true);
+                        get_system_io(), true, VIRT_ACPI_PCI_HOTPLUG_IO_BASE);
         acpi_pcihp_reset(&s->pcihp_state);
     }
 

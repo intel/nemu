@@ -46,13 +46,6 @@
 # define ACPI_PCIHP_DPRINTF(format, ...)     do { } while (0)
 #endif
 
-#define ACPI_PCIHP_ADDR 0xae00
-#define ACPI_PCIHP_SIZE 0x0014
-#define PCI_UP_BASE 0x0000
-#define PCI_DOWN_BASE 0x0004
-#define PCI_EJ_BASE 0x0008
-#define PCI_RMV_BASE 0x000c
-#define PCI_SEL_BASE 0x0010
 
 typedef struct AcpiPciHpFind {
     int bsel;
@@ -299,26 +292,26 @@ static uint64_t pci_read(void *opaque, hwaddr addr, unsigned int size)
     }
 
     switch (addr) {
-    case PCI_UP_BASE:
+    case ACPI_PCI_UP_BASE:
         val = s->acpi_pcihp_pci_status[bsel].up;
         if (!s->legacy_piix) {
             s->acpi_pcihp_pci_status[bsel].up = 0;
         }
         ACPI_PCIHP_DPRINTF("pci_up_read %" PRIu32 "\n", val);
         break;
-    case PCI_DOWN_BASE:
+    case ACPI_PCI_DOWN_BASE:
         val = s->acpi_pcihp_pci_status[bsel].down;
         ACPI_PCIHP_DPRINTF("pci_down_read %" PRIu32 "\n", val);
         break;
-    case PCI_EJ_BASE:
+    case ACPI_PCI_EJ_BASE:
         /* No feature defined yet */
         ACPI_PCIHP_DPRINTF("pci_features_read %" PRIu32 "\n", val);
         break;
-    case PCI_RMV_BASE:
+    case ACPI_PCI_RMV_BASE:
         val = s->acpi_pcihp_pci_status[bsel].hotplug_enable;
         ACPI_PCIHP_DPRINTF("pci_rmv_read %" PRIu32 "\n", val);
         break;
-    case PCI_SEL_BASE:
+    case ACPI_PCI_SEL_BASE:
         val = s->hotplug_select;
         ACPI_PCIHP_DPRINTF("pci_sel_read %" PRIu32 "\n", val);
     default:
@@ -333,7 +326,7 @@ static void pci_write(void *opaque, hwaddr addr, uint64_t data,
 {
     AcpiPciHpState *s = opaque;
     switch (addr) {
-    case PCI_EJ_BASE:
+    case ACPI_PCI_EJ_BASE:
         if (s->hotplug_select >= ACPI_PCIHP_MAX_HOTPLUG_BUS) {
             break;
         }
@@ -341,7 +334,7 @@ static void pci_write(void *opaque, hwaddr addr, uint64_t data,
         ACPI_PCIHP_DPRINTF("pciej write %" HWADDR_PRIx " <== %" PRIu64 "\n",
                       addr, data);
         break;
-    case PCI_SEL_BASE:
+    case ACPI_PCI_SEL_BASE:
         s->hotplug_select = s->legacy_piix ? ACPI_PCIHP_BSEL_DEFAULT : data;
         ACPI_PCIHP_DPRINTF("pcisel write %" HWADDR_PRIx " <== %" PRIu64 "\n",
                       addr, data);
@@ -361,10 +354,11 @@ static const MemoryRegionOps acpi_pcihp_io_ops = {
 };
 
 void acpi_pcihp_init(Object *owner, AcpiPciHpState *s, PCIBus *root_bus,
-                     MemoryRegion *address_space_io, bool bridges_enabled)
+                     MemoryRegion *address_space_io, bool bridges_enabled,
+                     uint16_t acpi_pcihp_addr)
 {
     s->io_len = ACPI_PCIHP_SIZE;
-    s->io_base = ACPI_PCIHP_ADDR;
+    s->io_base = acpi_pcihp_addr;
 
     s->root= root_bus;
     s->legacy_piix = !bridges_enabled;
