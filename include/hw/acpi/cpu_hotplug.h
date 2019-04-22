@@ -36,5 +36,5 @@ void acpi_switch_to_modern_cphp(AcpiCpuHotplug *gpe_cpu,
                                 uint16_t io_port);
 
 void build_legacy_cpu_hotplug_aml(Aml *ctx, MachineState *machine,
-                                  uint16_t io_base);
+                                  uint16_t io_base, unsigned apic_id_limit);
 #endif
