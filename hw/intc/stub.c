@@ -11,6 +11,7 @@
 #include "qemu/osdep.h"
 #include "hw/qdev-core.h"
 #include "hw/i386/apic.h"
+#include "hw/i386/ioapic.h"
 
 DeviceState *isa_pic=NULL;
 
@@ -22,4 +23,22 @@ int pic_get_output(DeviceState *d)
 int pic_read_irq(DeviceState *d)
 {
     return 0;
+}
+
+void apic_poll_irq(DeviceState *dev)
+{
+}
+
+void apic_sipi(DeviceState *dev)
+{
+}
+
+int apic_accept_pic_intr(DeviceState *dev)
+{
+    return 0;
+}
+
+int apic_get_interrupt(DeviceState *dev)
+{
+    return -1;
 }

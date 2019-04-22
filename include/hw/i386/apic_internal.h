@@ -210,6 +210,7 @@ void vapic_report_tpr_access(DeviceState *dev, CPUState *cpu, target_ulong ip,
                              TPRAccess access);
 
 int apic_get_ppr(APICCommonState *s);
+int get_highest_priority_int(uint32_t *tab);
 
 static inline void apic_set_bit(uint32_t *tab, int index)
 {
