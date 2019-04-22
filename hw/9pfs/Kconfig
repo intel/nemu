@@ -1,4 +1,4 @@
 config VIRTIO_9P
     bool
-    default y
+    default y if !VIRT
     depends on VIRTFS && VIRTIO
