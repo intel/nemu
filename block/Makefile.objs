@@ -29,6 +29,7 @@ block-obj-$(if $(CONFIG_LIBISCSI),y,n) += iscsi-opts.o
 block-obj-$(CONFIG_LIBNFS) += nfs.o
 block-obj-$(CONFIG_CURL) += curl.o
 block-obj-$(CONFIG_RBD) += rbd.o
+block-obj-$(CONFIG_BLOCK_VVFAT) += vvfat.o
 block-obj-$(CONFIG_GLUSTERFS) += gluster.o
 block-obj-$(CONFIG_VXHS) += vxhs.o
 block-obj-$(CONFIG_LIBSSH2) += ssh.o
