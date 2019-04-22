@@ -31,6 +31,7 @@
 #include "hw/char/serial.h"
 #include "hw/char/parallel.h"
 #include "hw/i386/apic.h"
+#include "hw/i386/smm.h"
 #include "hw/i386/topology.h"
 #include "sysemu/cpus.h"
 #include "hw/block/fdc.h"
@@ -1915,10 +1916,10 @@ static void pc_machine_class_init(ObjectClass *oc, void *data)
     object_class_property_set_description(oc, PC_MACHINE_MAX_RAM_BELOW_4G,
         "Maximum ram below the 4G boundary (32bit boundary)", &error_abort);
 
-    object_class_property_add(oc, PC_MACHINE_SMM, "OnOffAuto",
+    object_class_property_add(oc, MACHINE_SMM, "OnOffAuto",
         pc_machine_get_smm, pc_machine_set_smm,
         NULL, NULL, &error_abort);
-    object_class_property_set_description(oc, PC_MACHINE_SMM,
+    object_class_property_set_description(oc, MACHINE_SMM,
         "Enable SMM (pc & q35)", &error_abort);
 
     object_class_property_add(oc, PC_MACHINE_VMPORT, "OnOffAuto",
