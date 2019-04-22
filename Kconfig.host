@@ -37,3 +37,6 @@ config AUDIO
 
 config WDT
     bool
+
+config USB_REDIR
+    bool
