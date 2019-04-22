@@ -43,6 +43,18 @@ typedef struct AcpiPciHpPciStatus {
 #define ACPI_PCIHP_MAX_HOTPLUG_BUS 256
 #define ACPI_PCIHP_BSEL_DEFAULT 0x0
 
+#define ACPI_PCIHP_SIZE 0x0014
+#define ACPI_PCI_PCST_LEN 0x0008
+#define ACPI_PCI_UP_BASE 0x0000
+#define ACPI_PCI_UP_LEN 0x0004
+#define ACPI_PCI_DOWN_BASE 0x0004
+#define ACPI_PCI_DOWN_LEN 0x0004
+#define ACPI_PCI_EJ_BASE 0x0008
+#define ACPI_PCI_EJ_LEN 0x0004
+#define ACPI_PCI_RMV_BASE 0x000c
+#define ACPI_PCI_SEL_BASE 0x0010
+#define ACPI_PCI_SEL_LEN 0x0004
+
 typedef struct AcpiPciHpState {
     AcpiPciHpPciStatus acpi_pcihp_pci_status[ACPI_PCIHP_MAX_HOTPLUG_BUS];
     uint32_t hotplug_select;
@@ -54,7 +66,8 @@ typedef struct AcpiPciHpState {
 } AcpiPciHpState;
 
 void acpi_pcihp_init(Object *owner, AcpiPciHpState *, PCIBus *root,
-                     MemoryRegion *address_space_io, bool bridges_enabled);
+                     MemoryRegion *address_space_io, bool bridges_enabled,
+                     uint16_t apci_pcihp_addr);
 
 void acpi_pcihp_device_pre_plug_cb(HotplugHandler *hotplug_dev,
                                    DeviceState *dev, Error **errp);
