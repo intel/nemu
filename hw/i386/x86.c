@@ -24,6 +24,7 @@
 
 #include "qemu/osdep.h"
 #include "hw/i386/pc.h"
+#include "hw/i386/pci.h"
 #include "hw/i386/apic.h"
 #include "sysemu/qtest.h"
 #include "kvm_i386.h"
