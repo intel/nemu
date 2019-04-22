@@ -7,6 +7,11 @@ config PCIE_PORT
     default y if PCI_DEVICES
     depends on PCI_EXPRESS && MSI_NONBROKEN
 
+config PCIE_BRIDGE
+    bool
+    default y
+    depends on PCI_EXPRESS
+
 config PXB
     bool
     default y if Q35
