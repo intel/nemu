@@ -34,6 +34,7 @@ config PC
     select HID_DEV
     select MULTIBOOT
     select KVM_VAPIC
+    select PFLASH_CFI01
 
 config PC_PCI
     bool
@@ -105,6 +106,9 @@ config VIRT
     select APIC_COMMON
 
 config MULTIBOOT
+    bool
+
+config PFLASH_CFI01
     bool
 
 config VTD
