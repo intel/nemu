@@ -24,7 +24,7 @@ struct VHostUserFSPCI {
 
 typedef struct VHostUserFSPCI VHostUserFSPCI;
 
-#define TYPE_VHOST_USER_FS_PCI "vhost-user-fs-pci"
+#define TYPE_VHOST_USER_FS_PCI "vhost-user-fs-pci-base"
 
 #define VHOST_USER_FS_PCI(obj) \
         OBJECT_CHECK(VHostUserFSPCI, (obj), TYPE_VHOST_USER_FS_PCI)
@@ -86,8 +86,8 @@ static void vhost_user_fs_pci_instance_init(Object *obj)
 }
 
 static const VirtioPCIDeviceTypeInfo vhost_user_fs_pci_info = {
-    .generic_name  = TYPE_VHOST_USER_FS_PCI,
-    .parent        = TYPE_VIRTIO_PCI,
+    .base_name             = TYPE_VHOST_USER_FS_PCI,
+    .non_transitional_name = "vhost-user-fs-pci",
     .instance_size = sizeof(VHostUserFSPCI),
     .instance_init = vhost_user_fs_pci_instance_init,
     .class_init    = vhost_user_fs_pci_class_init,
