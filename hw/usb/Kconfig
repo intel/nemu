@@ -5,23 +5,24 @@ config USB_CORE
 
 config USB
     bool
+    default y if USB_CORE
     select HID_DEV
 
 config USB_UHCI
     bool
-    default y if PCI_DEVICES
+    default y if PCI_DEVICES && USB_CORE
     depends on PCI
     select USB
 
 config USB_OHCI
     bool
-    default y if PCI_DEVICES
+    default y if PCI_DEVICES && USB_CORE
     depends on PCI
     select USB
 
 config USB_EHCI
     bool
-    default y if PCI_DEVICES
+    default y if PCI_DEVICES && USB_CORE
     depends on PCI
     select USB
 
@@ -31,13 +32,13 @@ config USB_EHCI_SYSBUS
 
 config USB_XHCI
     bool
-    default y if PCI_DEVICES
+    default y if PCI_DEVICES && USB_CORE
     depends on PCI
     select USB
 
 config USB_XHCI_NEC
     bool
-    default y if PCI_DEVICES
+    default y if PCI_DEVICES && USB_CORE
     depends on PCI
     select USB
 
@@ -51,47 +52,47 @@ config TUSB6010
 
 config USB_TABLET_WACOM
     bool
-    default y
+    default y if USB_CORE
     depends on USB
 
 config USB_STORAGE_BOT
     bool
-    default y
+    default y if USB_CORE
     depends on USB
     select SCSI
 
 config USB_STORAGE_UAS
     bool
-    default y
+    default y if USB_CORE
     depends on USB
     select SCSI
 
 config USB_AUDIO
     bool
-    default y
+    default y if USB_CORE
     depends on USB
 
 config USB_SERIAL
     bool
-    default y
+    default y if USB_CORE
     depends on USB
 
 config USB_NETWORK
     bool
-    default y
+    default y if USB_CORE
     depends on USB
 
 config USB_BLUETOOTH
     bool
-    default y
+    default y if USB_CORE
     depends on USB
 
 config USB_SMARTCARD
     bool
-    default y
+    default y if USB_CORE
     depends on USB
 
 config USB_STORAGE_MTP
     bool
-    default y
+    default y if USB_CORE
     depends on USB
