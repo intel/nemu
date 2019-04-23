@@ -136,13 +136,26 @@ stage ("Release") {
 						containerName: env.BUILD_TAG.replaceAll("%2F","-")
 			}
 			stage ('Create release') {
+				writeFile file:'git-helper.sh', text:"#!/bin/bash\necho username=\$GIT_USERNAME\necho password=\$GIT_PASSWORD"
+				sh "chmod +x $WORKSPACE/git-helper.sh"
+				sh 'git config credential.helper "/bin/bash ' + env.WORKSPACE + '/git-helper.sh"'
+
+				withCredentials([[
+					$class: 'UsernamePasswordMultiBinding',
+					credentialsId: 'a27947d5-1706-465f-99f7-231eff68787b',
+					usernameVariable: 'GIT_USERNAME',
+					passwordVariable: 'GIT_PASSWORD'
+				]]) {
+					sh "git tag pre-release-`date +%Y-%m-%d`"
+					sh "git push --tags origin"
+				}
 				withCredentials([[
 					$class: 'UsernamePasswordMultiBinding',
 					credentialsId: 'a27947d5-1706-465f-99f7-231eff68787b',
 					usernameVariable: 'GITHUB_USERNAME',
 					passwordVariable: 'GITHUB_PASSWORD'
 				]]) {
-					sh "hub release create -m \"Release \$(date +%Y-%m-%d)\" -a qemu-system-x86_64_virt -a qemu-system-aarch64 pre-release-`date +%Y-%m-%d`" 
+					sh "hub release create -d -p -m \"Release \$(date +%Y-%m-%d)\" -a qemu-system-x86_64_virt -a qemu-system-aarch64 pre-release-`date +%Y-%m-%d`" 
 				}
 			}
 		}
