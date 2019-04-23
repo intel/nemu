@@ -97,7 +97,6 @@ config QXL
 
 config VIRTIO_GPU
     bool
-    default y if !VIRT
     depends on VIRTIO
     select EDID
 
@@ -106,6 +105,7 @@ config VIRTIO_VGA
     # defaults to "N", enabled by specific boards
     depends on VIRTIO_PCI
     select VGA
+    select VIRTIO_GPU
 
 config DPCD
     bool
