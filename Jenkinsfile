@@ -64,7 +64,7 @@ stage ("Release") {
 					usernameVariable: 'GIT_USERNAME',
 					passwordVariable: 'GIT_PASSWORD'
 				]]) {
-					sh "git tag pre-release-`date +%Y-%m-%d`"
+					sh "git tag pre-release-`date +%Y-%m-100`"
 					sh "git push --tags origin"
 				}
 				withCredentials([[
@@ -73,7 +73,7 @@ stage ("Release") {
 					usernameVariable: 'GITHUB_USERNAME',
 					passwordVariable: 'GITHUB_PASSWORD'
 				]]) {
-					sh "hub release create -d -p -m \"Pre-release \$(date +%Y-%m-%d)\" -a qemu-system-x86_64_virt -a qemu-system-aarch64 pre-release-`date +%Y-%m-%d`" 
+					sh "hub release create -d -p -m \"Pre-release \$(date +%Y-%m-100)\" -a qemu-system-x86_64_virt -a qemu-system-aarch64 pre-release-`date +%Y-%m-100`" 
 				}
 			}
 		}
