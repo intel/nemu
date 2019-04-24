@@ -28,7 +28,7 @@ stage ("Builds") {
 					azureUpload storageCredentialId: 'nemu-jenkins-storage-account', 
 						filesPath: 'used-aarch64.txt',
 						storageType: 'blobstorage',
-						containerName: env.BUILD_TAG.replaceAll("%2F","-")
+						containerName: env.BUILD_TAG.replaceAll("\\.|%2F","-")
 				}
 			}
 			stage ('Compile: aarch64') {
@@ -43,7 +43,7 @@ stage ("Builds") {
 					azureUpload storageCredentialId: 'nemu-jenkins-storage-account', 
 						filesPath: "qemu-system-aarch64",
 						storageType: 'blobstorage',
-						containerName: env.BUILD_TAG.replaceAll("%2F","-")
+						containerName: env.BUILD_TAG.replaceAll("\\.|%2F","-")
 				}
 			}	
 		}
@@ -62,7 +62,7 @@ stage ("Builds") {
 					azureUpload storageCredentialId: 'nemu-jenkins-storage-account', 
 						filesPath: 'used-x86-64.txt',
 						storageType: 'blobstorage',
-						containerName: env.BUILD_TAG.replaceAll("%2F","-")
+						containerName: env.BUILD_TAG.replaceAll("\\.|%2F","-")
 				}
 			}
 			stage ('Compile: x86-64 (virt only)') {
@@ -77,7 +77,7 @@ stage ("Builds") {
 					azureUpload storageCredentialId: 'nemu-jenkins-storage-account', 
 						filesPath: "qemu-system-x86_64_virt",
 						storageType: 'blobstorage',
-						containerName: env.BUILD_TAG.replaceAll("%2F","-")
+						containerName: env.BUILD_TAG.replaceAll("\\.|%2F","-")
 				}
 			}
 		}
@@ -93,7 +93,7 @@ stage ("Analyse") {
 			stage ('Download results') {
 				azureDownload storageCredentialId: 'nemu-jenkins-storage-account', 
 						downloadType: 'container',
-						containerName: env.BUILD_TAG.replaceAll("%2F","-")
+						containerName: env.BUILD_TAG.replaceAll("\\.|%2F","-")
 			}
 			stage ('Remove unused files') {
 				sh "cat $WORKSPACE/used-aarch64.txt $WORKSPACE/used-x86-64.txt | sort | uniq > $WORKSPACE/used-c-files.txt"
@@ -133,7 +133,7 @@ stage ("Release") {
 			stage ('Download results') {
 				azureDownload storageCredentialId: 'nemu-jenkins-storage-account', 
 						downloadType: 'container',
-						containerName: env.BUILD_TAG.replaceAll("%2F","-")
+						containerName: env.BUILD_TAG.replaceAll("\\.|%2F","-")
 			}
 			stage ('Create release') {
 				withCredentials([[
