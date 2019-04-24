@@ -45,7 +45,16 @@ stage ("Builds") {
 						storageType: 'blobstorage',
 						containerName: env.BUILD_TAG.replaceAll("\\.|%2F","-")
 				}
-			}	
+			}
+			stage ('Upload binary: virtiofsd-aarch64') {
+				if (env.TAG_NAME != null) {
+					sh "cp $HOME/build-aarch64/virtiofsd virtiofsd-aarch64"
+					azureUpload storageCredentialId: 'nemu-jenkins-storage-account', 
+						filesPath: "virtiofsd-aarch64",
+						storageType: 'blobstorage',
+						containerName: env.BUILD_TAG.replaceAll("\\.|%2F","-")
+				}
+			}
 		}
 	}, 'xenial-virt': {
 		node ('xenial') {
@@ -76,6 +85,15 @@ stage ("Builds") {
 					sh "cp $HOME/build-x86_64_virt/x86_64_virt-softmmu/qemu-system-x86_64_virt ."
 					azureUpload storageCredentialId: 'nemu-jenkins-storage-account', 
 						filesPath: "qemu-system-x86_64_virt",
+						storageType: 'blobstorage',
+						containerName: env.BUILD_TAG.replaceAll("\\.|%2F","-")
+				}
+			}
+			stage ('Upload binary: virtiofsd-x86_64') {
+				if (env.TAG_NAME != null) {
+					sh "cp $HOME/build-x86_64_virt/virtiofsd virtiofsd-x86_64"
+					azureUpload storageCredentialId: 'nemu-jenkins-storage-account', 
+						filesPath: "virtiofsd-x86_64",
 						storageType: 'blobstorage',
 						containerName: env.BUILD_TAG.replaceAll("\\.|%2F","-")
 				}
@@ -142,7 +160,7 @@ stage ("Release") {
 					usernameVariable: 'GITHUB_USERNAME',
 					passwordVariable: 'GITHUB_PASSWORD'
 				]]) {
-					sh "hub release create -p -d -m \"${env.TAG_NAME}\" -a qemu-system-x86_64_virt -a qemu-system-aarch64 ${env.TAG_NAME}" 
+					sh "hub release create -p -d -m \"${env.TAG_NAME}\" -a qemu-system-x86_64_virt -a qemu-system-aarch64 -a virtiofsd-x86_64 -a virtiofsd-aarch64 ${env.TAG_NAME}" 
 				}
 			}
 		}
