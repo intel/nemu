@@ -19,7 +19,6 @@ $SRCDIR/configure \
  --disable-modules \
  --disable-netmap \
  --disable-qom-cast-debug \
- --disable-seccomp \
  --disable-snappy \
  --disable-tcmalloc \
  --disable-tools \
@@ -50,6 +49,7 @@ $SRCDIR/configure \
  --enable-cap-ng \
  --enable-kvm \
  --enable-rbd \
+ --enable-seccomp \
  --enable-vhost-crypto \
  --enable-vhost-net \
  --enable-vhost-scsi \
