@@ -64,4 +64,5 @@ $SRCDIR/configure \
  --libexecdir=/usr/libexec/nemu \
  --datadir=/usr/share/nemu
 $MAKEPREFIX make -j `nproc`
+$MAKEPREFIX make -j `nproc` virtiofsd
 popd
