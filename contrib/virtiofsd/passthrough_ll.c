@@ -56,7 +56,10 @@
 #include <sys/resource.h>
 
 #include <gmodule.h>
+
+#ifdef CONFIG_SECCOMP
 #include "seccomp.h"
+#endif
 
 struct lo_map_elem {
 	union {
@@ -2108,7 +2111,9 @@ static void setup_mount_namespace(const char *source)
 static void setup_sandbox(struct lo_data *lo)
 {
 	setup_mount_namespace(lo->source);
+#ifdef CONFIG_SECCOMP
 	setup_seccomp();
+#endif
 }
 
 static void setup_root(struct lo_data *lo, struct lo_inode *root)
