@@ -5,8 +5,11 @@ virtiofsd-obj-y = buffer.o \
                   fuse_signals.o \
                   fuse_virtio.o \
                   helper.o \
-                  passthrough_ll.o \
-                  seccomp.o
+                  passthrough_ll.o
+
+ifeq ($(CONFIG_SECCOMP),y)
+virtiofsd-obj-y += seccomp.o
 
 seccomp.o-cflags := $(SECCOMP_CFLAGS)
 seccomp.o-libs := $(SECCOMP_LIBS)
+endif
