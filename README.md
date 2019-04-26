@@ -86,7 +86,7 @@ subset of features including PCI host brige.
 
 *NEMU* also introduces a new QEMU x86-64 machine type: **`virt`**. It is a purely virtual platform, that
 does not try to emulate any existing x86 chipset or legacy bus (ISA, SMBUS, etc) and offloads as many features
-to KVM as possible. This is a similar approach as the already existin AArch64 `virt` machine type and *NEMU*
+to KVM as possible. This is a similar approach as the already existing AArch64 `virt` machine type and *NEMU*
 will only support the two `virt` machine types.
 
 Below is a list of QEMU features that *NEMU* will retain and add.
