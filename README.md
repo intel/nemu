@@ -71,7 +71,7 @@ all of these legacy features.
 
 *NEMU* is based off QEMU and leverage its rich feature set, but with a much narrower focus.
 It leverages the performant, robust and stable QEMU codebase without the need to supporting the
-myriad of features, platforms and harware that are not relevant for the cloud.
+myriad of features, platforms and hardware that are not relevant for the cloud.
 
 The goal of *NEMU* is to retain the absolute minimal subset of the QEMU codebase that is required
 for the feature set described below. The QEMU code base will also be simplified to reduce the number
