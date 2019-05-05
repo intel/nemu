@@ -757,7 +757,7 @@ int virtio_session_mount(struct fuse_session *se)
                 return -1;
         }
 
-        fprintf(stderr, "%s: Waiting for QEMU socket connection...\n", __func__);
+        fprintf(stderr, "%s: Waiting for vhost-user socket connection...\n", __func__);
         int data_sock = accept(listen_sock, NULL, NULL);
         if (data_sock == -1) {
                 perror("vhost socket accept");
@@ -765,7 +765,7 @@ int virtio_session_mount(struct fuse_session *se)
                 return -1;
         }
         close(listen_sock);
-        fprintf(stderr, "%s: Received QEMU socket connection\n", __func__);
+        fprintf(stderr, "%s: Received vhost-user socket connection\n", __func__);
         se->vu_socketfd = data_sock;
 
         /* TODO: Some cleanup/deallocation! */
