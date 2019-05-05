@@ -2543,7 +2543,7 @@ void fuse_lowlevel_help(void)
 	printf(
 "    -o allow_other             allow access by all users\n"
 "    -o allow_root              allow access by root\n"
-"    -o vhost_user_socket=PATH  path for the vhost-user socket to talk to QEMU\n"
+"    -o vhost_user_socket=PATH  path for the vhost-user socket\n"
 "    -o auto_unmount            auto unmount on process termination\n");
 }
 
