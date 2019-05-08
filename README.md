@@ -54,7 +54,7 @@ QEMU is the current de facto standard open source cloud hypervisor. It has a ric
 that have been developed and tested over time. This includes features such as live migration,
 PCI, Memory, NVDIMM and CPU hotplug, VFIO, mediated device passthrough and vhost-user. QEMU also
 has been the code base on which significant effort and innovation has been invested to create multiple
-performant I/O models
+performant I/O models.
 
 It also comes with a very large support for legacy features, for platforms and devices and is capable
 of running on a large number of hardware platforms. It also allows for cross platform emulation.
