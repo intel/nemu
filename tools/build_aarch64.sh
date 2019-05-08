@@ -37,6 +37,7 @@ $SRCDIR/configure \
  --disable-gtk \
  --disable-vte \
  --disable-sdl \
+ --disable-rbd \
  --disable-rdma \
  --disable-vxhs \
  --disable-vvfat \
@@ -49,7 +50,6 @@ $SRCDIR/configure \
  --enable-cap-ng \
  --enable-fdt \
  --enable-kvm \
- --enable-rbd \
  --enable-seccomp \
  --enable-vhost-crypto \
  --enable-vhost-net \
@@ -62,7 +62,8 @@ $SRCDIR/configure \
  --extra-ldflags=" -pie -z noexecstack -z relro -z now" \
  --libdir=/usr/lib64/nemu \
  --libexecdir=/usr/libexec/nemu \
- --datadir=/usr/share/nemu
+ --datadir=/usr/share/nemu \
+ --static
 $MAKEPREFIX make -j `nproc`
 $MAKEPREFIX make -j `nproc` virtiofsd
 popd
