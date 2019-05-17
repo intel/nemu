@@ -566,7 +566,8 @@ static void virt_dimm_pre_plug(HotplugHandler *hotplug_dev,
                          DeviceState *dev, Error **errp)
 {
     VirtMachineState *vms = VIRT_MACHINE(hotplug_dev);
-    const uint64_t legacy_align = TARGET_PAGE_SIZE;
+    // Align DIMM to 2MiB to accomodate huge pages
+    const uint64_t legacy_align = 0x200000;
     const bool is_nvdimm = object_dynamic_cast(OBJECT(dev), TYPE_NVDIMM);
     Error *local_err = NULL;
 
