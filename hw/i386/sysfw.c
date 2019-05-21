@@ -65,6 +65,7 @@ void pc_system_rom_init(MemoryRegion *rom_memory, bool rw_fw)
     if (!rw_fw) {
         memory_region_set_readonly(bios, true);
     }
+    bios->vhost_ignore = true;
     ret = rom_add_file_fixed(bios_name, (uint32_t)(-bios_size), -1);
     if (ret != 0) {
     bios_error:
@@ -85,6 +86,7 @@ void pc_system_rom_init(MemoryRegion *rom_memory, bool rw_fw)
     if (!rw_fw) {
         memory_region_set_readonly(isa_bios, true);
     }
+    isa_bios->vhost_ignore = true;
 
     /* map all the bios at the top of memory */
     memory_region_add_subregion(rom_memory,
