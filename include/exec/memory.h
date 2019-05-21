@@ -385,6 +385,7 @@ struct MemoryRegion {
     const char *name;
     unsigned ioeventfd_nb;
     MemoryRegionIoeventfd *ioeventfds;
+    bool vhost_ignore;
 };
 
 struct IOMMUMemoryRegion {
