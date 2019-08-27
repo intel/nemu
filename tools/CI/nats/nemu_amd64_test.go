@@ -216,7 +216,7 @@ func (q *qemuTest) getTotalMemory(t *testing.T) int {
 func testMemoryHotplug(ctx context.Context, q *qemuTest, t *testing.T) {
 	addedMemoryMiB := 512
 	beforeMem := q.getTotalMemory(t)
-	err := q.qmp.ExecHotplugMemory(ctx, "memory-backend-ram", "memslot1", "", addedMemoryMiB)
+	err := q.qmp.ExecHotplugMemory(ctx, "memory-backend-ram", "memslot1", "", addedMemoryMiB, false)
 	if err != nil {
 		t.Errorf("Error adding memory to guest: %v", err)
 	}
@@ -241,7 +241,7 @@ func testCPUHotplug(ctx context.Context, q *qemuTest, t *testing.T) {
 		t.Errorf("Unexpected online cpus: %s", cpusOnlineBefore)
 	}
 
-	err := q.qmp.ExecuteCPUDeviceAdd(ctx, "host-x86_64-cpu", "core1", "1", "0", "0", "")
+	err := q.qmp.ExecuteCPUDeviceAdd(ctx, "host-x86_64-cpu", "core1", "1", "0", "0", "0", "")
 	if err != nil {
 		t.Errorf("Error hotplugging CPU: %v", err)
 	}
