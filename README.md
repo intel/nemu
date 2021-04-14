@@ -19,6 +19,10 @@
     + [Monitoring](#monitoring)
     + [**To be discussed**](#--to-be-discussed--)
 
+# Archived
+
+**NEMU is no longer active and is archived. Cloud Hypervisor is the successor https://github.com/cloud-hypervisor/cloud-hypervisor**
+
 
 # NEMU, a cloud hypervisor
 
